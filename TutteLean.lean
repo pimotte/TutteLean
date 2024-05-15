@@ -1,6 +1,7 @@
 import Mathlib.Combinatorics.SimpleGraph.Clique
 import Mathlib.Combinatorics.SimpleGraph.Matching
 import Mathlib.Combinatorics.SimpleGraph.Connectivity
+import Mathlib.Combinatorics.SimpleGraph.Metric
 import Mathlib.Data.Set.Card
 import Mathlib.Data.Set.Finite
 import Mathlib.Data.Fintype.Basic
@@ -1305,6 +1306,19 @@ lemma ConnectedComponentSubsetVerts (H : Subgraph G) (c : ConnectedComponent H.c
   exact Set.image_val_subset hv
 
 
+lemma isNotClique_iff (G : SimpleGraph V) (u : Set V) : ¬G.IsClique u ↔ ∃ (v w : u), v ≠ w ∧ ¬ G.Adj v w := by
+  constructor
+  · rw [@isClique_iff_induce_eq]
+    intro h
+    by_contra! hc
+    apply h
+    ext v w
+    rw [@top_adj]
+    exact ⟨fun h' ↦ Adj.ne' (adj_symm (induce u G) h'), fun h' ↦ hc v w h' ⟩
+  · rintro ⟨ v , ⟨ w , h ⟩ ⟩
+    rw [SimpleGraph.isClique_iff]
+    by_contra! hc
+    exact h.2 (hc (Subtype.coe_prop v) (w.coe_prop) (Subtype.coe_ne_coe.mpr h.1))
 
 
 lemma sup_support_eq_support_union (H H': Subgraph G) : (H ⊔ H').support = H.support ∪ H'.support := by
@@ -1332,9 +1346,62 @@ lemma sup_support_eq_support_union (H H': Subgraph G) : (H ⊔ H').support = H.s
       obtain ⟨ w , hw ⟩ := hr
       exact ⟨ w , SimpleGraph.Subgraph.sup_adj.mpr (.inr hw) ⟩
 
+lemma walk_length_one_adj : (∃ (p : G.Walk u v), p.length = 1) ↔ G.Adj u v := by
+  constructor
+  · rintro ⟨p , hp⟩
+    match p with
+    | Walk.nil' u => simp only [Walk.length_nil, zero_ne_one] at hp
+    | Walk.cons' u v w h p' =>
+      simp only [Walk.length_cons, add_left_eq_self] at hp
+      exact ((SimpleGraph.Walk.eq_of_length_eq_zero hp) ▸ h)
+  · intro h
+    use Walk.cons h Walk.nil
+    simp only [Walk.length_cons, Walk.length_nil, zero_add]
+
+lemma dist_gt_one_of_ne_and_nadj (h : G.Reachable u v) (hne : u ≠ v) (hnadj : ¬G.Adj u v) : 1 < G.dist u v := by
+  have : 1 ≠ G.dist u v := by
+    by_contra! hc
+    obtain ⟨p, hp⟩ := Reachable.exists_path_of_dist h
+    rw [← hc] at hp
+    exact hnadj (walk_length_one_adj.mp ⟨p, hp.2⟩)
+  exact Nat.lt_of_le_of_ne (h.pos_dist_of_ne hne) this
 
 
-def tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
+noncomputable def lift_walk {c : ConnectedComponent G} {v w : c.supp}  (p : G.Walk v w) : (G.induce c.supp).Walk v w :=
+  if hp : p.Nil
+  then
+    Subtype.val_injective (SimpleGraph.Walk.Nil.eq hp) ▸ Walk.nil
+  else
+    let u := (SimpleGraph.Walk.not_nil_iff.mp hp).choose
+    let h := (SimpleGraph.Walk.not_nil_iff.mp hp).choose_spec.choose
+    let q := (SimpleGraph.Walk.not_nil_iff.mp hp).choose_spec.choose_spec.choose
+    let h' := (SimpleGraph.Walk.not_nil_iff.mp hp).choose_spec.choose_spec.choose_spec
+    have hu : u ∈ c.supp := by
+      rw [SimpleGraph.ConnectedComponent.mem_supp_iff,
+        ← (c.mem_supp_iff w).mp w.coe_prop,
+        ConnectedComponent.eq]
+      exact Walk.reachable q
+    let u' : c.supp := ⟨u , hu⟩
+    Walk.cons (by simp only [comap_adj, Function.Embedding.coe_subtype, h] : (G.induce c.supp).Adj v u') (lift_walk q)
+termination_by p.length
+decreasing_by
+  simp_wf
+  rw [@Nat.lt_iff_add_one_le]
+  rw [← SimpleGraph.Walk.length_cons]
+  exact Nat.le_of_eq (congrArg Walk.length (id h'.symm))
+
+
+
+lemma reachable_in_connected_component_induce (c : ConnectedComponent G) (v w : c.supp) : (G.induce c.supp).Reachable v w := by
+  have hvc := (c.mem_supp_iff v).mp (Subtype.coe_prop v)
+  have hwc := (c.mem_supp_iff w).mp (Subtype.coe_prop w)
+  have : G.connectedComponentMk v = G.connectedComponentMk w := by
+    rw [hvc, hwc]
+  have p := (Classical.inhabited_of_nonempty (ConnectedComponent.exact this)).default
+  exact Walk.reachable (lift_walk p)
+
+
+theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
     (∃ (M : Subgraph G) , M.IsPerfectMatching) ↔
       (∀ (u : Set V),
         cardOddComponents ((⊤ : G.Subgraph).deleteVerts u).coe ≤ u.ncard) := by
@@ -1914,5 +1981,14 @@ def tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
             exact Set.mem_diff_of_mem (by trivial) h
         exact Gmax.hMatchFree ((M1 ⊔ M2) ⊔ M') ⟨ conMatch, conSpanning ⟩
     else
+      push_neg at h'
+      obtain ⟨K, hK⟩ := h'
+      rw [isNotClique_iff] at hK
+      obtain ⟨x, ⟨y, hxy⟩⟩ := hK
+
+
+      obtain ⟨p , hp⟩ := SimpleGraph.Reachable.exists_path_of_dist (reachable_in_connected_component_induce K x y)
+      
+
       sorry
   }
