@@ -47,7 +47,7 @@ instance [Fintype V] [DecidableEq V] [DecidableRel G.Adj]
     (fun _ _ _ _ => Subsingleton.elim _ _)
 
 
-lemma deleteVerts_verts_notmem_deleted [r : DecidableRel G.Adj] (a : ((⊤ : G.Subgraph).deleteVerts u).verts) : a.val ∉ u := a.prop.2
+lemma deleteVerts_verts_notmem_deleted (a : ((⊤ : G.Subgraph).deleteVerts u).verts) : a.val ∉ u := a.prop.2
 
 
 instance myInst3 [r : DecidableRel G.Adj] : DecidableRel (((⊤ : G.Subgraph).deleteVerts u).coe).Adj := by
@@ -381,7 +381,8 @@ def allEdgeSetFinite (G : SimpleGraph V) [Fintype V] [DecidableRel G.Adj] : Fini
 
 instance singleEdgeDecidableRel [DecidableEq V] {v w : V} (h : v ≠ w) : DecidableRel (singleEdge h).Adj := by
   intro x y
-  if h' : (v = x ∧ w = y) ∨ (v = y ∧ w = x)
+  if h' : (v = x ∧ w = y) ∨
+        sorry(v = y ∧ w = x)
   then
     exact .isTrue h'
   else
@@ -427,7 +428,7 @@ theorem cardEdgeSetLessThanSquare (H : SimpleGraph V) [Fintype V] [DecidableRel 
     have : Fintype.card V > 0 := Nat.zero_lt_of_ne_zero h'
     omega
 
---First
+--First (done)
 lemma isMatchingHom (G G' : SimpleGraph V) (x : Subgraph G) (h : G ≤ G') (hM : x.IsMatching) : (x.map (SimpleGraph.Hom.ofLE h)).IsMatching := by
   intro v hv
   unfold Subgraph.IsMatching at hM
@@ -1063,7 +1064,7 @@ lemma existsIsMatching [Fintype V] [DecidableEq V]
   exact (Exists.choose_spec (evenCliqueMatches u h uEven)).2
 
 
---First
+--First (done)
 lemma sup_IsMatching [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj]
   {M M' : Subgraph G} (hM : M.IsMatching) (hM' : M'.IsMatching) (hd : Disjoint (M.support) (M'.support)) : (M ⊔ M').IsMatching := by
   intro v hv
@@ -1112,7 +1113,7 @@ lemma sup_IsMatching [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.A
         rw [Set.disjoint_left] at hd
         exact hd hvMs hvM's
 
---First
+--First (done)
 lemma iSup_IsMatching [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj]
   {f : ι → Subgraph G} (hM : (i : ι) → (f i).IsMatching) (hd : (i j : ι) → (i ≠ j) →  Disjoint ((f i).support) ((f j).support)) : (⨆ i , f i).IsMatching := by
   intro v hv
@@ -1143,7 +1144,7 @@ lemma iSup_IsMatching [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.
       exfalso
       exact this hvsi hvsi'
 
---First
+--First (done)
 lemma subgraphOfAdj_IsMatching [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj]
   (h : G.Adj v w) : (G.subgraphOfAdj h).IsMatching := by
   intro v' hv'
@@ -1210,6 +1211,7 @@ lemma subgraphOfAdj_support [Fintype V] [Inhabited V] [DecidableEq V] [Decidable
 
 lemma componentExistsRep (c : ConnectedComponent G) : ∃ v, SimpleGraph.connectedComponentMk G v = c := c.exists_rep
 
+--First
 @[simp]
 lemma coe_verts [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj]
   {G' : Subgraph G} (M : Subgraph G'.coe) : M.coeSubgraph.verts = (M.verts : Set V) := rfl
@@ -1406,7 +1408,7 @@ lemma reachable_in_connected_component_induce (c : ConnectedComponent G) (v w : 
   have p := (Classical.inhabited_of_nonempty (ConnectedComponent.exact this)).default
   exact Walk.reachable (lift_walk p)
 
-lemma verts_of_walk (p : G.Walk v w) (hp : p.length = G.dist v w) (hl : 1 < G.dist v w) : ∃ (x a b : V), G.Adj x a ∧ G.Adj a b ∧ ¬ G.Adj x b := by
+lemma verts_of_walk (p : G.Walk v w) (hp : p.length = G.dist v w) (hl : 1 < G.dist v w) : ∃ (x a b : V), G.Adj x a ∧ G.Adj a b ∧ ¬ G.Adj x b ∧ x ≠ b := by
 
   have hnp : ¬p.Nil := by
     rw [SimpleGraph.Walk.nil_iff_length_eq]
@@ -1426,18 +1428,29 @@ lemma verts_of_walk (p : G.Walk v w) (hp : p.length = G.dist v w) (hl : 1 < G.di
   use p.sndOfNotNil hnp
   use t.sndOfNotNil hnt
   simp only [Walk.adj_sndOfNotNil, true_and]
-  intro hadj
+  constructor
+  · intro hadj
 
-  let pcon := Walk.cons hadj (t.tail hnt)
-  have hdist : pcon.length < G.dist v w := by
-    rw [← hp]
-    rw [@Walk.length_cons]
-    rw [SimpleGraph.Walk.length_tail_add_one]
-    apply @Nat.lt_of_add_lt_add_right _ _ 1
-    rw [@Walk.length_tail_add_one]
-    exact lt_add_one p.length
+    let pcon := Walk.cons hadj (t.tail hnt)
+    have hdist : pcon.length < G.dist v w := by
+      rw [← hp]
+      rw [@Walk.length_cons]
+      rw [SimpleGraph.Walk.length_tail_add_one]
+      apply @Nat.lt_of_add_lt_add_right _ _ 1
+      rw [@Walk.length_tail_add_one]
+      exact lt_add_one p.length
 
-  linarith [SimpleGraph.dist_le pcon]
+    linarith [SimpleGraph.dist_le pcon]
+  · intro heq
+    let pcon := t.tail hnt
+    rw [← heq] at pcon
+    have hdist : pcon.length < G.dist v w := by
+      
+      sorry
+
+
+    linarith [SimpleGraph.dist_le pcon]
+
 
 
 
@@ -2032,7 +2045,16 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
 
       obtain ⟨x, ⟨a, ⟨b, hxab⟩⟩⟩ := verts_of_walk p hp.2 (dist_gt_one_of_ne_and_nadj (Walk.reachable p) hxy.1 hxy.2)
 
+      have ha : (a : V) ∉ S := by exact deleteVerts_verts_notmem_deleted _
+      have hc : ∃ (c : V), ¬ Gmax.G'.Adj a c := by
+        have : ¬ ∀ (w : V), (a : V) ≠ w → Gmax.G'.Adj (w : V) a := by exact ha
+        push_neg at this
+        obtain ⟨c, hc⟩ := this
+        use c
+        intro h
+        exact hc.2 (adj_symm Gmax.G' h)
+      obtain ⟨c, hc⟩ := hc
 
-
+      have G1 := Gmax.G' ⊔ singleEdge
       sorry
   }
