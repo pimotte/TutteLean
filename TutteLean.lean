@@ -1430,28 +1430,36 @@ lemma verts_of_walk (p : G.Walk v w) (hp : p.length = G.dist v w) (hl : 1 < G.di
   simp only [Walk.adj_sndOfNotNil, true_and]
   constructor
   · intro hadj
-
     let pcon := Walk.cons hadj (t.tail hnt)
     have hdist : pcon.length < G.dist v w := by
       rw [← hp]
       rw [@Walk.length_cons]
-      rw [SimpleGraph.Walk.length_tail_add_one]
+      rw [Walk.length_tail_add_one]
       apply @Nat.lt_of_add_lt_add_right _ _ 1
-      rw [@Walk.length_tail_add_one]
+      rw [Walk.length_tail_add_one]
       exact lt_add_one p.length
 
     linarith [SimpleGraph.dist_le pcon]
   · intro heq
     let pcon := t.tail hnt
-    rw [← heq] at pcon
-    have hdist : pcon.length < G.dist v w := by
-      
-      sorry
-
-
+    have hdist : (t.tail hnt).length < G.dist (t.sndOfNotNil hnt) w := by
+      apply @Nat.lt_of_add_lt_add_right _ _ 1
+      rw [Walk.length_tail_add_one]
+      rw [← heq]
+      apply @Nat.lt_of_add_lt_add_right _ _ 1
+      rw [Walk.length_tail_add_one]
+      rw [hp]
+      omega
     linarith [SimpleGraph.dist_le pcon]
 
 
+
+lemma union_gt_iff : G < G ⊔ G' ↔ ¬ (G' ≤ G) := by
+  constructor
+  · intro h h'
+    simp only [sup_of_le_left h', lt_self_iff_false] at h
+  · intro h
+    exact left_lt_sup.mpr h
 
 
 theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
@@ -2046,15 +2054,24 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
       obtain ⟨x, ⟨a, ⟨b, hxab⟩⟩⟩ := verts_of_walk p hp.2 (dist_gt_one_of_ne_and_nadj (Walk.reachable p) hxy.1 hxy.2)
 
       have ha : (a : V) ∉ S := by exact deleteVerts_verts_notmem_deleted _
-      have hc : ∃ (c : V), ¬ Gmax.G'.Adj a c := by
+      have hc : ∃ (c : V), ¬ Gmax.G'.Adj a c ∧ (a : V) ≠ c := by
         have : ¬ ∀ (w : V), (a : V) ≠ w → Gmax.G'.Adj (w : V) a := by exact ha
         push_neg at this
         obtain ⟨c, hc⟩ := this
         use c
-        intro h
-        exact hc.2 (adj_symm Gmax.G' h)
+        constructor
+        · intro h
+          exact hc.2 (adj_symm Gmax.G' h)
+        · exact hc.1
       obtain ⟨c, hc⟩ := hc
 
-      have G1 := Gmax.G' ⊔ singleEdge
+      let G1 := Gmax.G' ⊔ (singleEdge <| Subtype.coe_ne_coe.mpr <| Subtype.coe_ne_coe.mpr hxab.2.2.2)
+      let G2 := Gmax.G' ⊔ (singleEdge hc.2)
+
+      have hG1 : Gmax.G' < G1 := by
+        apply union_gt_iff.mpr
+        
+        sorry
+
       sorry
   }
