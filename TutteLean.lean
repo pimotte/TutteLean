@@ -381,8 +381,7 @@ def allEdgeSetFinite (G : SimpleGraph V) [Fintype V] [DecidableRel G.Adj] : Fini
 
 instance singleEdgeDecidableRel [DecidableEq V] {v w : V} (h : v ≠ w) : DecidableRel (singleEdge h).Adj := by
   intro x y
-  if h' : (v = x ∧ w = y) ∨
-        sorry(v = y ∧ w = x)
+  if h' : (v = x ∧ w = y) ∨ (v = y ∧ w = x)
   then
     exact .isTrue h'
   else
@@ -1461,9 +1460,25 @@ lemma union_gt_iff : G < G ⊔ G' ↔ ¬ (G' ≤ G) := by
   · intro h
     exact left_lt_sup.mpr h
 
+lemma singleEdge_le_iff (hneq : v ≠ w) : singleEdge hneq ≤ G ↔ G.Adj v w := by
+  constructor
+  · intro h
+    exact h <| .inl ⟨rfl, rfl⟩
+  · intro hadj
+    intro v' w' hvw'
+    cases hvw' with
+    | inl h1 =>
+      exact (h1.1 ▸ h1.2 ▸ hadj)
+    | inr h2 =>
+      exact (h2.1 ▸ h2.2 ▸ hadj.symm)
+
+lemma matching_union_left (M : (G ⊔ G').Subgraph) (hM : M.IsPerfectMatching) (hd : M.coe ⊓ G' = ⊥)
+  : ∃ (M' : Subgraph G), M'.IsPerfectMatching := by
+
+  sorry
 
 theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
-    (∃ (M : Subgraph G) , M.IsPerfectMatching) ↔
+    (∃ (M : Subgraph G) , M.IsPerfect Matching) ↔
       (∀ (u : Set V),
         cardOddComponents ((⊤ : G.Subgraph).deleteVerts u).coe ≤ u.ncard) := by
   constructor
@@ -2070,8 +2085,37 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
 
       have hG1 : Gmax.G' < G1 := by
         apply union_gt_iff.mpr
-        
-        sorry
+        rw [@singleEdge_le_iff]
+        intro h
+        apply hxab.2.2.1
+        rw [@induce_eq_coe_induce_top]
+        simp only [Subgraph.coe_adj, Subgraph.induce_verts, Subgraph.induce_adj, Subgraph.top_adj]
+        refine ⟨Subtype.coe_prop x, Subtype.coe_prop b, ?_⟩
+        rw [@Subgraph.deleteVerts_adj]
+        simp only [Subgraph.verts_top, Set.mem_univ, deleteVerts_verts_notmem_deleted,
+          not_false_eq_true, Subgraph.top_adj, h, and_self]
 
+      have hG2 : Gmax.G' < G2 := by
+        apply union_gt_iff.mpr
+        rw [@singleEdge_le_iff]
+        intro h
+        exact hc.1 h
+
+      obtain ⟨M1, hM1⟩ := Decidable.not_forall_not.mp (Gmax.hMaximal _ hG1)
+      obtain ⟨M2, hM2⟩ := Decidable.not_forall_not.mp (Gmax.hMaximal _ hG2)
+
+      have hM1' : M1.Adj x b := by
+        by_contra! hc
+        let Mcon : Subgraph Gmax.G' := {
+          verts := Set.univ,
+          Adj := fun v w ↦ M1.Adj v w,
+          adj_sub := by
+            intro v w hvw
+
+            sorry,
+          edge_vert := by sorry,
+        }
+
+        sorry
       sorry
   }
