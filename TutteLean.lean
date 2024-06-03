@@ -1472,13 +1472,462 @@ lemma singleEdge_le_iff (hneq : v ≠ w) : singleEdge hneq ≤ G ↔ G.Adj v w :
     | inr h2 =>
       exact (h2.1 ▸ h2.2 ▸ hadj.symm)
 
-lemma matching_union_left (M : (G ⊔ G').Subgraph) (hM : M.IsPerfectMatching) (hd : M.coe ⊓ G' = ⊥)
-  : ∃ (M' : Subgraph G), M'.IsPerfectMatching := by
 
-  sorry
+def Subgraph.coeBig (H : Subgraph G) : SimpleGraph V := {
+  Adj := fun v w => H.Adj v w
+  symm := fun v w => by
+    exact fun a => (adj_symm H a)
+  loopless := Subgraph.loopless H
+}
+
+-- structure Walk.isAlternating (p : G.Walk u v) (M : Subgraph G) where
+--   firstEdge (hnp : ¬ p.Nil) : (p.firstDart hnp).edge ∉ M.edgeSet
+--   secondEdge (hnp : ¬ p.Nil) (hnt : ¬ (p.tail hnp).Nil) : ((p.tail hnp).firstDart hnt).edge ∈ M.edgeSet
+--   tailAlternating (hnp : ¬ p.Nil) (hnt : ¬ (p.tail hnp).Nil) :
+
+-- inductive Walk.IsAlternating (M : Subgraph G) : {v w : V} → (p : G.Walk v w) → Prop where
+--   | nil {u : V} : Walk.IsAlternating M (nil : G.Walk u u)
+--   | single (hadj : G.Adj v w) : Walk.IsAlternating M (.cons hadj .nil)
+--   | alt (q : G.Walk v w) : (hnq : ¬ q.Nil) → (hnt : ¬ (q.tail hnq).Nil) →
+--       (halt: (q.firstDart hnq).edge ∈ M.edgeSet ↔ ¬ ((q.tail hnq).firstDart hnt).edge ∈ M.edgeSet) →
+--       (htail: Walk.IsAlternating M (q.tail hnq)) → Walk.IsAlternating M q
+
+-- structure Walk.IsAlternating (p : G.Walk u v) (M : Subgraph G) where
+--   halt : ∀ (n : ℕ), 0 < n → n < p.length → (M.Adj (p.getVert (n-1)) (p.getVert n) ↔ ¬ M.Adj (p.getVert n) (p.getVert (n+1)))
+
+structure Walk.IsAlternating (p : G.Walk u v) (M : Subgraph G) where
+  halt : ∀ (v w w': V), w ≠ w' → p.toSubgraph.Adj v w → p.toSubgraph.Adj v w' → (M.Adj v w ↔ ¬ M.Adj v w')
+
+
+lemma reverse_Nil (p : G.Walk u v) : p.reverse.Nil ↔ p.Nil := by
+  rw [@Walk.nil_iff_length_eq]
+  rw [SimpleGraph.Walk.length_reverse]
+  exact Walk.nil_iff_length_eq.symm
+
+
+def Walk.lastButOneOfNotNil (p : G.Walk u v) (hnp : ¬ p.Nil) := p.reverse.sndOfNotNil (by rwa [reverse_Nil])
+
+
+
+@[simp]
+lemma notNilRec_cons {motive : {u w : V} → (p : G.Walk u w) → (h : ¬ p.Nil) → Sort*}
+    (cons : {u v w : V} → (h : G.Adj u v) → (q : G.Walk v w) → motive (Walk.cons h q) Walk.not_nil_cons)
+    (h' : G.Adj u v) (q' : G.Walk v w) : @Walk.notNilRec _ _ _ _ _ cons _ _ = cons h' q' := by
+    rfl
+
+lemma cons_tail (p : G.Walk u v) (h : G.Adj t u) : (Walk.cons h p).tail (Walk.not_nil_cons) = p := by
+  unfold Walk.tail
+  simp only [notNilRec_cons]
+
+lemma tail_support_eq_support_tail (p : G.Walk u v) (hnp : ¬p.Nil) : (p.tail hnp).support = p.support.tail :=
+  p.notNilRec (by
+    intro u v w huv q
+    unfold Walk.tail
+    simp only [notNilRec_cons, Walk.support_cons, List.tail_cons]) hnp
+
+lemma sndOfNotNil_mem_support (p : G.Walk u v) (hnp : ¬ p.Nil) : p.sndOfNotNil hnp ∈ p.support := by
+  rw [SimpleGraph.Walk.mem_support_iff]
+  right
+  rw [← tail_support_eq_support_tail _ hnp]
+  exact Walk.start_mem_support (p.tail hnp)
+
+lemma mem_reverse_support (p : G.Walk u v) (w : V) : w ∈ p.support ↔ w ∈ p.reverse.support := by
+  rw [SimpleGraph.Walk.mem_support_iff_exists_append]
+  rw [SimpleGraph.Walk.mem_support_iff_exists_append]
+  constructor
+  · rintro ⟨q, r, hqr⟩
+    use r.reverse
+    use q.reverse
+    exact hqr ▸ Walk.reverse_append q r
+  · rintro ⟨q, r, hqr⟩
+    use r.reverse
+    use q.reverse
+    rw [← Walk.reverse_reverse p]
+    exact hqr ▸ Walk.reverse_append q r
+
+lemma lastButOneOfNotNil_mem_support (p : G.Walk u v) (hnp : ¬ p.Nil) : p.lastButOneOfNotNil hnp ∈ p.support := by
+  unfold Walk.lastButOneOfNotNil
+  rw [mem_reverse_support]
+  exact sndOfNotNil_mem_support p.reverse (Walk.lastButOneOfNotNil.proof_1 p hnp)
+
+lemma cycle_neq_not_nil (p : G.Walk u u) (hpc : p.IsCycle) : ¬p.Nil := by
+  intro hp
+  apply hpc.1.2
+  rw [← @Walk.length_eq_zero_iff]
+  exact Walk.nil_iff_length_eq.mp hp
+
+lemma support_exists_getVert (p : G.Walk v w) (h : u ∈ p.support) : ∃ n, p.getVert n = u := by
+  obtain ⟨q, r, hqr⟩ := SimpleGraph.Walk.mem_support_iff_exists_append.mp h
+  use q.length
+  rw [hqr]
+  rw [@Walk.getVert_append]
+  simp only [lt_self_iff_false, ↓reduceIte, ge_iff_le, le_refl, tsub_eq_zero_of_le,
+    Walk.getVert_zero]
+
+@[simp]
+lemma cons_getVert_succ (p : G.Walk v w) (h : G.Adj u v) : (Walk.cons h p).getVert n.succ = p.getVert n := by
+  rfl
+
+lemma support_tail_length (p : G.Walk v w) : p.support.tail.length = p.length := by
+  match p with
+  | .nil => simp only [Walk.support_nil, List.tail_cons, List.length_nil, Walk.length_nil]
+  | .cons _ _ => simp only [Walk.support_cons, List.tail_cons, Walk.length_support, Walk.length_cons]
+
+lemma getVert_nonZero (p : G.Walk v w) (h : G.Adj u v) (hn : 0 < n) : (Walk.cons h p).getVert n = p.getVert (n - 1) := by
+  have : ∃ (i : ℕ), i.succ = n := by
+    use (n - 1)
+    exact Nat.sub_one_add_one_eq_of_pos hn
+  obtain ⟨i, hi⟩ := this
+  rw [← hi]
+  simp only [Nat.succ_eq_add_one, cons_getVert_succ, add_tsub_cancel_right]
+
+lemma get?_nonZero (a : α) (l : List α) (h : n ≠ 0) : (a :: l).get? n = l.get? (n - 1) := by
+    have : ∃ (i : ℕ), i.succ = n := by
+      use (n - 1)
+      exact Nat.sub_one_add_one_eq_of_pos (Nat.zero_lt_of_ne_zero h)
+    obtain ⟨i, hi⟩ := this
+    rw [← hi]
+    simp only [Nat.succ_eq_add_one, List.get?_cons_succ, add_tsub_cancel_right]
+
+lemma tail_get? (l : List α) : l.tail.get? n = l.get? (n + 1) := by
+  match l with
+  | [] =>
+    simp only [List.tail_nil, List.get?_nil]
+  | _ :: _ =>
+    simp only [List.tail_cons, List.get?_cons_succ]
+
+
+
+lemma getVert_support_get (p : G.Walk u v) (h2 : n ≤ p.length) : p.getVert n = p.support.get? n := by
+  match p with
+  | .nil =>
+    simp only [Walk.length_nil, nonpos_iff_eq_zero] at h2
+    simp only [h2, Walk.getVert_zero, Walk.support_nil, List.get?_cons_zero]
+  | .cons h q =>
+    simp only [Walk.support_cons]
+    by_cases hn : n = 0
+    · simp only [hn, Walk.getVert_zero, List.get?_cons_zero]
+    · push_neg at hn
+      rw [getVert_nonZero _ _  (Nat.zero_lt_of_ne_zero hn)]
+      rw [get?_nonZero _ _ hn]
+      exact getVert_support_get q (by
+        rw [@Walk.length_cons] at h2
+        exact Nat.sub_le_of_le_add h2
+        )
+
+lemma cycle_getVert_sub_neq_getVert_add (p : G.Walk u u) (hpc : p.IsCycle) (h1 : 0 < n) (h2 : n < p.length) : ¬p.getVert (n - 1) = p.getVert (n + 1) := by
+  have hnodup := hpc.2
+  rw [@List.nodup_iff_get?_ne_get?] at hnodup
+  by_cases h : n = 1
+  · have : p.getVert (n - 1) = u := by
+      simp [h]
+    rw [this]
+    intro h'
+    have hgl : p.getVert p.length = u := Walk.getVert_length p
+    have hpl := SimpleGraph.Walk.IsCycle.three_le_length hpc
+    have := hnodup n (p.length - 1) (by
+      rw [h]
+      omega)
+      (by
+        simp [hpl]
+        omega
+        )
+    apply this
+    rw [h]
+    rw [tail_get?]
+    rw [tail_get?]
+    rw [← getVert_support_get _ (by omega)]
+    rw [← getVert_support_get _ (by omega)]
+    simp only [Nat.reduceAdd, Option.some.injEq]
+    rw [h] at h'
+    simp only [Nat.reduceAdd] at h'
+    rw [← h']
+    have : p.length - 1 + 1 = p.length := by omega
+    rw [this]
+    exact hgl.symm
+  ·
+    have := hnodup (n - 2) n (Nat.sub_lt h1 (by simp : 0 < 2)) (support_tail_length p ▸ h2)
+    push_neg
+    rw [tail_get?] at this
+    rw [tail_get?] at this
+    have h' : n - 2 + 1 = n - 1 := by omega
+    rw [h'] at this
+    rw [← getVert_support_get _ (by
+      calc
+        n - 1 ≤ n := Nat.sub_le n 1
+        _ ≤  p.length := Nat.le_of_succ_le h2
+      )] at this
+    rw [← getVert_support_get _ h2] at this
+
+    exact fun a => this (congrArg some a)
+
+theorem toSubgraph_getVert_succ {u v} (w : G.Walk u v) {i : ℕ} (hi : i < w.length) :
+    (w.toSubgraph).Adj (w.getVert i) (w.getVert (i + 1)) := by
+  induction w generalizing i with
+  | nil => cases hi
+  | cons hxy i' ih =>
+    cases i
+    · simp only [Walk.toSubgraph, Walk.getVert_zero, zero_add, cons_getVert_succ, Subgraph.sup_adj,
+      subgraphOfAdj_adj, true_or]
+    · simp only [Walk.toSubgraph, cons_getVert_succ, Subgraph.sup_adj, subgraphOfAdj_adj, Sym2.eq,
+      Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk]
+      right
+      exact ih (Nat.succ_lt_succ_iff.mp hi)
+
+theorem toSubgraph_adj_exists {u v} (w : G.Walk u v)
+    (hadj : (w.toSubgraph).Adj u' v') : ∃ i, u' = w.getVert i ∧ v' = w.getVert (i + 1) ∨ v' = w.getVert i ∧ u' = w.getVert (i + 1) := by
+  unfold Walk.toSubgraph at hadj
+  match w with
+  | .nil =>
+    simp at hadj
+    exact hadj.elim
+  | .cons h p =>
+    simp at hadj
+    cases hadj with
+    | inl hl =>
+      cases hl with
+      | inl h1 =>
+        use 0
+        simp only [Walk.getVert_zero, zero_add, cons_getVert_succ]
+        left
+        exact ⟨h1.1.symm, h1.2.symm⟩
+      | inr h2 =>
+        use 0
+        simp only [Walk.getVert_zero, zero_add, cons_getVert_succ]
+        right
+        exact ⟨h2.1.symm, h2.2.symm⟩
+    | inr hr =>
+      obtain ⟨i, hi⟩ := toSubgraph_adj_exists _ hr
+      use (i + 1)
+      simp only [cons_getVert_succ]
+      exact hi
+
+lemma cycle_two_neighbors (p : G.Walk u u) (hpc : p.IsCycle) (h : v ∈ p.support): (p.toSubgraph.neighborSet v).ncard = 2 := by
+  unfold Subgraph.neighborSet
+  obtain ⟨n, hn⟩ := support_exists_getVert p h
+  rw [@Set.ncard_eq_two]
+  by_cases hbounds : 0 < n ∧ n < p.length
+  · use p.getVert (n - 1)
+    use p.getVert (n + 1)
+    simp only [ne_eq]
+    constructor
+    · exact cycle_getVert_sub_neq_getVert_add p hpc hbounds.1 hbounds.2
+    · ext w'
+      constructor
+      · intro hw'
+        simp only [Set.mem_insert_iff, Set.mem_singleton_iff]
+        by_contra! hc
+        rw [@Set.mem_setOf] at hw'
+        obtain ⟨i, hi⟩ := toSubgraph_adj_exists _ hw'
+        cases hi with
+        | inl hl =>
+          have hnodup := hpc.2
+          rw [@List.nodup_iff_get?_ne_get?] at hnodup
+          have : n ≠ i := by
+            intro h
+            apply hc.2
+            exact h ▸ hl.2
+          cases Nat.lt_or_gt_of_ne this with
+          | inl h1 =>
+            have := hnodup _ _ h1
+            sorry
+          | inr h2 => sorry
+        | inr hr => sorry
+      · intro hw'
+        simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hw'
+        cases hw' with
+        | inl hl =>
+          simp only [Set.mem_setOf_eq]
+          rw [hl, ← hn]
+          have := SimpleGraph.Walk.adj_getVert_succ p (by omega : n - 1 < p.length)
+          have h' : n - 1 + 1 = n := by omega
+          rw [h'] at this
+          have := toSubgraph_getVert_succ p (by omega : n - 1 < p.length)
+          rw [h'] at this
+          exact this.symm
+        | inr hr =>
+          simp only [Set.mem_setOf_eq]
+          rw [hr, ← hn]
+          exact toSubgraph_getVert_succ _ hbounds.2
+  · sorry
+
+-- lemma cycle_two_neighbors (p : G.Walk u u) (hpc : p.IsCycle) (h : v ∈ p.support): (p.toSubgraph.neighborSet v).ncard = 2 := by
+--   unfold Subgraph.neighborSet
+--   by_cases hu : v = u
+--   · sorry
+--   ·
+--   --   have hv' : v ∈ p.support.tail := by
+--   --     cases (Walk.mem_support_iff _).mp h with
+--   --     | inl h1 => exact (hu h1).elim
+--   --     | inr h2 => exact h2
+--     -- rw [← tail_support_eq_support_tail p (cycle_neq_not_nil p hpc)]
+
+--     obtain ⟨q, r, hqr⟩ := SimpleGraph.Walk.mem_support_iff_exists_append.mp h
+--     rw [hqr]
+--     rw [SimpleGraph.Walk.toSubgraph_append]
+--     rw [@Set.ncard_eq_two]
+--     let firstNode := r.sndOfNotNil (Walk.not_nil_of_ne hu)
+--     let secondNode := q.lastButOneOfNotNil (by
+--       exact Walk.not_nil_of_ne fun a => hu a.symm
+--       )
+--     use firstNode
+--     use secondNode
+--     constructor
+--     · intro hrq
+--       have hf : firstNode ∈ p.support := by
+--         rw [hqr, SimpleGraph.Walk.mem_support_append_iff]
+--         right
+--         exact sndOfNotNil_mem_support r (Walk.not_nil_of_ne hu)
+--       have := hpc.1.1
+--       by_cases h2 : secondNode = u
+--       ·
+--         sorry
+--       · sorry
+--     · sorry
+
+
+lemma lem1 (p : G.Walk u u) (M : Subgraph G) (h : p.IsAlternating M) (hpeven : Even p.length)
+    (hpc : p.IsCycle) (hM : ¬ M.Adj v w) (hp : p.toSubgraph.Adj v w)
+    : ∃ w', M.Adj v w' ∧ p.toSubgraph.Adj v w' ∧ w ≠ w' := by
+
+    sorry
+
+def Subgraph.symDiff (M : Subgraph G) (C : Subgraph G) : Subgraph G := {
+  verts := M.verts ∪ C.verts,
+  Adj := fun v w ↦ (¬ M.Adj v w ∧ C.Adj v w) ∨ (M.Adj v w ∧ ¬ C.Adj v w),
+  adj_sub := by
+    intro v w hvw
+    cases hvw
+    next h1 => simp only [h1.2, C.adj_sub]
+    next h2 => simp only [h2.1, M.adj_sub]
+  edge_vert := by
+    intro v w hvw
+    cases hvw
+    next h1 =>
+      right
+      apply SimpleGraph.Subgraph.support_subset_verts
+      exact C.mem_support.mpr ⟨w, h1.2⟩
+    next h2 =>
+      left
+      apply SimpleGraph.Subgraph.support_subset_verts
+      exact M.mem_support.mpr ⟨w, h2.1⟩
+  symm := by
+    intro v w hvw
+    cases hvw
+    next h1 =>
+      left
+      exact ⟨fun h ↦ h1.1 h.symm, h1.2.symm⟩
+    next h2 =>
+      right
+      exact ⟨h2.1.symm, fun h ↦ h2.2 h.symm⟩
+  }
+
+lemma Subgraph.symDiffSingletonAdj {M : Subgraph G} : (M.symDiff (G.singletonSubgraph u)).Adj v w = M.Adj v w := by
+  unfold symDiff
+  simp [singletonSubgraph_adj, Pi.bot_apply, eq_iff_iff, Prop.bot_eq_false]
+
+lemma alternatingCycleSymDiffMatch {M : Subgraph G} {p : G.Walk u u} (hM : M.IsPerfectMatching) (hpeven : Even p.length)
+    (hpc : p.IsCycle) (hpalt : p.IsAlternating M) : (M.symDiff p.toSubgraph).IsMatching := by
+    intro v _
+    --unused?
+    have hv : v ∈ M.verts := hM.2 v
+    obtain ⟨w, hw⟩ := hM.1 (hM.2 v)
+    by_cases hc : p.toSubgraph.Adj v w
+    ·
+      sorry
+    · use w
+      unfold Subgraph.symDiff at *
+      dsimp at *
+      constructor
+      · right
+        exact ⟨hw.1, hc⟩
+      · intro y hy
+
+        cases hy
+        next h1 => {
+
+          -- obtain ⟨v', hv'⟩ := hM.1 (hM.2 w)
+          -- dsimp at *
+          -- have := hv'.2 v hw.1.symm
+
+
+
+
+          sorry
+        }
+        next h2 => {
+          apply hw.2
+          exact h2.1
+        }
+
+
+
+
+
+-- lemma alternatingCycleSymDiffMatch {M : Subgraph G} {p : G.Walk u u} (hM : M.IsPerfectMatching) (hpeven : Even p.length)
+--     (hpc : p.IsCycle) (hpalt : p.IsAlternating M) : (M.symDiff p.toSubgraph).IsMatching := by
+--   have hMuniv : M.verts = Set.univ := by
+--     rw [← @Subgraph.isSpanning_iff]
+--     exact hM.2
+
+--   cases hpalt
+--   next =>
+--     simp only [Walk.toSubgraph]
+--     intro v hv
+--     obtain ⟨w, hw⟩ := hM.1 (by
+--       rw [hMuniv]
+--       trivial
+--       : v ∈ M.verts)
+--     use w
+--     dsimp at hw
+--     simpa [Subgraph.symDiffSingletonAdj]
+
+--   next hadj =>
+--     simp only [Walk.length_cons, Walk.length_nil, zero_add, Nat.not_even_one] at hpeven
+--   next hnq hnt halt htail =>
+--     intro v w
+--     obtain ⟨w, hw⟩ := hM.1 (by
+--       rw [hMuniv]
+--       trivial
+--       : v ∈ M.verts)
+--     use w
+--     dsimp at hw
+--     have := alternatingPathSymDiffMatch hM.1 _ (_ :((p.tail hnq).tail hnt).IsPath)
+
+--     sorry
+
+
+lemma matching_union_left (M : (G ⊔ G').Subgraph) (hM : M.IsPerfectMatching) (hd : M.coeBig ⊓ G' = ⊥)
+  : ∃ (M' : Subgraph G), M'.IsPerfectMatching := by
+  let M' : Subgraph G := {
+    verts := Set.univ,
+    Adj := fun v w => M.Adj v w,
+    adj_sub := by
+      intro v w hvw
+      have := M.adj_sub hvw
+      rw [@sup_adj] at this
+      cases this
+      next h1 =>
+        exact h1
+      next h2 =>
+        have : (M.coeBig ⊓ G').Adj v w := by
+          rw [inf_adj]
+          exact ⟨hvw, h2⟩
+        rw [hd] at this
+        exact this.elim
+    edge_vert := fun {v w} a => trivial
+    symm := fun ⦃x y⦄ a => Subgraph.adj_symm M a
+  }
+  use M'
+  rw [@Subgraph.isPerfectMatching_iff]
+  intro v
+  obtain ⟨w, hw⟩ := M.isPerfectMatching_iff.mp hM v
+  use w
+
+
 
 theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
-    (∃ (M : Subgraph G) , M.IsPerfect Matching) ↔
+    (∃ (M : Subgraph G) , M.IsPerfectMatching) ↔
       (∀ (u : Set V),
         cardOddComponents ((⊤ : G.Subgraph).deleteVerts u).coe ≤ u.ncard) := by
   constructor
@@ -2106,16 +2555,41 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
 
       have hM1' : M1.Adj x b := by
         by_contra! hc
-        let Mcon : Subgraph Gmax.G' := {
-          verts := Set.univ,
-          Adj := fun v w ↦ M1.Adj v w,
-          adj_sub := by
-            intro v w hvw
+        obtain ⟨Mcon, hMcon⟩ := matching_union_left M1 hM1 (by
+          ext v hv
+          simp only [ne_eq, inf_adj, bot_adj, iff_false, not_and]
+          intro h hc'
+          unfold singleEdge at hc'
+          unfold Subgraph.coeBig at h
+          apply hc
+          simp only at h hc' ⊢
+          cases hc'
+          next h1 =>
+            exact h1.1.symm ▸ h1.2.symm ▸ h
+          next h2 =>
+            exact h2.1.symm ▸ h2.2.symm ▸ h.symm
+          )
+        exact Gmax.hMatchFree Mcon hMcon
 
-            sorry,
-          edge_vert := by sorry,
-        }
+      -- TODO: Dedup with above
+      have hM2' : M2.Adj a c := by
+        by_contra! hc
+        obtain ⟨Mcon, hMcon⟩ := matching_union_left M2 hM2 (by
+          ext v hv
+          simp only [ne_eq, inf_adj, bot_adj, iff_false, not_and]
+          intro h hc'
+          unfold singleEdge at hc'
+          unfold Subgraph.coeBig at h
+          apply hc
+          simp only at h hc' ⊢
+          cases hc'
+          next h1 =>
+            exact h1.1.symm ▸ h1.2.symm ▸ h
+          next h2 =>
+            exact h2.1.symm ▸ h2.2.symm ▸ h.symm
+          )
+        exact Gmax.hMatchFree Mcon hMcon
 
-        sorry
+
       sorry
   }
