@@ -1675,7 +1675,7 @@ theorem toSubgraph_getVert_succ {u v} (w : G.Walk u v) {i : ℕ} (hi : i < w.len
       exact ih (Nat.succ_lt_succ_iff.mp hi)
 
 theorem toSubgraph_adj_exists {u v} (w : G.Walk u v)
-    (hadj : (w.toSubgraph).Adj u' v') : ∃ i, u' = w.getVert i ∧ v' = w.getVert (i + 1) ∨ v' = w.getVert i ∧ u' = w.getVert (i + 1) := by
+    (hadj : (w.toSubgraph).Adj u' v') : ∃ i, (u' = w.getVert i ∧ v' = w.getVert (i + 1) ∨ v' = w.getVert i ∧ u' = w.getVert (i + 1)) ∧ i < w.length := by
   unfold Walk.toSubgraph at hadj
   match w with
   | .nil =>
@@ -1689,18 +1689,24 @@ theorem toSubgraph_adj_exists {u v} (w : G.Walk u v)
       | inl h1 =>
         use 0
         simp only [Walk.getVert_zero, zero_add, cons_getVert_succ]
-        left
-        exact ⟨h1.1.symm, h1.2.symm⟩
+        constructor
+        · left
+          exact ⟨h1.1.symm, h1.2.symm⟩
+        · simp only [Walk.length_cons, lt_add_iff_pos_left, add_pos_iff, zero_lt_one, or_true]
       | inr h2 =>
         use 0
         simp only [Walk.getVert_zero, zero_add, cons_getVert_succ]
-        right
-        exact ⟨h2.1.symm, h2.2.symm⟩
+        constructor
+        · right
+          exact ⟨h2.1.symm, h2.2.symm⟩
+        · simp only [Walk.length_cons, lt_add_iff_pos_left, add_pos_iff, zero_lt_one, or_true]
     | inr hr =>
       obtain ⟨i, hi⟩ := toSubgraph_adj_exists _ hr
       use (i + 1)
       simp only [cons_getVert_succ]
-      exact hi
+      constructor
+      · exact hi.1
+      · simp only [Walk.length_cons, add_lt_add_iff_right, hi.2]
 
 lemma cycle_two_neighbors (p : G.Walk u u) (hpc : p.IsCycle) (h : v ∈ p.support): (p.toSubgraph.neighborSet v).ncard = 2 := by
   unfold Subgraph.neighborSet
@@ -1719,7 +1725,7 @@ lemma cycle_two_neighbors (p : G.Walk u u) (hpc : p.IsCycle) (h : v ∈ p.suppor
         by_contra! hc
         rw [@Set.mem_setOf] at hw'
         obtain ⟨i, hi⟩ := toSubgraph_adj_exists _ hw'
-        cases hi with
+        cases hi.1 with
         | inl hl =>
           have hnodup := hpc.2
           rw [@List.nodup_iff_get?_ne_get?] at hnodup
@@ -1727,13 +1733,111 @@ lemma cycle_two_neighbors (p : G.Walk u u) (hpc : p.IsCycle) (h : v ∈ p.suppor
             intro h
             apply hc.2
             exact h ▸ hl.2
+
           cases Nat.lt_or_gt_of_ne this with
           | inl h1 =>
-            have := hnodup _ _ h1
-            sorry
-          | inr h2 => sorry
-        | inr hr => sorry
-      · intro hw'
+            have := hnodup (n - 1) (i - 1) (by omega) (by
+              rw [@support_tail_length]
+              calc
+                i - 1 < i := by omega
+                _ < p.length := hi.2
+              )
+            apply this
+            rw [@tail_get?]
+            rw [tail_get?]
+            have : (n - 1 + 1) = n := by omega
+
+            rw [this]
+            have : (i - 1 + 1) = i := by omega
+            rw [this]
+            rw [← getVert_support_get _ (by omega)]
+            rw [← getVert_support_get _ (by omega)]
+            rw [← hl.1]
+            rw [hn]
+          | inr h2 =>
+            have : i > 0 := by
+              by_contra! hc
+              simp only [nonpos_iff_eq_zero] at hc
+              rw [hc] at hl
+              rw [hl.1] at hn
+              rw [@Walk.getVert_zero] at hn
+              have := hnodup (n - 1) (p.support.tail.length - 1) (by
+                rw [@support_tail_length]
+                omega
+                ) (by
+                rw [support_tail_length]
+                omega
+                )
+              simp only [tail_get?, List.length_tail, Walk.length_support, add_tsub_cancel_right,
+                ne_eq] at this
+              apply this
+              have : (n - 1 + 1) = n := by omega
+              rw [this]
+              have : (p.length - 1 + 1) = p.length := by omega
+              rw [this]
+              rw [← getVert_support_get _ (by omega)]
+              rw [← getVert_support_get _ (by rfl)]
+              rw [hn]
+              rw [@Walk.getVert_length]
+
+            have := hnodup (i - 1) (n - 1) (by omega) (by
+              rw [support_tail_length]
+              omega
+              )
+            apply this
+            rw [tail_get?]
+            rw [tail_get?]
+            have : (n - 1 + 1) = n := by omega
+            rw [this]
+            have : (i - 1 + 1) = i := by omega
+            rw [this]
+            rw [← getVert_support_get _ (by omega)]
+            rw [← getVert_support_get _ (by omega)]
+            rw [hn]
+            rw [← hl.1]
+        | inr hr =>
+          -- duplicated from other case
+          have hnodup := hpc.2
+          rw [@List.nodup_iff_get?_ne_get?] at hnodup
+          have : n ≠ (i + 1) := by
+            intro h
+            apply hc.1
+            rw [h]
+            simp only [add_tsub_cancel_right]
+            exact hr.1
+
+          cases Nat.lt_or_gt_of_ne this with
+          | inl h1 =>
+            have := hnodup (n - 1) i (by omega) (by
+              rw [@support_tail_length]
+              exact hi.2
+              )
+            apply this
+            rw [@tail_get?]
+            rw [tail_get?]
+            have : (n - 1 + 1) = n := by omega
+            rw [this]
+            rw [← getVert_support_get _ (by omega)]
+            rw [← getVert_support_get _ (by omega)]
+            rw [hn]
+            rw [hr.2]
+          | inr h2 =>
+            have := hnodup i (n - 1) (by omega) (by
+              rw [@support_tail_length]
+              omega
+              )
+            apply this
+            rw [tail_get?]
+            rw [tail_get?]
+            rw [← getVert_support_get _ (by omega)]
+            rw [← getVert_support_get _ (by omega)]
+            have : (n - 1 + 1) = n := by omega
+            rw [this]
+            rw [← hr.2]
+            rw [hn]
+
+      ·
+        intro hw'
         simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hw'
         cases hw' with
         | inl hl =>
@@ -1749,41 +1853,102 @@ lemma cycle_two_neighbors (p : G.Walk u u) (hpc : p.IsCycle) (h : v ∈ p.suppor
           simp only [Set.mem_setOf_eq]
           rw [hr, ← hn]
           exact toSubgraph_getVert_succ _ hbounds.2
-  · sorry
 
--- lemma cycle_two_neighbors (p : G.Walk u u) (hpc : p.IsCycle) (h : v ∈ p.support): (p.toSubgraph.neighborSet v).ncard = 2 := by
---   unfold Subgraph.neighborSet
---   by_cases hu : v = u
---   · sorry
---   ·
---   --   have hv' : v ∈ p.support.tail := by
---   --     cases (Walk.mem_support_iff _).mp h with
---   --     | inl h1 => exact (hu h1).elim
---   --     | inr h2 => exact h2
---     -- rw [← tail_support_eq_support_tail p (cycle_neq_not_nil p hpc)]
+  · use p.getVert 1
+    use p.getVert (p.length - 1)
+    have hnodup := hpc.2
+    rw [@List.nodup_iff_get?_ne_get?] at hnodup
+    constructor
+    · intro h
+      have := SimpleGraph.Walk.IsCycle.three_le_length hpc
+      have := hnodup 0 (p.length - 2) (by
+        omega
+        ) (by
+          rw [@support_tail_length]
+          omega
+          )
+      apply this
+      rw [tail_get?]
+      rw [tail_get?]
+      have : p.length - 2 + 1 = p.length - 1 := by omega
+      rw [this]
+      simp only [Nat.reduceAdd]
+      rw [← getVert_support_get _ (by omega)]
+      rw [← getVert_support_get _ (by omega)]
+      simp only [Walk.getVert_length, Option.some.injEq]
+      exact h
+    · ext w'
+      have hp3 := SimpleGraph.Walk.IsCycle.three_le_length hpc
+      rw [@Set.mem_setOf]
+      push_neg at hbounds
+      have huv : u = v := by
+        rw [← hn]
+        by_cases hz : 0 = n
+        · rw [← hz]
+          simp only [Walk.getVert_zero]
+        · rw [Walk.getVert_of_length_le p (hbounds (by omega))]
+      rw [← huv]
+      constructor
+      · intro h
+        simp only [Set.mem_insert_iff, Set.mem_singleton_iff]
+        by_contra! hc
+        obtain ⟨i, hi⟩ := toSubgraph_adj_exists _ h
+        cases hi.1 with
+        | inl hl =>
+          have : i ≠ 0 := by
+            intro hi'
+            rw [hi'] at hl
+            simp only [Walk.getVert_zero, zero_add, true_and] at hl
+            exact hc.1 hl
+          have := hnodup (i - 1) (p.length - 1) (by omega) (by
+            rw [@support_tail_length]
+            omega
+            )
+          apply this
+          rw [tail_get?]
+          rw [tail_get?]
+          rw [← getVert_support_get _ (by omega)]
+          rw [← getVert_support_get _ (by omega)]
+          have : i - 1 + 1 = i := by omega
+          rw [this]
+          have : p.length - 1 + 1 = p.length := by omega
+          rw [this]
+          rw [← hl.1]
+          rw [@Walk.getVert_length]
+        | inr hr =>
+          have : i ≠ p.length - 1 := by
+            intro h
+            rw [h] at hr
+            exact hc.2 hr.1
+          have := hnodup i (p.length - 1) (by omega) (by
+            rw [@support_tail_length]
+            omega
+            )
+          apply this
+          rw [tail_get?]
+          rw [tail_get?]
+          rw [← getVert_support_get _ (by omega)]
+          rw [← getVert_support_get _ (by omega)]
+          have : p.length - 1 + 1 = p.length := by omega
+          rw [this]
+          rw [← hr.2]
+          rw [Walk.getVert_length]
+      · intro h
+        simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at h
+        cases h with
+        | inl hl =>
+          rw [hl]
+          have := toSubgraph_getVert_succ p (by omega : 0 < p.length)
+          simpa using this
+        | inr hr =>
+          rw [hr]
+          have hadj := toSubgraph_getVert_succ p (by omega : p.length - 1 < p.length)
+          have : (p.length - 1 + 1) = p.length := by omega
+          rw [this] at hadj
+          simp at hadj
+          exact hadj.symm
 
---     obtain ⟨q, r, hqr⟩ := SimpleGraph.Walk.mem_support_iff_exists_append.mp h
---     rw [hqr]
---     rw [SimpleGraph.Walk.toSubgraph_append]
---     rw [@Set.ncard_eq_two]
---     let firstNode := r.sndOfNotNil (Walk.not_nil_of_ne hu)
---     let secondNode := q.lastButOneOfNotNil (by
---       exact Walk.not_nil_of_ne fun a => hu a.symm
---       )
---     use firstNode
---     use secondNode
---     constructor
---     · intro hrq
---       have hf : firstNode ∈ p.support := by
---         rw [hqr, SimpleGraph.Walk.mem_support_append_iff]
---         right
---         exact sndOfNotNil_mem_support r (Walk.not_nil_of_ne hu)
---       have := hpc.1.1
---       by_cases h2 : secondNode = u
---       ·
---         sorry
---       · sorry
---     · sorry
+
 
 
 lemma lem1 (p : G.Walk u u) (M : Subgraph G) (h : p.IsAlternating M) (hpeven : Even p.length)
@@ -2593,3 +2758,38 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
 
       sorry
   }
+
+
+-- lemma cycle_two_neighbors (p : G.Walk u u) (hpc : p.IsCycle) (h : v ∈ p.support): (p.toSubgraph.neighborSet v).ncard = 2 := by
+--   unfold Subgraph.neighborSet
+--   by_cases hu : v = u
+--   · sorry
+--   ·
+--   --   have hv' : v ∈ p.support.tail := by
+--   --     cases (Walk.mem_support_iff _).mp h with
+--   --     | inl h1 => exact (hu h1).elim
+--   --     | inr h2 => exact h2
+--     -- rw [← tail_support_eq_support_tail p (cycle_neq_not_nil p hpc)]
+
+--     obtain ⟨q, r, hqr⟩ := SimpleGraph.Walk.mem_support_iff_exists_append.mp h
+--     rw [hqr]
+--     rw [SimpleGraph.Walk.toSubgraph_append]
+--     rw [@Set.ncard_eq_two]
+--     let firstNode := r.sndOfNotNil (Walk.not_nil_of_ne hu)
+--     let secondNode := q.lastButOneOfNotNil (by
+--       exact Walk.not_nil_of_ne fun a => hu a.symm
+--       )
+--     use firstNode
+--     use secondNode
+--     constructor
+--     · intro hrq
+--       have hf : firstNode ∈ p.support := by
+--         rw [hqr, SimpleGraph.Walk.mem_support_append_iff]
+--         right
+--         exact sndOfNotNil_mem_support r (Walk.not_nil_of_ne hu)
+--       have := hpc.1.1
+--       by_cases h2 : secondNode = u
+--       ·
+--         sorry
+--       · sorry
+--     · sorry
