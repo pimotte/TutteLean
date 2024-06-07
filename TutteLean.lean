@@ -1948,14 +1948,85 @@ lemma cycle_two_neighbors (p : G.Walk u u) (hpc : p.IsCycle) (h : v ∈ p.suppor
           simp at hadj
           exact hadj.symm
 
+lemma Walk.toSubgraph_Adj_mem_support (p : G.Walk u v) (hp : p.toSubgraph.Adj u' v') : u' ∈ p.support := by
+  unfold Walk.toSubgraph at hp
+  match p with
+  | nil =>
+    simp only [singletonSubgraph_adj, Pi.bot_apply] at hp
+    exact hp.elim
+  | .cons h q =>
+    simp only [Subgraph.sup_adj, subgraphOfAdj_adj, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq,
+      Prod.swap_prod_mk] at hp
+    rw [@support_cons]
+    rw [@List.mem_cons_eq]
+    cases hp with
+    | inl hl =>
+      cases hl with
+      | inl h1 => left; exact h1.1.symm
+      | inr h2 =>
+        right
+        rw [← h2.2]
+        exact start_mem_support q
+    | inr hr =>
+      right
+      exact q.toSubgraph_Adj_mem_support hr
+
+lemma Walk.toSubgraph_Adj_mem_support' (p : G.Walk u v) (hp : p.toSubgraph.Adj u' v') : v' ∈ p.support := p.toSubgraph_Adj_mem_support hp.symm
 
 
-
-lemma lem1 (p : G.Walk u u) (M : Subgraph G) (h : p.IsAlternating M) (hpeven : Even p.length)
+lemma alternating_edge (p : G.Walk u u) (M : Subgraph G) (h : p.IsAlternating M)
     (hpc : p.IsCycle) (hM : ¬ M.Adj v w) (hp : p.toSubgraph.Adj v w)
     : ∃ w', M.Adj v w' ∧ p.toSubgraph.Adj v w' ∧ w ≠ w' := by
+    have hv : v ∈ p.support := Walk.toSubgraph_Adj_mem_support p hp
+    have hn := cycle_two_neighbors p hpc hv
+    rw [@Set.ncard_eq_two] at hn
+    obtain ⟨x, y, hxy⟩ := hn
+    by_cases hxw : x = w
+    · use y
+      have hpvy : p.toSubgraph.Adj v y := by
+        have : y ∈ ({x, y} : Set V) := by
+          exact Set.mem_insert_of_mem x rfl
+        rw [← hxy.2] at this
+        exact this
+      have := h.halt _ _ _ (hxw ▸ hxy.1) hp hpvy
+      rw [@iff_not_comm] at this
+      have hMAdj : M.Adj v y := this.mpr hM
+      exact ⟨hMAdj, hpvy, hxw ▸ hxy.1⟩
+    · use x
+      have hpvx : p.toSubgraph.Adj v x := by
+        have : x ∈ ({x, y} : Set V) := by
+          exact Set.mem_insert x {y}
+        rw [← hxy.2] at this
+      push_neg at hxw
+      have := h.halt _ _ _ hxw hpvx hp
+      exact ⟨this.mpr hM, hpvx, hxw.symm⟩
 
-    sorry
+lemma alternating_edge' (p : G.Walk u u) (M : Subgraph G) (h : p.IsAlternating M)
+    (hpc : p.IsCycle) (hM : M.Adj v w) (hp : p.toSubgraph.Adj v w)
+    : ∃ w', ¬ M.Adj v w' ∧ p.toSubgraph.Adj v w' ∧ w ≠ w' := by
+    have hv : v ∈ p.support := Walk.toSubgraph_Adj_mem_support p hp
+    have hn := cycle_two_neighbors p hpc hv
+    rw [@Set.ncard_eq_two] at hn
+    obtain ⟨x, y, hxy⟩ := hn
+    by_cases hxw : x = w
+    · use y
+      have hpvy : p.toSubgraph.Adj v y := by
+        have : y ∈ ({x, y} : Set V) := by
+          exact Set.mem_insert_of_mem x rfl
+        rw [← hxy.2] at this
+        exact this
+      have := (h.halt _ _ _ (hxw ▸ hxy.1) hp hpvy).mp hM
+      exact ⟨this, hpvy, hxw ▸ hxy.1⟩
+    · use x
+      have hpvx : p.toSubgraph.Adj v x := by
+        have : x ∈ ({x, y} : Set V) := by
+          exact Set.mem_insert x {y}
+        rw [← hxy.2] at this
+        exact this
+      push_neg at hxw
+      have := h.halt _ _ _ hxw hpvx hp
+      rw [@iff_not_comm] at this
+      exact ⟨this.mp hM, hpvx, hxw.symm⟩
 
 def Subgraph.symDiff (M : Subgraph G) (C : Subgraph G) : Subgraph G := {
   verts := M.verts ∪ C.verts,
@@ -1998,8 +2069,26 @@ lemma alternatingCycleSymDiffMatch {M : Subgraph G} {p : G.Walk u u} (hM : M.IsP
     have hv : v ∈ M.verts := hM.2 v
     obtain ⟨w, hw⟩ := hM.1 (hM.2 v)
     by_cases hc : p.toSubgraph.Adj v w
-    ·
-      sorry
+    · unfold Subgraph.symDiff
+      dsimp at *
+      obtain ⟨w', hw'⟩ := alternating_edge' p M hpalt hpc hw.1 hc
+      use w'
+      constructor
+      · left
+        exact ⟨hw'.1, hw'.2.1⟩
+      · dsimp at *
+        intro y hy
+        cases hy
+        next hl => {
+          obtain ⟨w'', hw''⟩ := alternating_edge p M hpalt hpc hw'.1 hw'.2.1
+          push_neg at hw'
+          
+
+          sorry
+        }
+        next hr => {
+          sorry
+        }
     · use w
       unfold Subgraph.symDiff at *
       dsimp at *
@@ -2010,15 +2099,9 @@ lemma alternatingCycleSymDiffMatch {M : Subgraph G} {p : G.Walk u u} (hM : M.IsP
 
         cases hy
         next h1 => {
-
-          -- obtain ⟨v', hv'⟩ := hM.1 (hM.2 w)
-          -- dsimp at *
-          -- have := hv'.2 v hw.1.symm
-
-
-
-
-          sorry
+          obtain ⟨w', hw'⟩ := alternating_edge p M hpalt hpc h1.1 h1.2
+          have := hw.2 _ hw'.1
+          exact (hc (this ▸ hw'.2.1)).elim
         }
         next h2 => {
           apply hw.2
