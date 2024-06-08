@@ -6,7 +6,7 @@ import Mathlib.Data.Set.Card
 import Mathlib.Data.Set.Finite
 import Mathlib.Data.Fintype.Basic
 import Mathlib.Data.Fintype.Card
-import Mathlib.Algebra.BigOperators.Basic
+-- import Mathlib.Algebra.BigOperators.Basic
 
 
 
@@ -277,7 +277,7 @@ theorem chainFinsetInFintypeHasMax {α : Type*} [PartialOrder α] [DecidableEq �
     · have cGch : IsChain (. ≤ .) (c \ {g}).toSet := by
         rw [Finset.coe_sdiff]
         rw [Finset.coe_singleton]
-        apply IsChain.mono (Set.diff_subset c {g})
+        apply IsChain.mono (@Set.diff_subset _ c {g})
         exact hic
       haveI instNonEmp : Nonempty ↑(c \ {g}) := Set.Nonempty.to_subtype hcnemp
       obtain ⟨ m , hm ⟩ := chainFinsetInFintypeHasMax cGch
@@ -1261,7 +1261,7 @@ lemma oddCliqueAlmostMatches [Fintype V] [DecidableEq V]
     rw [Finset.card_erase_of_mem (Set.mem_toFinset.mpr hv)]
     rw [Set.toFinset_card]
     exact oddSubOneEven _ uOdd
-  have u'Clique : G.IsClique (u \ {v}) := SimpleGraph.IsClique.subset (Set.diff_subset u {v}) h
+  have u'Clique : G.IsClique (u \ {v}) := SimpleGraph.IsClique.subset (@Set.diff_subset _ u {v}) h
   obtain ⟨ M , hM ⟩ := (evenCliqueMatches (u \ {v}) u'Clique u'Even)
   use M
   constructor
@@ -1680,7 +1680,6 @@ theorem toSubgraph_adj_exists {u v} (w : G.Walk u v)
   match w with
   | .nil =>
     simp at hadj
-    exact hadj.elim
   | .cons h p =>
     simp at hadj
     cases hadj with
@@ -2080,8 +2079,8 @@ lemma alternatingCycleSymDiffMatch {M : Subgraph G} {p : G.Walk u u} (hM : M.IsP
         exact ⟨hw'.1, hw'.2.1⟩
       · dsimp at *
         intro y hy
-        cases hy
-        next hl => {
+        cases hy with
+        | inl hl => {
           -- obtain ⟨w'', hw''⟩ := alternating_edge p M hpalt hpc hw'.1 hw'.2.1
           push_neg at hw'
           have hc2 := cycle_two_neighbors p hpc (p.toSubgraph_Adj_mem_support hc)
@@ -2102,18 +2101,18 @@ lemma alternatingCycleSymDiffMatch {M : Subgraph G} {p : G.Walk u u} (hM : M.IsP
             simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hv'
             unfold Subgraph.neighborSet
             rw [@Set.mem_setOf]
-            cases hv'
-            next h1 => {
+            cases hv' with
+            | inl h1 => {
               rw [h1]
               exact hl.2
             }
-            next h2 => {
-              cases h2
-              next h3 => {
+            | inr h2 => {
+              cases h2 with
+              | inl h3 => {
                 rw [h3]
                 exact hc
               }
-              next h4 => {
+              | inr h4 => {
                 rw [h4]
                 exact hw'.2.1
               }
@@ -2130,7 +2129,7 @@ lemma alternatingCycleSymDiffMatch {M : Subgraph G} {p : G.Walk u u} (hM : M.IsP
           rw [Set.ncard_pair hxy'.1] at this
           omega
         }
-        next hr => {
+        | inr hr => {
           exfalso
           have := hw.2 _ hr.1
           rw [this] at hr
@@ -2144,13 +2143,13 @@ lemma alternatingCycleSymDiffMatch {M : Subgraph G} {p : G.Walk u u} (hM : M.IsP
         exact ⟨hw.1, hc⟩
       · intro y hy
 
-        cases hy
-        next h1 => {
+        cases hy with
+        | inl h1 => {
           obtain ⟨w', hw'⟩ := alternating_edge p M hpalt hpc h1.1 h1.2
           have := hw.2 _ hw'.1
           exact (hc (this ▸ hw'.2.1)).elim
         }
-        next h2 => {
+        | inr h2 => {
           apply hw.2
           exact h2.1
         }
@@ -2913,8 +2912,6 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
           )
         if hv : v = a then
           .cons (by
-
-
             sorry
              : G2.Adj c v) p
         else
@@ -2924,10 +2921,11 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
             if M1.Adj v w then
               altWalk (.cons (by sorry : G2.Adj (hM2.1 (hM2.2 v)).choose v) p) (by sorry)
             else
-              altWalk (.cons (by sorry : G2.Adj (hM1.1 (hM1.1 v)).choose v) p) (by sorry)
+              altWalk (.cons (by sorry : G2.Adj (hM1.1 (hM1.2 v)).choose v) p) (by sorry)
 
 
       let C := altWalk (.cons (by sorry : G2.Adj (hM1.1 (hM1.2 c)).choose c) Walk.nil) (by sorry)
+
 
 
 
