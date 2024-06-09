@@ -2154,7 +2154,67 @@ lemma alternatingCycleSymDiffMatch {M : Subgraph G} {p : G.Walk u u} (hM : M.IsP
           exact h2.1
         }
 
+def Subgraph.IsAlternating (B : Subgraph G) (M : Subgraph G) :=
+  ∀ (v w w': V), w ≠ w' → B.Adj v w → B.Adj v w' → (M.Adj v w ↔ ¬ M.Adj v w')
 
+lemma Subgraph.symDiffPerfectMatchingsAlternating {M1 : Subgraph G} {M2 : Subgraph G}
+    (hM1 : M1.IsPerfectMatching) (hM2 : M2.IsPerfectMatching) : (M1.symDiff M2).IsAlternating M2 := by
+  unfold Subgraph.IsAlternating
+  intro v w w' hww' havw havw'
+  unfold Subgraph.symDiff at *
+  simp only [ne_eq] at *
+  by_cases h : M2.Adj v w
+  · simp only [h, true_iff]
+    intro h'
+    obtain ⟨w'', hw''⟩ := hM2.1 (hM2.2 v)
+    have heq1 := hw''.2 w h
+    have heq2 := hw''.2 w' h'
+    apply hww'
+    exact heq2.symm ▸ heq1
+  · simp only [h, false_iff, not_not]
+    cases havw with
+    | inl hl => exact (h hl.2).elim
+    | inr hr =>
+      have hM1' : ¬M1.Adj v w' := by
+        intro h1vw
+        obtain ⟨w'', hw''⟩ := hM1.1 (hM1.2 v)
+        have heq1 := hw''.2 w hr.1
+        have heq2 := hw''.2 w' h1vw
+        apply hww'
+        exact heq2.symm ▸ heq1
+      cases havw' with
+      | inl h1 => exact h1.2
+      | inr h2 => exact (hM1' h2.1).elim
+
+-- Is valid, but doesn't work for Tutte proof?
+lemma Subgraph.symDiffPerfectMatchingsCard {M1 : Subgraph G} {M2 : Subgraph G}
+    (hM1 : M1.IsPerfectMatching) (hM2 : M2.IsPerfectMatching) (v : V) : ((M1.symDiff M2).neighborSet v) = ∅ ∨ ((M1.symDiff M2).neighborSet v).ncard = 2 := by
+  obtain ⟨w1, hw1⟩ := hM1.1 (hM1.2 v)
+  obtain ⟨w2, hw2⟩ := hM2.1 (hM2.2 v)
+  unfold Subgraph.symDiff
+  unfold Subgraph.neighborSet
+  by_cases h : w1 = w2
+  · left
+    simp only
+    rw [@Set.eq_empty_iff_forall_not_mem]
+    intro v'
+    simp only [Set.mem_setOf_eq, not_or, not_and, not_not]
+    constructor
+    · intro h1nvv' h2vv'
+      have := hw2.2 _ h2vv'
+      rw [this, ← h] at h1nvv'
+      exact h1nvv' hw1.1
+    · intro h1vv'
+      have := hw1.2 _ h1vv'
+      exact this ▸ h ▸ hw2.1
+  · right
+    simp only
+    rw [@Set.ncard_eq_two]
+    use w1
+    use w2
+    refine ⟨h, ?_⟩
+    ext w'
+    sorry
 
 
 
@@ -2218,7 +2278,28 @@ lemma matching_union_left (M : (G ⊔ G').Subgraph) (hM : M.IsPerfectMatching) (
   obtain ⟨w, hw⟩ := M.isPerfectMatching_iff.mp hM v
   use w
 
+-- noncomputable def altWalk {v a b x : V} [Fintype V] [DecidableEq V] {G1 G2 : SimpleGraph V} {M1 : Subgraph G1} {M2 : Subgraph G2}[DecidableRel M1.Adj]
+--   [DecidableRel M2.Adj] (hM1 : M1.IsPerfectMatching) (hM2 : M2.IsPerfectMatching) (p : G2.Walk v c) (hp : p.length ≥ 1) : G2.Walk c c :=
+--   let w := p.sndOfNotNil (by
+--     rw [@Walk.nil_iff_length_eq]
+--     omega
+--     )
+--   if hv : v = a then
+--     .cons (by
+--       sorry
+--         : G2.Adj c v) p
+--   else
+--     if hv' : v = x ∨ v = b then
+--       .cons (by sorry : G2.Adj c a) (.cons (by sorry : G2.Adj a v) p)
+--     else
+--       have : Fintype.card V - (p.length + 1 + 1) < (Fintype.card V - (p.length + 1)) := by
+--         sorry
+--       if M1.Adj v w then
 
+--         altWalk (-.cons (by sorry : G2.Adj (hM2.1 (hM2.2 v)).choose v) p) (by sorry)
+--       else
+--         altWalk (.cons (by sorry : G2.Adj (hM1.1 (hM1.2 v)).choose v) p) (by sorry)
+-- termination_by Fintype.card V - p.support.length
 
 theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
     (∃ (M : Subgraph G) , M.IsPerfectMatching) ↔
@@ -2885,46 +2966,32 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
         exact Gmax.hMatchFree Mcon hMcon
 
 
-      let auxAltWalk (l : List V) (h : l.length > 1) : List V :=
-        let v := l.head (by
-          intro hl
-          rw [List.length_eq_zero.mpr hl] at h
-          omega
-          )
-        let w := l.get ⟨1, h⟩
-        if hv : v = a then
-          c :: []
-        else
-          if hv' : v = x ∨ v = b then
-            c :: a :: []
-          else
-            if M1.Adj v w then
-              (hM2.1 (hM2.2 v)).choose :: []
-            else
-              (hM1.1 (hM1.2 v)).choose :: []
+      -- let auxAltWalk (l : List V) (h : l.length > 1) : List V :=
+      --   let v := l.head (by
+      --     intro hl
+      --     rw [List.length_eq_zero.mpr hl] at h
+      --     omega
+      --     )
+      --   let w := l.get ⟨1, h⟩
+      --   if hv : v = a then
+      --     c :: []
+      --   else
+      --     if hv' : v = x ∨ v = b then
+      --       c :: a :: []
+      --     else
+      --       if M1.Adj v w then
+      --         (hM2.1 (hM2.2 v)).choose :: []
+      --       else
+      --         (hM1.1 (hM1.2 v)).choose :: []
 
 
       -- let C := f ((hM1.1 (hM1.2 c)).choose :: c :: []) (by simp)
-      let rec altWalk {v : V} (p : G2.Walk v c) (hp : p.length ≥ 1) : G2.Walk c c :=
-        let w := p.sndOfNotNil (by
-          rw [@Walk.nil_iff_length_eq]
-          omega
-          )
-        if hv : v = a then
-          .cons (by
-            sorry
-             : G2.Adj c v) p
-        else
-          if hv' : v = x ∨ v = b then
-            .cons (by sorry : G2.Adj c a) (.cons (by sorry : G2.Adj a v) p)
-          else
-            if M1.Adj v w then
-              altWalk (.cons (by sorry : G2.Adj (hM2.1 (hM2.2 v)).choose v) p) (by sorry)
-            else
-              altWalk (.cons (by sorry : G2.Adj (hM1.1 (hM1.2 v)).choose v) p) (by sorry)
 
 
-      let C := altWalk (.cons (by sorry : G2.Adj (hM1.1 (hM1.2 c)).choose c) Walk.nil) (by sorry)
+
+
+
+      -- let C := altWalk (.cons (by sorry : G2.Adj (hM1.1 (hM1.2 c)).choose c) Walk.nil) (by sorry)
 
 
 
