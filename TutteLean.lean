@@ -2029,6 +2029,8 @@ lemma alternating_edge' (p : G.Walk u u) (M : Subgraph G) (h : p.IsAlternating M
       rw [@iff_not_comm] at this
       exact ⟨this.mp hM, hpvx, hxw.symm⟩
 
+
+
 def Subgraph.symDiff (M : Subgraph G) (C : Subgraph G) : Subgraph G := {
   verts := M.verts ∪ C.verts,
   Adj := fun v w ↦ (¬ M.Adj v w ∧ C.Adj v w) ∨ (M.Adj v w ∧ ¬ C.Adj v w),
@@ -2186,7 +2188,7 @@ lemma Subgraph.symDiffPerfectMatchingsAlternating {M1 : Subgraph G} {M2 : Subgra
       | inl h1 => exact h1.2
       | inr h2 => exact (hM1' h2.1).elim
 
--- Is valid, but doesn't work for Tutte proof?
+
 lemma Subgraph.symDiffPerfectMatchingsCard {M1 : Subgraph G} {M2 : Subgraph G}
     (hM1 : M1.IsPerfectMatching) (hM2 : M2.IsPerfectMatching) (v : V) : ((M1.symDiff M2).neighborSet v) = ∅ ∨ ((M1.symDiff M2).neighborSet v).ncard = 2 := by
   obtain ⟨w1, hw1⟩ := hM1.1 (hM1.2 v)
@@ -2214,10 +2216,181 @@ lemma Subgraph.symDiffPerfectMatchingsCard {M1 : Subgraph G} {M2 : Subgraph G}
     use w2
     refine ⟨h, ?_⟩
     ext w'
-    sorry
+    constructor
+    · intro hw'
+      simp only [Set.mem_setOf_eq] at hw'
+      cases hw' with
+      | inl hl =>
+        have := hw2.2 _ hl.2
+        rw [this]
+        exact Set.mem_insert_of_mem w1 rfl
+      | inr hr =>
+        have := hw1.2 _ hr.1
+        rw [this]
+        exact Set.mem_insert w1 {w2}
+    · intro hw'
+      simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hw'
+      simp only [Set.mem_setOf_eq]
+      cases hw' with
+      | inl hl =>
+        right
+        refine ⟨hl.symm ▸ hw1.1 , ?_⟩
+        intro h2vw
+        have := hw2.2 _ h2vw
+        exact h (hl.symm ▸ this)
+      | inr hr =>
+        left
+        refine ⟨?_, hr.symm ▸ hw2.1⟩
+        intro h1vw
+        exact h (hr ▸ (hw1.2 _ h1vw).symm)
 
+def Subgraph.IsCycle (M : Subgraph G) := ∀ v ∈ M.support, (M.neighborSet v).ncard = 2
 
+lemma Subgraph.alternating_edge (C : Subgraph G) (M : Subgraph G) (h : C.IsAlternating M)
+    (hic : C.IsCycle) (hM : ¬ M.Adj v w) (hc : C.Adj v w)
+    : ∃ w', M.Adj v w' ∧ C.Adj v w' ∧ w ≠ w' := by
+    -- have hv : v ∈ p.support := Walk.toSubgraph_Adj_mem_support p hp
+    have hn := hic v (by rw [SimpleGraph.Subgraph.mem_support]; use w)
+    rw [@Set.ncard_eq_two] at hn
+    obtain ⟨x, y, hxy⟩ := hn
+    by_cases hxw : x = w
+    · use y
+      have hpvy : C.Adj v y := by
+        have : y ∈ ({x, y} : Set V) := by
+          exact Set.mem_insert_of_mem x rfl
+        rw [← hxy.2] at this
+        exact this
+      have := h _ _ _ (hxw ▸ hxy.1) hc hpvy
+      rw [@iff_not_comm] at this
+      have hMAdj : M.Adj v y := this.mpr hM
+      exact ⟨hMAdj, hpvy, hxw ▸ hxy.1⟩
+    · use x
+      have hpvx : C.Adj v x := by
+        have : x ∈ ({x, y} : Set V) := by
+          exact Set.mem_insert x {y}
+        rw [← hxy.2] at this
+        exact this
 
+      push_neg at hxw
+      have := h _ _ _ hxw hpvx hc
+      exact ⟨this.mpr hM, hpvx, hxw.symm⟩
+
+lemma Subgraph.alternating_edge' (C : Subgraph G) (M : Subgraph G) (h : C.IsAlternating M)
+    (hic : C.IsCycle) (hM : M.Adj v w) (hc : C.Adj v w)
+    : ∃ w', ¬ M.Adj v w' ∧ C.Adj v w' ∧ w ≠ w' := by
+    have hn := hic v (by rw [SimpleGraph.Subgraph.mem_support]; use w)
+    rw [@Set.ncard_eq_two] at hn
+    obtain ⟨x, y, hxy⟩ := hn
+    by_cases hxw : x = w
+    · use y
+      have hpvy : C.Adj v y := by
+        have : y ∈ ({x, y} : Set V) := by
+          exact Set.mem_insert_of_mem x rfl
+        rw [← hxy.2] at this
+        exact this
+      have := (h _ _ _ (hxw ▸ hxy.1) hc hpvy).mp hM
+      exact ⟨this, hpvy, hxw ▸ hxy.1⟩
+    · use x
+      have hpvx : C.Adj v x := by
+        have : x ∈ ({x, y} : Set V) := by
+          exact Set.mem_insert x {y}
+        rw [← hxy.2] at this
+        exact this
+      push_neg at hxw
+      have := h _ _ _ hxw hpvx hc
+      rw [@iff_not_comm] at this
+      exact ⟨this.mp hM, hpvx, hxw.symm⟩
+
+lemma alternatingCycleSymDiffMatch' {M : Subgraph G} {C : Subgraph G} (hM : M.IsPerfectMatching)
+    (hic : C.IsCycle) (halt : C.IsAlternating M) : (M.symDiff C).IsMatching := by
+    intro v _
+    --unused?
+    have hv : v ∈ M.verts := hM.2 v
+    obtain ⟨w, hw⟩ := hM.1 (hM.2 v)
+    by_cases hc : C.Adj v w
+    · unfold Subgraph.symDiff
+      dsimp at *
+      obtain ⟨w', hw'⟩ := Subgraph.alternating_edge' C M halt hic hw.1 hc
+      use w'
+      constructor
+      · left
+        exact ⟨hw'.1, hw'.2.1⟩
+      · dsimp at *
+        intro y hy
+        cases hy with
+        | inl hl => {
+          -- obtain ⟨w'', hw''⟩ := alternating_edge p M hpalt hpc hw'.1 hw'.2.1
+          push_neg at hw'
+          have hc2 := hic v ((by rw [SimpleGraph.Subgraph.mem_support]; use w))
+          by_contra! hc'
+          have hc3 : ({y, w, w'} : Set V).ncard = 3 := by
+            rw [Set.ncard_eq_three]
+            use y
+            use w
+            use w'
+            simp only [ne_eq, and_true]
+            push_neg
+            refine ⟨?_, hc', hw'.2.2⟩
+            intro hyw
+            exact hl.1 (hyw ▸ hw.1)
+
+          have : ({y, w, w'} : Set V) ⊆ C.neighborSet v := by
+            intro v' hv'
+            simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hv'
+            unfold Subgraph.neighborSet
+            rw [@Set.mem_setOf]
+            cases hv' with
+            | inl h1 => {
+              rw [h1]
+              exact hl.2
+            }
+            | inr h2 => {
+              cases h2 with
+              | inl h3 => {
+                rw [h3]
+                exact hc
+              }
+              | inr h4 => {
+                rw [h4]
+                exact hw'.2.1
+              }
+            }
+          rw [@Set.ncard_eq_two] at hc2
+          obtain ⟨x', y', hxy'⟩ := hc2
+          have : ({y, w, w'} : Set V).ncard ≤ ({x', y'} : Set V).ncard := by
+            refine Set.ncard_le_ncard ?_ (by
+              simp only [Set.finite_singleton, Set.Finite.insert]
+              )
+            rw [← hxy'.2]
+            exact this
+          rw [hc3] at this
+          rw [Set.ncard_pair hxy'.1] at this
+          omega
+        }
+        | inr hr => {
+          exfalso
+          have := hw.2 _ hr.1
+          rw [this] at hr
+          exact hr.2 hc
+        }
+    · use w
+      unfold Subgraph.symDiff at *
+      dsimp at *
+      constructor
+      · right
+        exact ⟨hw.1, hc⟩
+      · intro y hy
+
+        cases hy with
+        | inl h1 => {
+          obtain ⟨w', hw'⟩ := Subgraph.alternating_edge C M halt hic h1.1 h1.2
+          have := hw.2 _ hw'.1
+          exact (hc (this ▸ hw'.2.1)).elim
+        }
+        | inr h2 => {
+          apply hw.2
+          exact h2.1
+        }
 -- lemma alternatingCycleSymDiffMatch {M : Subgraph G} {p : G.Walk u u} (hM : M.IsPerfectMatching) (hpeven : Even p.length)
 --     (hpc : p.IsCycle) (hpalt : p.IsAlternating M) : (M.symDiff p.toSubgraph).IsMatching := by
 --   have hMuniv : M.verts = Set.univ := by
@@ -2300,6 +2473,15 @@ lemma matching_union_left (M : (G ⊔ G').Subgraph) (hM : M.IsPerfectMatching) (
 --       else
 --         altWalk (.cons (by sorry : G2.Adj (hM1.1 (hM1.2 v)).choose v) p) (by sorry)
 -- termination_by Fintype.card V - p.support.length
+
+
+
+
+lemma perfectMapLe {M : Subgraph G} (h : G ≤ G') (hM : M.IsPerfectMatching) : (M.map (Hom.ofLE h)).IsPerfectMatching := by
+  simp only [Subgraph.IsPerfectMatching, Subgraph.IsMatching, Subgraph.map,
+    Subgraph.IsSpanning, Hom.coe_ofLE, id_eq, Set.image_id', Relation.map_id_id]
+  exact hM
+
 
 theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
     (∃ (M : Subgraph G) , M.IsPerfectMatching) ↔
@@ -2965,6 +3147,78 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
           )
         exact Gmax.hMatchFree Mcon hMcon
 
+      let G12 := Gmax.G' ⊔ (singleEdge <| Subtype.coe_ne_coe.mpr <| Subtype.coe_ne_coe.mpr hxab.2.2.2) ⊔ (singleEdge hc.2)
+
+      have hG1leG12 : G1 ≤ G12 := SemilatticeSup.le_sup_left G1 (singleEdge hc.right)
+      have hG2leG12 : G2 ≤ G12 := by
+        have : G12 = Gmax.G' ⊔ (singleEdge hc.2) ⊔ (singleEdge <| Subtype.coe_ne_coe.mpr <| Subtype.coe_ne_coe.mpr hxab.2.2.2) := by
+          exact
+            sup_right_comm Gmax.G'
+              (singleEdge (Subtype.coe_ne_coe.mpr (Subtype.coe_ne_coe.mpr hxab.right.right.right)))
+              (singleEdge hc.right)
+        rw [this]
+        exact
+          SemilatticeSup.le_sup_left G2
+            (singleEdge (Subtype.coe_ne_coe.mpr (Subtype.coe_ne_coe.mpr hxab.right.right.right)))
+
+
+      let M1' := M1.map (Hom.ofLE hG1leG12)
+      let M2' := M2.map (Hom.ofLE hG2leG12)
+
+      have hM1' := perfectMapLe hG1leG12 hM1
+      have hM2' := perfectMapLe hG2leG12 hM2
+
+      let cycles := M1'.symDiff M2'
+      have hCycles (v : V) : v ∈ (M1'.symDiff M2').verts := by
+        unfold Subgraph.symDiff
+        simp only [Set.mem_union]
+        left
+        exact hM1'.2 v
+      let cycle := cycles.induce (cycles.coe.connectedComponentMk (
+        Set.codRestrict (fun v => v) cycles.verts hCycles c)).supp
+
+      have hadjImp {u v : V} (h : cycle.Adj u v) : cycles.Adj u v := by
+        rw [SimpleGraph.Subgraph.induce_adj] at h
+        exact h.2.2
+
+      have hadjImp' {u v : V} (h : cycles.Adj u v) (hu : u ∈ cycle.support) : cycle.Adj u v := by
+        rw [SimpleGraph.Subgraph.induce_adj]
+        exact ⟨ (by
+          
+          sorry), by sorry, h⟩
+        sorry
+
+      have cycleAlt : cycle.IsAlternating M2' := by
+        intro u v w hvw huv huw
+        exact Subgraph.symDiffPerfectMatchingsAlternating hM1' hM2' u v w hvw (hadjImp huv) (hadjImp huw)
+
+      have cycleIsCycle : cycle.IsCycle := by
+        intro v hv
+        have := Subgraph.symDiffPerfectMatchingsCard hM1' hM2' v
+        simp only at this
+        cases this with
+        | inl hl => sorry
+        | inr hr =>
+          rw [@Set.ncard_eq_two] at hr ⊢
+          obtain ⟨x, y, hxy⟩ := hr
+          use x
+          use y
+          refine ⟨hxy.1, ?_⟩
+          unfold Subgraph.neighborSet
+          unfold Subgraph.neighborSet at hxy
+
+
+          sorry
+
+      by_cases hxcycle : (x : V) ∈ cycle.support
+      · sorry
+      · let Mcon := cycle.symDiff M2'
+        -- have hMcon := alternatingCycleSymDiffMatch' hM2'
+        sorry
+
+
+
+      -- have hM1' : M1'.IsPerfectMatching := by exact?
 
       -- let auxAltWalk (l : List V) (h : l.length > 1) : List V :=
       --   let v := l.head (by
@@ -2996,7 +3250,6 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
 
 
 
-      sorry
   }
 
 
