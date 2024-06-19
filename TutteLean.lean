@@ -2735,6 +2735,15 @@ lemma fpath_IsCycle [Fintype V] {u : V} [DecidableEq V] {C : Subgraph G}
     apply fpath_IsCycle
 termination_by (Fintype.card V + 1) - p.support.length
 
+lemma cycle_with_path {C : Subgraph G} (hc : C.IsCycle) (p : G.Walk v v) (hic : p.IsCycle)
+    (v' w' : C.verts) (hv : v'.val ∈ p.support) (p' : C.coe.Walk v' w') : w'.val ∈ p.support := by
+  match p' with
+  | .nil => exact hv
+  | .cons' u v w h q =>
+    refine cycle_with_path hc p hic _ _ ?_ q
+    
+    sorry
+
 lemma fpath_toSubgraph [Fintype V] {u : V} [DecidableEq V] {C : Subgraph G}
   (hc : C.IsCycle) (p : G.Walk u v) (hnp : ¬ p.Nil) (hp : p.toSubgraph ≤ C) (hpp : p.IsPath) : (fpath hc p hnp hp hpp).toSubgraph = C := by
   have hpc := fpath_IsCycle hc p hnp hp hpp
@@ -2742,12 +2751,41 @@ lemma fpath_toSubgraph [Fintype V] {u : V} [DecidableEq V] {C : Subgraph G}
   split_ifs with h
   · simp only [Walk.toSubgraph]
     -- rw [@Subgraph.ext_iff]
-    
+    have : G.subgraphOfAdj (fpath.proof_3 hc p hnp hp (fpath.proof_2 hc p hnp hp) h) ⊔ p.toSubgraph ≤ C := by
+      rw [@sup_le_iff]
+      refine ⟨?_, hp⟩
+      apply SimpleGraph.subgraphOfAdj_le_of_adj
+      have := (fpath.proof_1 hc p hnp hp).choose_spec.2
+      rw [h] at this
+      exact this.symm
+    rw [le_antisymm_iff]
+    refine ⟨this, ?_⟩
     simp [h] at hpc
-    by_contra! hc
+    constructor
+    · simp only [Subgraph.verts_sup, subgraphOfAdj_verts, Walk.verts_toSubgraph]
+      intro w hw
+      -- right
+      -- simp only [Set.mem_setOf_eq]
+      have hv : v ∈ C.verts := by
+        apply hp.1
+        exact Walk.end_mem_verts_toSubgraph p
+      have ⟨p', hp'⟩ := SimpleGraph.Reachable.exists_path_of_dist (hc.2 ⟨v,
+        hv⟩ ⟨w, hw⟩)
+
+      have := cycle_with_path hc _ hpc ⟨v, hv⟩ ⟨w, hw⟩ (Walk.start_mem_support _) p'
+      simp only [Walk.support_cons, List.mem_cons] at this
+      cases this with
+      | inl hl =>
+        left
+        rw [hl]
+        exact Set.mem_insert v {u}
+      | inr hr =>
+        right
+        exact hr
+    · sorry
 
 
-    sorry
+
   · have : (Fintype.card V + 1) - (p.length + 1 + 1) < (Fintype.card V + 1) - (p.length + 1) := by
       have h1 := SimpleGraph.Walk.IsPath.length_lt hpp
       omega
