@@ -2735,17 +2735,40 @@ lemma fpath_IsCycle [Fintype V] {u : V} [DecidableEq V] {C : Subgraph G}
     apply fpath_IsCycle
 termination_by (Fintype.card V + 1) - p.support.length
 
-lemma cycle_with_path {C : Subgraph G} (hc : C.IsCycle) (p : G.Walk v v) (hic : p.IsCycle)
+lemma pair_subset_pair {v w x y : V} (h : v ≠ w) (h3 : ({v , w} : Set V) ⊆ {x, y}) : ({v, w} : Set V) = {x, y} := by
+  rw [@Set.Subset.antisymm_iff]
+  refine ⟨h3, ?_⟩
+  have h4 := Set.nontrivial_pair h
+  have : ({v, w} : Set V).Nonempty := by
+    simp only [Set.insert_nonempty]
+  rw [Set.Nonempty.subset_pair_iff_eq this] at h3
+  simp [@Set.Nontrivial.ne_singleton _ _ x h4, @Set.Nontrivial.ne_singleton _ _ y h4] at h3
+  exact Eq.subset (Eq.symm h3)
+
+
+lemma cycle_with_path {C : Subgraph G} (hc : C.IsCycle) (p : G.Walk v v) (hic : p.IsCycle) (hp : p.toSubgraph ≤ C)
     (v' w' : C.verts) (hv : v'.val ∈ p.support) (p' : C.coe.Walk v' w') : w'.val ∈ p.support := by
   match p' with
   | .nil => exact hv
   | .cons' u v w h q =>
-    refine cycle_with_path hc p hic _ _ ?_ q
-    
-    sorry
+    refine cycle_with_path hc p hic hp _ _ ?_ q
+    rw [@Subgraph.coe_adj] at h
+    have hc2 := hc.1 _ (Walk.support_path_subgraph_support p (cycle_neq_not_nil p hic) hp hv)
+    have hp2 := cycle_two_neighbors p hic hv
+    rw [@Set.ncard_eq_two] at hc2 hp2
+    obtain ⟨x, y, hxy⟩ := hc2
+    obtain ⟨x2, y2, hxy2⟩ := hp2
+    have hpsc : p.toSubgraph.neighborSet u.val ⊆ C.neighborSet u.val := by
+      exact Subgraph.neighborSet_subset_of_subgraph hp ↑u
+    rw [hxy.2, hxy2.2] at hpsc
+    have hpsceq := pair_subset_pair hxy2.1 hpsc
+    rw [← hxy.2, ← hxy2.2] at hpsceq
+    have : v.val ∈ C.neighborSet u.val := h
+    rw [← hpsceq] at this
+    exact Walk.toSubgraph_Adj_mem_support' p this
 
 lemma fpath_toSubgraph [Fintype V] {u : V} [DecidableEq V] {C : Subgraph G}
-  (hc : C.IsCycle) (p : G.Walk u v) (hnp : ¬ p.Nil) (hp : p.toSubgraph ≤ C) (hpp : p.IsPath) : (fpath hc p hnp hp hpp).toSubgraph = C := by
+  (hc : C.IsCycle) (p : G.Walk u v) (hnp : ¬ p.Nil) (hp : p.toSubgraph ≤ C) (hpp : p.IsPath)  : (fpath hc p hnp hp hpp).toSubgraph = C := by
   have hpc := fpath_IsCycle hc p hnp hp hpp
   unfold fpath at hpc ⊢
   split_ifs with h
@@ -2761,31 +2784,47 @@ lemma fpath_toSubgraph [Fintype V] {u : V} [DecidableEq V] {C : Subgraph G}
     rw [le_antisymm_iff]
     refine ⟨this, ?_⟩
     simp [h] at hpc
-    constructor
-    · simp only [Subgraph.verts_sup, subgraphOfAdj_verts, Walk.verts_toSubgraph]
-      intro w hw
-      -- right
-      -- simp only [Set.mem_setOf_eq]
+
+    have hsupp {w : V} (hw : w ∈ C.verts) : w ∈ p.support := by
       have hv : v ∈ C.verts := by
         apply hp.1
         exact Walk.end_mem_verts_toSubgraph p
       have ⟨p', hp'⟩ := SimpleGraph.Reachable.exists_path_of_dist (hc.2 ⟨v,
         hv⟩ ⟨w, hw⟩)
-
-      have := cycle_with_path hc _ hpc ⟨v, hv⟩ ⟨w, hw⟩ (Walk.start_mem_support _) p'
+      have : (Walk.cons (fpath.proof_3 hc p hnp hp (fpath.proof_2 hc p hnp hp) h) p).toSubgraph ≤ C := by
+        simp only [Walk.toSubgraph]
+        exact this
+      have := cycle_with_path hc _ hpc this ⟨v, hv⟩ ⟨w, hw⟩ (Walk.start_mem_support _) p'
       simp only [Walk.support_cons, List.mem_cons] at this
       cases this with
       | inl hl =>
-        left
-        rw [hl]
-        exact Set.mem_insert v {u}
-      | inr hr =>
-        right
-        exact hr
-    · sorry
+        exact hl ▸ p.end_mem_support
+      | inr hr => exact hr
+    constructor
+    · simp only [Subgraph.verts_sup, subgraphOfAdj_verts, Walk.verts_toSubgraph]
+      intro w hw
+      exact Set.mem_union_right {v, u} (hsupp hw)
+    · intro v' w hv'w
+      have hv' : v' ∈ p.support := by
+        apply hsupp
+        exact C.edge_vert hv'w
+      have hw : w ∈ p.support := by
+        apply hsupp
+        exact C.edge_vert hv'w.symm
 
-
-
+      have hp2 := cycle_two_neighbors _ hpc (by simp [hv']: v' ∈ _)
+      have hc2 := hc.1 v' (Walk.support_path_subgraph_support p hnp hp hv')
+      rw [@Set.ncard_eq_two] at hc2 hp2
+      obtain ⟨x, y, hxy⟩ := hc2
+      obtain ⟨x2, y2, hxy2⟩ := hp2
+      have hpsc : (Walk.cons (fpath.proof_3 hc p hnp hp (fpath.proof_2 hc p hnp hp) (of_eq_true (Eq.trans (congrArg (fun x => x = v) h) (eq_self v))) : G.Adj v u) p).toSubgraph.neighborSet v' ⊆ C.neighborSet v' := by
+        exact Subgraph.neighborSet_subset_of_subgraph this v'
+      rw [hxy.2, hxy2.2] at hpsc
+      have hpsceq := pair_subset_pair hxy2.1 hpsc
+      rw [← hxy.2, ← hxy2.2] at hpsceq
+      have : w ∈ C.neighborSet v' := hv'w
+      rw [← hpsceq] at this
+      exact this
   · have : (Fintype.card V + 1) - (p.length + 1 + 1) < (Fintype.card V + 1) - (p.length + 1) := by
       have h1 := SimpleGraph.Walk.IsPath.length_lt hpp
       omega
@@ -2820,7 +2859,6 @@ lemma Subgraph.IsCycle_iff [Fintype V] [DecidableEq V] {C : Subgraph G} (h : v �
     refine ⟨hpc, ?_⟩
     have hpsc : p.toSubgraph = C := by
       unfold fpath
-      -- unfold Walk.toSubgraph
       simp only [Walk.cons_sndOfNotNil, ne_eq]
       split_ifs with h
       · exfalso
@@ -2832,14 +2870,9 @@ lemma Subgraph.IsCycle_iff [Fintype V] [DecidableEq V] {C : Subgraph G} (h : v �
     exact hpsc
 
 
-    -- let other {v w : V} (hadj : C.Adj v w) : V := (exOther v w hadj).choose
-
-
-
   · rintro ⟨p, hp⟩
     rw [← hp.2] at h
 
-    -- have := cycle_two_neighbors p hp.1
     constructor
     ·
       intro v' hv'
@@ -2849,37 +2882,7 @@ lemma Subgraph.IsCycle_iff [Fintype V] [DecidableEq V] {C : Subgraph G} (h : v �
         exact hv')
       exact hp.2 ▸ this
     · exact hp.2 ▸ p.toSubgraph_connected
--- lemma alternatingCycleSymDiffMatch {M : Subgraph G} {p : G.Walk u u} (hM : M.IsPerfectMatching) (hpeven : Even p.length)
---     (hpc : p.IsCycle) (hpalt : p.IsAlternating M) : (M.symDiff p.toSubgraph).IsMatching := by
---   have hMuniv : M.verts = Set.univ := by
---     rw [← @Subgraph.isSpanning_iff]
---     exact hM.2
 
---   cases hpalt
---   next =>
---     simp only [Walk.toSubgraph]
---     intro v hv
---     obtain ⟨w, hw⟩ := hM.1 (by
---       rw [hMuniv]
---       trivial
---       : v ∈ M.verts)
---     use w
---     dsimp at hw
---     simpa [Subgraph.symDiffSingletonAdj]
-
---   next hadj =>
---     simp only [Walk.length_cons, Walk.length_nil, zero_add, Nat.not_even_one] at hpeven
---   next hnq hnt halt htail =>
---     intro v w
---     obtain ⟨w, hw⟩ := hM.1 (by
---       rw [hMuniv]
---       trivial
---       : v ∈ M.verts)
---     use w
---     dsimp at hw
---     have := alternatingPathSymDiffMatch hM.1 _ (_ :((p.tail hnq).tail hnt).IsPath)
-
---     sorry
 
 
 lemma matching_union_left (M : (G ⊔ G').Subgraph) (hM : M.IsPerfectMatching) (hd : M.coeBig ⊓ G' = ⊥)
@@ -3772,9 +3775,11 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
             exact hadjImp' hcvw hv
 
       by_cases hxcycle : (x : V) ∈ cycle.support
-      · have hxsupp := suppImpMemSupp hxcycle
+      ·
+        have hxsupp := suppImpMemSupp hxcycle
         simp only [ConnectedComponent.mem_supp_iff] at hxsupp
         rw [SimpleGraph.ConnectedComponent.eq] at hxsupp
+
         obtain ⟨p, hp⟩ := SimpleGraph.Reachable.exists_path_of_dist hxsupp
         have hnp : ¬ p.Nil := by
           refine Walk.not_nil_of_ne ?_
@@ -3785,29 +3790,46 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
           have := hxab.1
           simp only [comap_adj, Function.Embedding.coe_subtype, Subgraph.coe_adj] at this
           exact Gsplit.coe_adj_sub (↑a) (↑x) (Gsplit.adj_symm this)
-
-        let p' := p.coeWalk
-        have hnp' := p.coeWalkNotNil hnp
-        let x2 := p'.sndOfNotNil hnp'
-        let c2 := p'.lastButOneOfNotNil hnp'
-
-        have G12ab : G12.Adj a b := by
-          rw [sup_adj]
-          rw [sup_adj]
-          left ; left
-          have := hxab.2.1
-          simp only [comap_adj, Function.Embedding.coe_subtype, Subgraph.coe_adj] at this
-          exact Gsplit.coe_adj_sub _ _ this
-
-        let p' := p.coeWalk
-        by_cases hxb : x2 = b
-        · by_cases hac : c2 = a
-          · let C := Walk.cons (hxb ▸ G12ab) (p'.tail hnp')
+        rw [Subgraph.IsCycle_iff (by sorry : c ∈ cycle.support)] at cycleIsCycle
+        obtain ⟨p, hp⟩ := cycleIsCycle
+        -- use hxcycle to split p into two appended paths, then rearrange from there
+        obtain ⟨q, r, hqr⟩ := SimpleGraph.Walk.mem_support_iff_exists_append.mp (by sorry : x.val.val ∈ p.support)
+        by_cases hqca : q.toSubgraph.Adj c a
+        · by_cases hqxb : q.toSubgraph.Adj x.val.val b
+          · let p' := Walk.cons (by sorry : G12.Adj c a) (Walk.cons (by sorry : G12.Adj a x.val.val) r)
+            sorry
+          · let p' := Walk.cons (by sorry : G12.Adj c a) (Walk.cons (by sorry : G12.Adj a (r.sndOfNotNil (by sorry))) (r.tail (by sorry : ¬ r.Nil)))
 
             sorry
-          · sorry
+        · by_cases hqxb : q.toSubgraph.Adj x.val.val b
+          · let p' := Walk.cons (by sorry : G12.Adj c a) (Walk.cons (by sorry : G12.Adj a (q.reverse.sndOfNotNil (by sorry))) (q.reverse.tail (by sorry : ¬ q.reverse.Nil)))
+            sorry
+          · let p' := Walk.cons (by sorry : G12.Adj c a) (Walk.cons (by sorry : G12.Adj a x.val.val) q.reverse)
 
-        · sorry
+            sorry
+
+        -- let p' := p.coeWalk
+        -- have hnp' := p.coeWalkNotNil hnp
+        -- let x2 := p'.sndOfNotNil hnp'
+        -- let c2 := p'.lastButOneOfNotNil hnp'
+
+        -- have G12ab : G12.Adj a b := by
+        --   rw [sup_adj]
+        --   rw [sup_adj]
+        --   left ; left
+        --   have := hxab.2.1
+        --   simp only [comap_adj, Function.Embedding.coe_subtype, Subgraph.coe_adj] at this
+        --   exact Gsplit.coe_adj_sub _ _ this
+
+        -- let p' := p.coeWalk
+        -- by_cases hxb : x2 = b
+        -- · by_cases hac : c2 = a
+        --   · let pC := Walk.cons (hxb ▸ G12ab) (p'.tail hnp')
+
+        --     sorry
+        --   · sorry
+
+        -- · sorry
 
 
       · let Mcon := M2'.symDiff cycle
