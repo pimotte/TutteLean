@@ -3087,15 +3087,97 @@ lemma Walk.toSubgraph_cons_adj_iff {p : G.Walk u v} {h : G.Adj t u} : (Walk.cons
   simp only [Walk.toSubgraph, Subgraph.sup_adj, subgraphOfAdj_adj, Sym2.eq, Sym2.rel_iff',
     Prod.mk.injEq, Prod.swap_prod_mk]
 
+lemma Walk.IsPath.start_neighbourSet_ncard {p : G.Walk u v} (hnp : ¬ p.Nil) (hp : p.IsPath) : (p.toSubgraph.neighborSet u).ncard = 1 := by
+  rw [@Set.ncard_eq_one]
+  use p.sndOfNotNil hnp
+  ext v'
+  constructor
+  · intro h
+    rw [@Subgraph.mem_neighborSet] at h
+    rw [@Set.mem_singleton_iff]
+    have hnodup := hp.2
+    rw [@List.nodup_iff_get?_ne_get?] at hnodup
+    obtain ⟨i, hi⟩ := toSubgraph_adj_exists _ h
+    by_cases hi0 : i = 0
+    · rw [hi0] at hi
+      simp only [getVert_zero, zero_add, true_and, getVert_one _ hnp] at hi
+      cases hi.1 with
+      | inl hl => exact hl
+      | inr hr =>
+        exfalso
+        exact h.ne hr.1.symm
+    · exfalso
+      cases hi.1 with
+      | inl hl =>
+        have := hnodup 0 i (by omega) (by
+          rw [length_support]
+          omega
+          )
+        rw [← getVert_support_get _ (by omega)] at this
+        rw [← getVert_support_get _ (by omega)] at this
+        rw [← hl.1] at this
+        rw [@getVert_zero] at this
+        exfalso
+        exact this rfl
+      | inr hr =>
+        have := hnodup 0 (i + 1) (by omega) (by
+          rw [length_support]
+          omega
+          )
+        rw [← getVert_support_get _ (by omega)] at this
+        rw [← getVert_support_get _ (by omega)] at this
+        rw [getVert_zero] at this
+        rw [← hr.2] at this
+        exact this rfl
+  · intro h
+    rw [@Set.mem_singleton_iff] at h
+    rw [h]
+    rw [@Subgraph.mem_neighborSet]
+    exact toSubgraph_adj_sndOfNotNil p hnp
+
+
+lemma Walk.toSubgraph_snd {p : G.Walk u v} (hp : p.IsPath) (hnp : ¬ p.Nil) (h : p.toSubgraph.Adj u w) : p.sndOfNotNil hnp = w := by
+  have hset := hp.start_neighbourSet_ncard hnp
+  have hwmem : w ∈ p.toSubgraph.neighborSet u := by
+    exact h
+  have hsmem : (p.sndOfNotNil hnp) ∈ p.toSubgraph.neighborSet u  := by
+    exact toSubgraph_adj_sndOfNotNil p hnp
+  rw [Set.ncard_eq_one] at hset
+  obtain ⟨v, hv⟩ := hset
+  have := Set.eq_of_mem_singleton (hv ▸ hwmem)
+  rw [this]
+  exact Set.eq_of_mem_singleton (hv ▸ hsmem)
 
 lemma Walk.IsCycle.IsAlternating_cons {p : G.Walk u v} {h : G.Adj v u} {M : Subgraph G} (hnp : ¬ p.Nil) (hcyc : (Walk.cons h p).IsCycle)
-  (halt : p.toSubgraph.IsAlternating M) (h1 : M.Adj u v ↔ ¬ M.Adj u (p.sndOfNotNil hnp)) (h2 : M.Adj u v ↔ ¬ M.Adj u (p.lastButOneOfNotNil (hnp)))
+  (halt : p.toSubgraph.IsAlternating M) (ha : M.Adj v u  ↔ ¬ M.Adj v (p.sndOfNotNil hnp)) (hb : M.Adj u v ↔ ¬ M.Adj u (p.lastButOneOfNotNil (hnp)))
     : (Walk.cons h p).toSubgraph.IsAlternating M := by
-  intro v' w w' hvw' hadj hadj'
+  intro v' w w' hww' hadj hadj'
   rw [@cons_isCycle_iff] at hcyc
   rw [Walk.toSubgraph_cons_adj_iff ] at hadj hadj'
   cases hadj with
-  | inl hl => sorry
+  | inl hl =>
+    cases hadj' with
+    | inl hl' =>
+      rw [hl'] at hl
+      simp only [Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, true_and, Prod.swap_prod_mk] at hl
+      exfalso
+      cases hl with
+      | inl h1 =>
+        exact hww' h1.symm
+      | inr h2 =>
+        rw [← h2.1, h2.2] at hww'
+        simp only [ne_eq, not_true_eq_false] at hww'
+    | inr hr' =>
+      simp only [Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk] at hl
+      cases hl with
+      | inl h1 =>
+        rw [← h1.1, ← h1.2]
+        rw [ha]
+        rw [← h1.1] at hr'
+
+        -- have := p.toSubgraph_snd hcyc.1 hnp hr'
+        sorry
+      | inr h2 => sorry
   | inr hr => sorry
 
 
