@@ -3149,7 +3149,7 @@ lemma Walk.toSubgraph_snd {p : G.Walk u v} (hp : p.IsPath) (hnp : ¬ p.Nil) (h :
   exact Set.eq_of_mem_singleton (hv ▸ hsmem)
 
 lemma Walk.IsCycle.IsAlternating_cons {p : G.Walk u v} {h : G.Adj v u} {M : Subgraph G} (hnp : ¬ p.Nil) (hcyc : (Walk.cons h p).IsCycle)
-  (halt : p.toSubgraph.IsAlternating M) (ha : M.Adj v u  ↔ ¬ M.Adj v (p.sndOfNotNil hnp)) (hb : M.Adj u v ↔ ¬ M.Adj u (p.lastButOneOfNotNil (hnp)))
+  (halt : p.toSubgraph.IsAlternating M) (ha : M.Adj u v  ↔ ¬ M.Adj u (p.sndOfNotNil hnp)) (hb : M.Adj v u ↔ ¬ M.Adj v (p.lastButOneOfNotNil (hnp)))
     : (Walk.cons h p).toSubgraph.IsAlternating M := by
   intro v' w w' hww' hadj hadj'
   rw [@cons_isCycle_iff] at hcyc
@@ -3172,14 +3172,78 @@ lemma Walk.IsCycle.IsAlternating_cons {p : G.Walk u v} {h : G.Adj v u} {M : Subg
       cases hl with
       | inl h1 =>
         rw [← h1.1, ← h1.2]
-        rw [ha]
+        rw [hb]
         rw [← h1.1] at hr'
+        rw [← SimpleGraph.Walk.toSubgraph_reverse ] at hr'
+        unfold lastButOneOfNotNil
+        have := p.reverse.toSubgraph_snd ((isPath_reverse_iff p).mpr hcyc.1)
+          (by rw [@reverse_Nil]; exact hnp) hr'
+        rw [this]
+      | inr h2 =>
+        rw [← h2.1, ← h2.2]
+        rw [ha]
+        rw [← h2.2] at hr'
+        have := p.toSubgraph_snd hcyc.1 hnp hr'
+        rw [this]
+  | inr hr =>
+    cases hadj' with
+    | inl hl' =>
+      simp only [Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk] at hl'
+      cases hl' with
+      | inl h1 =>
+        rw [← h1.1, ← h1.2]
+        rw [hb]
+        rw [← h1.1] at hr
+        rw [← SimpleGraph.Walk.toSubgraph_reverse ] at hr
+        have := p.reverse.toSubgraph_snd ((isPath_reverse_iff p).mpr hcyc.1)
+          (by rw [@reverse_Nil]; exact hnp) hr
+        unfold lastButOneOfNotNil
+        rw [this]
+        simp only [not_not]
+      | inr h2 =>
+        rw [← h2.1, ← h2.2]
+        rw [ha]
+        rw [← h2.2] at hr
+        have := p.toSubgraph_snd hcyc.1 hnp hr
+        rw [this]
+        simp only [not_not]
+    | inr hr' =>
+      exact halt v' w w' hww' hr hr'
 
-        -- have := p.toSubgraph_snd hcyc.1 hnp hr'
-        sorry
-      | inr h2 => sorry
-  | inr hr => sorry
-
+lemma Walk.IsPath.IsAlternating_cons {p : G.Walk u v} {h : G.Adj t u} {M : Subgraph G} (hnp : ¬ p.Nil) (hpath : (Walk.cons h p).IsPath)
+  (halt : p.toSubgraph.IsAlternating M) (ha : M.Adj t u  ↔ ¬ M.Adj u (p.sndOfNotNil hnp))
+    : (Walk.cons h p).toSubgraph.IsAlternating M := by
+  intro v' w w' hww' hadj hadj'
+  rw [Walk.toSubgraph_cons_adj_iff ] at hadj hadj'
+  rw [@cons_isPath_iff] at hpath
+  cases hadj with
+  | inl hl =>
+    cases hadj' with
+    | inl hl' =>
+      exfalso
+      rw [hl'] at hl
+      simp only [Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, true_and, Prod.swap_prod_mk] at hl
+      cases hl with
+      | inl h1 => exact hww' h1.symm
+      | inr h2 => exact hww' (h2.1 ▸ h2.2.symm)
+    | inr hr' =>
+      simp only [Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk] at hl
+      cases hl with
+      | inl h1 =>
+        suffices hsuf : t ∈ p.support from (by
+          exfalso; exact hpath.2 hsuf
+          )
+        rw [← h1.1] at hr'
+        exact toSubgraph_Adj_mem_support p hr'
+      | inr h2 =>
+        rw [← h2.1, ← h2.2]
+        rw [Subgraph.adj_comm, ha]
+        rw [← h2.2] at hr'
+        have := p.toSubgraph_snd hpath.1 hnp hr'
+        rw [this]
+  | inr hr =>
+    
+    sorry
 
 theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
     (∃ (M : Subgraph G) , M.IsPerfectMatching) ↔
