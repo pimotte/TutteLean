@@ -3369,6 +3369,20 @@ lemma Walk.tail_support_imp_support {u v w : V} {p : G.Walk u v} (hp : ¬ p.Nil)
   rw [← hqr]
   exact (cons_tail_eq p hp).symm
 
+-- unused
+lemma Walk.IsPath.start_non_mem_support_tail {p : G.Walk u v} (hp : p.IsPath) (hnp : ¬ p.Nil) : u ∉ (p.tail hnp).support := by
+  have := p.cons_tail_eq hnp
+  rw [← this] at hp
+  rw [@cons_isPath_iff] at hp
+  exact hp.2
+
+-- unused
+lemma Walk.IsPath.edge_start_not_mem_tail_edges {p : G.Walk u v} (hp : p.IsPath) (hnp : ¬ p.Nil) : s(u, w) ∉ (p.tail hnp).edges := by
+  intro hsp
+  have := (p.tail hnp).fst_mem_support_of_mem_edges hsp
+  exact hp.start_non_mem_support_tail hnp this
+
+
 theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
     (∃ (M : Subgraph G) , M.IsPerfectMatching) ↔
       (∀ (u : Set V),
@@ -4439,7 +4453,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
           | inl hl => exfalso; exact h hl
           | inr hr => exact hr
 
-        have hnqxbImprxb (h : ¬ q.toSubgraph.Adj x.val.val b) : r.sndOfNotNil hrn = b := by
+        have hnqxbImprxb' (h : ¬ q.toSubgraph.Adj x.val.val b) : r.sndOfNotNil hrn = b := by
           stop
           obtain ⟨w, hw'⟩ := hM1''.1 (hM1''.2 x)
           have hbw := hw'.2 _ (by simp only [Subgraph.map_adj, Hom.coe_ofLE, Relation.map_id_id]; exact hM1')
@@ -4507,8 +4521,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
 
             have hsubcyc : p'.toSubgraph.IsCycle := (p'.toSubgraph.IsCycle_iff hcss).mpr ⟨p', ⟨hp'c, rfl⟩⟩
 
-            -- have hp'tsac : p'.toSubgraph.Adj (↑↑a) c := by
-            --   sorry
+            have hp'tsac : p'.toSubgraph.Adj (↑↑a) c := ((Walk.cons hG12adjax r).cons_to_Subgraph_first_adj hG12adjca).symm
             have hp'nbx : ¬p'.toSubgraph.Adj ↑↑b ↑↑x := by
               stop
               intro h
@@ -4576,10 +4589,10 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
                 exact hnars this
 
             use p'.toSubgraph
-            sorry
 
           · have hG12ars : G12.Adj a (r.sndOfNotNil hrn) := by
-              rw [hnqxbImprxb hqxb]
+              stop
+              rw [hnqxbImprxb' hqxb]
               rw [sup_adj]
               simp only [sup_adj, singleEdge_Adj, and_true, true_and]
               left ; left
@@ -4598,6 +4611,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
                 exact Walk.tail_support_imp_support hrn h⟩
 
             have hp'c : p'.IsCycle := by
+              stop
               rw [@Walk.cons_isCycle_iff]
               refine ⟨hconsrPath, ?_⟩
               intro h
@@ -4605,11 +4619,22 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
                 Prod.swap_prod_mk, and_true] at h
               cases h with
               | inl hl =>
-                -- continue here
-                sorry
-              | inr hr => sorry
-            have hcss : c ∈ p'.toSubgraph.support := by sorry
+                cases hl with
+                | inl hl' =>
+                  exact hqca.ne hl'.1
+                | inr hr' =>
+                  have := hnqxbImprxb' hqxb
+                  apply hbnec
+                  rw [hr', ← this]
+              | inr hr =>
+                rw [@Walk.cons_isPath_iff] at hconsrPath
+                apply hconsrPath.2
+                exact (r.tail hrn).snd_mem_support_of_mem_edges hr
+            have hcss : c ∈ p'.toSubgraph.support := by
+              exact Walk.IsCycle.mem_endpoint hp'c
             have hsubcyc : p'.toSubgraph.IsCycle := (p'.toSubgraph.IsCycle_iff hcss).mpr ⟨p', ⟨hp'c, rfl⟩⟩
+
+
             sorry
         · by_cases hqxb : q.toSubgraph.Adj x.val.val b
           · let p' := Walk.cons hG12adjca (Walk.cons (by sorry : G12.Adj a (q.reverse.sndOfNotNil hqrn)) (q.reverse.tail hqrn))
