@@ -2618,6 +2618,11 @@ lemma Walk.toSubgraph_append_le' (p : G.Walk u v) (q : G.Walk v w) : q.toSubgrap
   rw [@toSubgraph_append]
   exact le_sup_right
 
+lemma Walk.not_nil_reverse (p : G.Walk u v) : ¬ p.reverse.Nil ↔ ¬ p.Nil := by
+  rw [@not_iff_not]
+  exact reverse_Nil p
+
+
 lemma Set.triple_ncard_two {x y z : V} (h : ({x, y, z} : Set V).ncard ≤ 2) : x = y ∨ x = z ∨ y = z := by
   by_contra! hc
   have := Set.ncard_eq_three.mpr ⟨x, y, z, hc.1, hc.2.1, hc.2.2, rfl⟩
@@ -2988,6 +2993,15 @@ lemma matching_union_left (M : (G ⊔ G').Subgraph) (hM : M.IsPerfectMatching) (
 --         altWalk (.cons (by sorry : G2.Adj (hM1.1 (hM1.2 v)).choose v) p) (by sorry)
 -- termination_by Fintype.card V - p.support.length
 
+lemma Walk.IsCycle.of_append_left {p : G.Walk u v} {q : G.Walk v u} (h : u ≠ v) (hcyc : (p.append q).IsCycle) : p.IsPath := by
+  have := hcyc.2
+  rw [SimpleGraph.Walk.tail_support_append, List.nodup_append] at this
+  rw [@isPath_def, @support_eq_cons, @List.nodup_cons]
+  refine ⟨?_, this.1⟩
+  intro h'
+  apply this.2.2 h'
+  exact q.end_mem_tail_support_of_ne h.symm
+
 
 
 lemma Walk.IsCycle.of_append_right {p : G.Walk u v} {q : G.Walk v u} (h : u ≠ v) (hcyc : (p.append q).IsCycle) : q.IsPath := by
@@ -3123,6 +3137,8 @@ lemma Walk.IsCycle.decompose_mem_support_part {p : G.Walk u u} {q : G.Walk u v} 
   rw [h]
   rw [SimpleGraph.Walk.getVert_append]
   simp only [add_lt_iff_neg_left, not_lt_zero', ↓reduceIte, add_tsub_cancel_left, hn.1]
+
+
 
 
 lemma Walk.toSubgraph_cons_adj_iff {p : G.Walk u v} {h : G.Adj t u} : (Walk.cons h p).toSubgraph.Adj w x ↔ (s(t, u) = s(w, x) ∨ p.toSubgraph.Adj w x) := by
@@ -3369,18 +3385,264 @@ lemma Walk.tail_support_imp_support {u v w : V} {p : G.Walk u v} (hp : ¬ p.Nil)
   rw [← hqr]
   exact (cons_tail_eq p hp).symm
 
--- unused
+
+
 lemma Walk.IsPath.start_non_mem_support_tail {p : G.Walk u v} (hp : p.IsPath) (hnp : ¬ p.Nil) : u ∉ (p.tail hnp).support := by
   have := p.cons_tail_eq hnp
   rw [← this] at hp
   rw [@cons_isPath_iff] at hp
   exact hp.2
 
--- unused
+-- unused?
 lemma Walk.IsPath.edge_start_not_mem_tail_edges {p : G.Walk u v} (hp : p.IsPath) (hnp : ¬ p.Nil) : s(u, w) ∉ (p.tail hnp).edges := by
   intro hsp
   have := (p.tail hnp).fst_mem_support_of_mem_edges hsp
   exact hp.start_non_mem_support_tail hnp this
+
+
+lemma Walk.tail_toSubgraph {p : G.Walk u v} (hp : ¬ p.Nil) : (p.tail hp).toSubgraph ≤ p.toSubgraph := by
+  constructor
+  · simp only [verts_toSubgraph, Set.setOf_subset_setOf]
+    intro v hv
+    rw [@mem_support_iff]
+    right
+    rw [← tail_support_eq_support_tail _ hp]
+    exact hv
+  · intro v' w hvw
+    have := p.cons_tail_eq hp
+    rw [← this]
+    simp only [Walk.toSubgraph, Subgraph.sup_adj, subgraphOfAdj_adj, Sym2.eq, Sym2.rel_iff',
+      Prod.mk.injEq, Prod.swap_prod_mk]
+    right
+    exact hvw
+
+lemma Subgraph.IsAlternatingMono {C C' M: Subgraph G} (h : C ≤ C') (halt : C'.IsAlternating M) : C.IsAlternating M := by
+  intro v w w' hww' hadj hadj'
+  exact halt v w w' hww' (h.2 hadj) (h.2 hadj')
+
+lemma Walk.getVert_two {p : G.Walk u v} (hnp1 : ¬ p.Nil) (hnp2 : ¬ (p.tail hnp1).Nil) : p.getVert 2 = (p.tail hnp1).sndOfNotNil hnp2 := by
+  cases p with
+  | nil =>
+    simp only [nil_nil, not_true_eq_false] at hnp1
+  | cons h q =>
+    simp only [cons_getVert_succ]
+    rw [getVert_one q hnp2]
+    rfl
+
+lemma Walk.IsPath.start_ne_snd_snd {p : G.Walk u v} (hp : p.IsPath) (hnp1 : ¬ p.Nil) (hnp2 : ¬ (p.tail hnp1).Nil) : u ≠ (p.tail hnp1).sndOfNotNil hnp2 := by
+  intro h
+  have hnodup := hp.2
+  rw [@List.nodup_iff_get?_ne_get?] at hnodup
+  have help : 2 < p.support.length := by
+    rw [SimpleGraph.Walk.length_support]
+    rw [← SimpleGraph.Walk.cons_tail_eq _ hnp1]
+    rw [← SimpleGraph.Walk.cons_tail_eq _ hnp2]
+    have : 2 ≤ (Walk.cons (adj_sndOfNotNil hnp1) (Walk.cons (adj_sndOfNotNil hnp2) ((p.tail hnp1).tail hnp2))).length := by
+      rw [SimpleGraph.Walk.length_cons]
+      rw [SimpleGraph.Walk.length_cons]
+      omega
+    omega
+  have := hnodup 0 2 (by omega) (by omega)
+  rw [← getVert_support_get _ (by omega)] at this
+  rw [← getVert_support_get _ (by
+    rw [length_support] at help
+    omega
+    )] at this
+  apply this
+  simp only [getVert_zero, Option.some.injEq, p.getVert_two hnp1 hnp2]
+  exact h
+
+lemma Walk.getVert_length_sub_one {p : G.Walk u v} (hnp : ¬ p.Nil)  : p.getVert (p.length - 1) = p.lastButOneOfNotNil hnp := by
+  unfold lastButOneOfNotNil
+  rw [← SimpleGraph.Walk.getVert_reverse]
+  exact getVert_one p.reverse (lastButOneOfNotNil.proof_1 p hnp)
+
+
+
+lemma Walk.IsPath.start_ne_lastButOne {p : G.Walk u v} (hnp : ¬ p.Nil) (hnp' : ¬ (p.tail hnp).Nil) (hadj : G.Adj w (p.sndOfNotNil hnp))
+    (hpath : (Walk.cons hadj (p.tail hnp)).IsPath) : (Walk.cons hadj (p.tail hnp)).lastButOneOfNotNil (Walk.not_nil_cons) ≠ w := by
+  intro h
+  have hnodup := hpath.2
+  rw [@List.nodup_iff_get?_ne_get?] at hnodup
+  have h1 : 0 < (cons hadj (p.tail hnp)).length - 1 := by
+    unfold length
+    have : (p.tail hnp).length > 0 := by
+      by_contra! hc
+      rw [@Nat.le_zero] at hc
+      have := SimpleGraph.Walk.nil_iff_length_eq.mpr hc
+      exact hnp' this
+    omega
+  have := hnodup 0 ((Walk.cons hadj (p.tail hnp)).length - 1) h1 (by
+    rw [length_support]
+    omega)
+  rw [← getVert_support_get _ (by omega)] at this
+  rw [← getVert_support_get _ (by
+    omega
+    )] at this
+  apply this
+  simp only [getVert_zero, length_cons, length_tail_add_one, Option.some.injEq]
+  have : p.length = (Walk.cons hadj (p.tail hnp)).length := by
+    rw [Walk.length_cons]
+    exact (length_tail_add_one hnp).symm
+  rw [this]
+  rw [Walk.getVert_length_sub_one (Walk.not_nil_cons)]
+  exact h.symm
+
+lemma Walk.IsCircuit.reverse {p: G.Walk u u} (hp : p.IsCircuit) : p.reverse.IsCircuit := by
+  constructor
+  · exact hp.1.reverse
+  · intro h
+    rw [← @nil_iff_eq_nil] at h
+    rw [@reverse_Nil] at h
+    apply hp.2
+    exact nil_iff_eq_nil.mp h
+
+lemma Walk.tail_nodup_reverse {p : G.Walk u u} [DecidableEq V] (hp : p.IsCycle): p.reverse.support.tail.Nodup  := by
+  have hp3 : p.length ≥ 3 := IsCycle.three_le_length hp
+  rw [@support_reverse]
+  have hnodup := hp.2
+  rw [@List.nodup_iff_get?_ne_get?] at hnodup ⊢
+  intro i j hij hj
+  simp [List.length_tail, List.length_reverse, tail_get?] at hj hnodup
+  simp only [tail_get?]
+  by_cases h : j = p.support.tail.length - 1
+  · simp [List.length_tail, support_length] at h
+    have := hnodup (p.length - i - 2) (p.length - 1) (by omega) (by omega)
+    intro heq
+    apply this
+    rw [List.get?_reverse _ (by
+      rw [support_length]
+      omega
+      )] at heq
+    rw [List.get?_reverse _ (by
+      rw [support_length]
+      omega)] at heq
+    rw [support_length] at heq
+    have : p.length - 1 + 1 = p.length := by omega
+    rw [this]
+    rw [← getVert_support_get _ (by omega)]
+    rw [← getVert_support_get _ (by omega)]
+    simp only [getVert_length, Option.some.injEq]
+    rw [← getVert_support_get _ (by omega)] at heq
+    rw [← getVert_support_get _ (by omega)] at heq
+    simp only [add_tsub_cancel_right, Option.some.injEq] at heq
+    rw [h] at heq
+    have : p.length - (p.length - 1 + 1) = 0 := by omega
+    rw [this] at heq
+    simp only [getVert_zero] at heq
+    have : p.length - (i + 1) = p.length - i - 2 + 1 := by omega
+    rw [← this]
+    exact heq
+  · rw [List.length_tail] at h
+    rw [support_length] at h
+    push_neg at h
+    have := hnodup (p.length - j - 2) (p.length - i - 2)
+      (by omega) (by omega)
+    intro heq
+
+    apply this
+
+    rw [List.get?_reverse _ (by
+      rw [support_length]
+      omega
+      )] at heq
+    rw [List.get?_reverse _ (by
+      rw [support_length]
+      omega)] at heq
+    rw [support_length] at heq
+    have : p.length - j - 2 + 1 = p.length + 1 - 1 - (j + 1) := by omega
+
+    rw [this]
+    have : p.length - i - 2 + 1 = p.length + 1 - 1 - (i + 1) := by omega
+    rw [this]
+    exact heq.symm
+
+lemma Walk.IsCycle.reverse {p : G.Walk u u} [DecidableEq V] (hp : p.IsCycle) : p.reverse.IsCycle := by
+  constructor
+  · exact hp.1.reverse
+  · exact Walk.tail_nodup_reverse hp
+
+
+
+
+
+lemma Walk.IsCycle.decompose_mem_support_part' {p : G.Walk u u} {q : G.Walk u v} {r : G.Walk v u} (hp : p.IsCycle) (h : p = q.append r)
+    (hrpath : r.IsPath)
+    (hux : p.toSubgraph.Adj u x) (hx : ¬ q.toSubgraph.Adj u x) (huv : u ≠ v) (hxu : x ≠ u) (hxv : x ≠ v) : x ∉ q.support := by
+  have : r.toSubgraph.Adj u x := by
+    rw [h] at hux
+    simp only [toSubgraph_append, Subgraph.sup_adj] at hux
+    cases hux with
+    | inl h1 => exact (hx h1).elim
+    | inr h2 => exact h2
+
+  have : r.reverse.sndOfNotNil (not_nil_of_ne huv) = x := by
+    exact SimpleGraph.toSubgraph_adj_sndOfNotNil r.reverse (not_nil_of_ne huv) (
+      (isPath_reverse_iff r).mpr hrpath) (by simpa [SimpleGraph.Walk.toSubgraph_reverse] )
+  intro hq
+  obtain ⟨i, hi⟩ := support_exists_getVert' _ hq
+  have hrl1 : r.getVert (r.length - 1) = x := by
+    rw [← this, getVert_length_sub_one (not_nil_of_ne huv.symm)]
+    unfold lastButOneOfNotNil
+    rfl
+
+  have hine0 : i ≠ 0 := by
+    intro hi'
+    rw [hi'] at hi
+    rw [@getVert_zero] at hi
+    exact hxu hi.1.symm
+
+  have hnodup := hp.2
+  rw [@List.nodup_iff_get?_ne_get?] at hnodup
+  have hp3 : p.length ≥ 3 := three_le_length hp
+
+  have hiq : i < q.length := by
+    have h1 := hi.2
+    rw [@Nat.le_iff_lt_or_eq] at h1
+    cases h1 with
+    | inl hl => exact hl
+    | inr hr =>
+      rw [hr] at hi
+      rw [@getVert_length] at hi
+      exact (hxv hi.1.symm).elim
+  have hqp : q.length ≤ p.length := by
+    rw [h]
+    rw [@length_append]
+    exact Nat.le_add_right q.length r.length
+  have h3 : r.length ≥ 1 := by
+    by_contra! hc
+    rw [@Nat.lt_one_iff] at hc
+    exact (not_nil_of_ne huv.symm) (SimpleGraph.Walk.nil_iff_length_eq.mpr hc)
+  have := hnodup (i - 1) (p.length - 2) (by
+    have h2 : p.length = q.length + r.length := by
+      rw [h]
+      exact length_append q r
+
+    rw [h2]
+    omega
+    ) (by rw [@support_tail_length]; omega)
+  apply this
+  rw [@tail_get?]
+  rw [@tail_get?]
+  have : i - 1 + 1 = i := by omega
+  rw [this]
+  have : p.length - 2 + 1 = p.length - 1 := by omega
+  rw [this]
+  rw [← getVert_support_get _ (by omega)]
+  rw [← getVert_support_get _ (by
+    omega
+    )]
+  simp only [Option.some.injEq]
+
+  rw [h]
+  simp only [length_append]
+  rw [@getVert_append]
+  simp only [hiq, ↓reduceIte, hi.1]
+  rw [getVert_append]
+  have : ¬ q.length + r.length - 1 < q.length := by omega
+  simp only [this, ↓reduceIte]
+  have : q.length + r.length - 1 - q.length = r.length - 1 := by omega
+  rw [this, hrl1]
 
 
 theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
@@ -4111,6 +4373,13 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
             apply hxab.2.1.ne
             exact Subtype.val_injective (Subtype.val_injective h2.1)
 
+      have hM2'nab : ¬M2'.Adj ↑↑a ↑↑b := by
+        intro h
+        obtain ⟨w, hw⟩ := hM2''.1 (hM2''.2 a.val.val)
+        have hb := hw.2 _ h
+        have hc := hw.2 _ (by simp only [Subgraph.map_adj, Hom.coe_ofLE, Relation.map_id_id]; exact hM2')
+        rw [← hc] at hb
+        exact hbnec hb
 
       let cycles := M1'.symDiff M2'
       have hCycles (v : V) : v ∈ (M1'.symDiff M2').verts := by
@@ -4394,6 +4663,17 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
           rw [sup_adj, sup_adj]
           right
           simp only [singleEdge_Adj, and_self, or_true]
+
+        have hG12adjba : G12.Adj b.val.val a := by
+          stop
+          rw [sup_adj, sup_adj]
+          left ; left
+          have := hxab.2.1
+          rw [@induce_eq_coe_induce_top] at this
+          simp only [Subgraph.coe_adj, Subgraph.induce_verts, Subgraph.induce_adj,
+            ConnectedComponent.mem_supp_iff, Subgraph.top_adj] at this
+          exact this.2.2.adj_sub.symm
+
         have hGsplitadjax : Gmax.G'.Adj ↑↑a ↑↑x := by
           stop
           have := hxab.1
@@ -4422,6 +4702,16 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
           apply this.ne
           exact Subtype.val_injective h
 
+        have hscanesbx : s(c, ↑↑a) ≠ s(↑↑b, ↑↑x) := by
+          intro h
+          simp only [Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk] at h
+          cases h with
+          | inl hl =>
+            apply hbnec
+            exact hl.1.symm
+          | inr hr =>
+            exact haneb hr.2
+
         have hM2'nax : ¬ M2'.Adj a.val.val x.val.val := by
           stop
           intro hM2'xa
@@ -4431,9 +4721,11 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
           exact hcnex (hxx' ▸ hcc')
 
         have hrn : ¬ r.Nil := SimpleGraph.Walk.not_nil_of_ne hcnex.symm
+        have hqn : ¬ q.Nil := SimpleGraph.Walk.not_nil_of_ne hcnex
         have hqrn : ¬ q.reverse.Nil :=  SimpleGraph.Walk.not_nil_of_ne hcnex.symm
 
         have hrpath : r.IsPath := Walk.IsCycle.of_append_right hcnex (hqr ▸ hp.1)
+        have hqpath : q.IsPath := Walk.IsCycle.of_append_left hcnex (hqr ▸ hp.1)
         have hralt : r.toSubgraph.IsAlternating M2' := (Walk.append_toSubgraph_alternating (hqr ▸ hp.2 ▸ cycleAlt)).2
 
 
@@ -4461,12 +4753,19 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
             exact hnqxbImprxb h
           exact toSubgraph_adj_sndOfNotNil r hrn hrpath hrb
 
+        have hqxbImpqrsb (h : q.toSubgraph.Adj x.val.val b) : (q.reverse.sndOfNotNil hqrn) = b := by
+          stop
+          refine toSubgraph_adj_sndOfNotNil q.reverse hqrn ?hpp (by rw [SimpleGraph.Walk.toSubgraph_reverse ]; exact h)
+          rw [@Walk.isPath_reverse_iff]
+          exact (hqr ▸ hp.1).of_append_left hcnex
+
         by_cases hqca : q.toSubgraph.Adj c a
         · have hnars : a.val.val ∉ r.support := hp.1.decompose_mem_support_part hqr (q.toSubgraph_Adj_mem_support (q.toSubgraph.adj_symm hqca))
               hG12adjca.ne.symm hG12adjax.ne
 
           by_cases hqxb : q.toSubgraph.Adj x.val.val b
-          · let p' := Walk.cons (hG12adjca) (Walk.cons hG12adjax r)
+          · stop
+            let p' := Walk.cons (hG12adjca) (Walk.cons hG12adjax r)
             have hnbrs : b.val.val ∉ r.support := hp.1.decompose_mem_support_part hqr (q.toSubgraph_Adj_mem_support (q.toSubgraph.adj_symm hqxb)) hbnec
               (by intro h; exact hqxb.ne h.symm)
 
@@ -4590,7 +4889,8 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
 
             use p'.toSubgraph
 
-          · have hG12ars : G12.Adj a (r.sndOfNotNil hrn) := by
+          · stop
+            have hG12ars : G12.Adj a (r.sndOfNotNil hrn) := by
               stop
               rw [hnqxbImprxb' hqxb]
               rw [sup_adj]
@@ -4634,11 +4934,123 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
               exact Walk.IsCycle.mem_endpoint hp'c
             have hsubcyc : p'.toSubgraph.IsCycle := (p'.toSubgraph.IsCycle_iff hcss).mpr ⟨p', ⟨hp'c, rfl⟩⟩
 
+            have hcac : p'.toSubgraph.Adj a.val.val c := ((Walk.cons hG12ars (r.tail hrn)).cons_to_Subgraph_first_adj hG12adjca ).symm
 
-            sorry
-        · by_cases hqxb : q.toSubgraph.Adj x.val.val b
-          · let p' := Walk.cons hG12adjca (Walk.cons (by sorry : G12.Adj a (q.reverse.sndOfNotNil hqrn)) (q.reverse.tail hqrn))
-            have hp'c : p'.IsCycle := by sorry
+            have hcnbx : ¬ p'.toSubgraph.Adj b.val.val x.val.val := by
+              stop
+              intro hp'
+              rw [@Walk.toSubgraph_cons_adj_iff] at hp'
+              cases hp' with
+              | inl hl => exact hscanesbx hl
+              | inr hr =>
+                rw [@Walk.toSubgraph_cons_adj_iff] at hr
+                cases hr with
+                | inl hl' =>
+                  rw [hnqxbImprxb' hqxb] at hl'
+                  simp at hl'
+                  cases hl' with
+                  | inl h1 =>
+                    exact haneb h1.1
+                  | inr h2 =>
+                    exact hG12adjax.ne h2
+                | inr hr' =>
+                  exact hrpath.start_non_mem_support_tail hrn ((r.tail hrn).toSubgraph_Adj_mem_support (hr'.symm))
+            have hrrn : ¬ (r.tail hrn).Nil := by
+              stop
+              apply SimpleGraph.Walk.not_nil_of_ne
+              rw [hnqxbImprxb' hqxb]
+              exact hbnec
+
+            have hpAdjbrtt : p.toSubgraph.Adj b.val.val ((r.tail hrn).sndOfNotNil hrrn) := by
+              stop
+              rw [hqr]
+              refine Subgraph.adj_symm (q.append r).toSubgraph (Walk.append_subgraph_adj' ?_)
+              rw [← hnqxbImprxb' hqxb]
+              rw [@Subgraph.adj_comm]
+              have h1 : (r.tail hrn).toSubgraph.Adj (r.sndOfNotNil hrn) ((r.tail hrn).sndOfNotNil hrrn) := by
+                exact Walk.toSubgraph_adj_sndOfNotNil (r.tail hrn) hrrn
+              have h2 : (r.tail hrn).toSubgraph ≤ r.toSubgraph := by
+                exact Walk.tail_toSubgraph hrn
+              exact h2.2 h1
+
+            have hp'alt : p'.toSubgraph.IsAlternating M2' := by
+              stop
+              refine hp'c.IsAlternating_cons (Walk.not_nil_cons) ?_ ?_ ?_
+              · refine hconsrPath.IsAlternating_cons hrrn ?_ ?_
+                · exact (r.tail hrn).toSubgraph.IsAlternatingMono (by
+                  exact Walk.tail_toSubgraph hrn) hralt
+                · constructor
+                  · intro h
+                    exfalso
+                    rw [hnqxbImprxb' hqxb] at h
+                    exact hM2'nab h
+                  · intro h
+                    exfalso
+                    rw [hp.2] at hpAdjbrtt
+                    have := hadjImp hpAdjbrtt
+                    rw [← hnqxbImprxb' hqxb] at this
+                    rw [@Subgraph.symDiff_adj] at this
+                    cases this with
+                    | inl hl =>
+                      exact (h (hl.2)).elim
+                    | inr hr =>
+                      rw [← hnqxbImprxb' hqxb] at hM1'
+                      have := hM1'
+                      have : M1'.Adj (r.sndOfNotNil hrn) x.val.val := by
+                        rw [@Subgraph.map_adj]
+                        simp only [Hom.coe_ofLE, Relation.map_id_id]
+                        exact this.symm
+                      obtain ⟨w, hw⟩ := hM1''.1 (hM1''.2 (r.sndOfNotNil hrn))
+                      have h1 := hw.2 _ hr.1
+                      have h2 := hw.2 _ this
+                      rw [← h2] at h1
+                      apply hrpath.start_ne_snd_snd hrn hrrn
+                      exact h1.symm
+              · simp only [hM'2ca.symm, Walk.cons_sndOfNotNil, true_iff]
+                intro h
+                rw [hnqxbImprxb' hqxb] at h
+                obtain ⟨w, hw⟩ := hM2''.1 (hM2''.2 a.val.val)
+
+                simp only [Relation.map_id_id] at hw
+
+                have h1 := hw.2 _ h
+                have h2 := hw.2 _ hM'2ca.symm
+                rw [← h2] at h1
+                exact hbnec h1
+              · simp only [hM'2ca, true_iff]
+                intro h
+                obtain ⟨w, hw⟩ := hM2''.1 (hM2''.2 c)
+
+                simp only [Relation.map_id_id] at hw
+                have h1 := hw.2 _ h
+                have h2 := hw.2 _ hM'2ca
+                rw [← h2] at h1
+                apply (Walk.IsPath.start_ne_lastButOne hrn hrrn hG12ars hconsrPath)
+                exact h1
+
+            use p'.toSubgraph
+
+        ·
+          have hnars : a.val.val ∉ q.reverse.support := by
+            apply Walk.IsCycle.decompose_mem_support_part'
+
+          by_cases hqxb : q.toSubgraph.Adj x.val.val b
+          · have G12Adjaqrs : G12.Adj a (q.reverse.sndOfNotNil hqrn) := by
+              stop
+              rw [hqxbImpqrsb hqxb]
+              exact hG12adjba.symm
+            let p' := Walk.cons hG12adjca (Walk.cons G12Adjaqrs (q.reverse.tail hqrn))
+
+            have hconsrPath : (Walk.cons G12Adjaqrs (q.reverse.tail hqrn)).IsPath := by
+              simp only [Walk.cons_isPath_iff]
+              refine ⟨hqpath.reverse.tail (q.not_nil_reverse.mpr hqn), ?_⟩
+
+              sorry
+
+            have hp'c : p'.IsCycle := by
+              rw [@Walk.cons_isCycle_iff]
+
+              sorry
             have hcss : c ∈ p'.toSubgraph.support := by sorry
             have hsubcyc : p'.toSubgraph.IsCycle := (p'.toSubgraph.IsCycle_iff hcss).mpr ⟨p', ⟨hp'c, rfl⟩⟩
             sorry
