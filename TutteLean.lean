@@ -676,7 +676,7 @@ lemma oddSubComponent [Fintype V] [Inhabited V] [DecidableEq V] (G G' : SimpleGr
       rw [@ConnectedComponent.isOdd_iff] at ho
       exact Nat.odd_iff_not_even.mp ho this
 
-
+-- In #14623
 lemma oddComponent [Fintype V] [DecidableEq V] (G : SimpleGraph V) [DecidableRel G.Adj]
       (ho : Odd (Fintype.card V)) : ∃ (c : ConnectedComponent G), c.isOdd := by
       simp_rw [ConnectedComponent.isOdd_iff, Nat.odd_iff_not_even]
@@ -1576,12 +1576,14 @@ def Walk.lastButOneOfNotNil (p : G.Walk u v) (hnp : ¬ p.Nil) := p.reverse.sndOf
 
 
 
+-- In getVert PR
 @[simp]
 lemma notNilRec_cons {motive : {u w : V} → (p : G.Walk u w) → (h : ¬ p.Nil) → Sort*}
     (cons : {u v w : V} → (h : G.Adj u v) → (q : G.Walk v w) → motive (Walk.cons h q) Walk.not_nil_cons)
     (h' : G.Adj u v) (q' : G.Walk v w) : @Walk.notNilRec _ _ _ _ _ cons _ _ = cons h' q' := by
     rfl
 
+-- In getVert PR
 lemma cons_tail (p : G.Walk u v) (h : G.Adj t u) : (Walk.cons h p).tail (Walk.not_nil_cons) = p := by
   unfold Walk.tail
   simp only [notNilRec_cons]
@@ -1623,6 +1625,7 @@ lemma cycle_neq_not_nil (p : G.Walk u u) (hpc : p.IsCycle) : ¬p.Nil := by
   rw [← @Walk.length_eq_zero_iff]
   exact Walk.nil_iff_length_eq.mp hp
 
+-- unnecisarry
 lemma support_exists_getVert (p : G.Walk v w) (h : u ∈ p.support) : ∃ n, p.getVert n = u := by
   obtain ⟨q, r, hqr⟩ := SimpleGraph.Walk.mem_support_iff_exists_append.mp h
   use q.length
@@ -1631,6 +1634,7 @@ lemma support_exists_getVert (p : G.Walk v w) (h : u ∈ p.support) : ∃ n, p.g
   simp only [lt_self_iff_false, ↓reduceIte, ge_iff_le, le_refl, tsub_eq_zero_of_le,
     Walk.getVert_zero]
 
+-- In getVert PR
 lemma support_exists_getVert' (p : G.Walk v w) (h : u ∈ p.support) : ∃ n, p.getVert n = u ∧ n ≤ p.length := by
   obtain ⟨q, r, hqr⟩ := SimpleGraph.Walk.mem_support_iff_exists_append.mp h
   use q.length
@@ -1639,6 +1643,7 @@ lemma support_exists_getVert' (p : G.Walk v w) (h : u ∈ p.support) : ∃ n, p.
   simp only [lt_self_iff_false, ↓reduceIte, ge_iff_le, le_refl, tsub_eq_zero_of_le,
     Walk.getVert_zero, Walk.length_append, le_add_iff_nonneg_right, zero_le, and_self]
 
+-- In getVert PR
 @[simp]
 lemma cons_getVert_succ (p : G.Walk v w) (h : G.Adj u v) : (Walk.cons h p).getVert n.succ = p.getVert n := by
   rfl
@@ -1654,6 +1659,7 @@ lemma support_length (p : G.Walk v w) : p.support.length = p.length + 1 := by
   | .cons _ _ => simp only [Walk.support_cons, List.length_cons, Walk.length_support,
     Nat.succ_eq_add_one, Walk.length_cons]
 
+-- in getVert PR
 lemma getVert_nonZero (p : G.Walk v w) (h : G.Adj u v) (hn : 0 < n) : (Walk.cons h p).getVert n = p.getVert (n - 1) := by
   have : ∃ (i : ℕ), i.succ = n := by
     use (n - 1)
@@ -1695,6 +1701,7 @@ lemma getVert_support_get (p : G.Walk u v) (h2 : n ≤ p.length) : p.getVert n =
         rw [@Walk.length_cons] at h2
         exact Nat.sub_le_of_le_add h2
         )
+-- In getVert PR
 lemma getVert_tail_support_get (p : G.Walk u v) (hnp: ¬ p.Nil) : (p.tail hnp).getVert n = p.getVert (n + 1) :=
   p.notNilRec (by
     intro u v w h q
@@ -1759,6 +1766,7 @@ lemma path_getVert_sub_neq_getVert_add (p : G.Walk u v) (hpp : p.IsPath) (h1 : 0
   rw [← getVert_support_get _ (by omega)] at this
   exact fun a => this (congrArg some a)
 
+-- In getVert PR
 theorem toSubgraph_getVert_succ {u v} (w : G.Walk u v) {i : ℕ} (hi : i < w.length) :
     (w.toSubgraph).Adj (w.getVert i) (w.getVert (i + 1)) := by
   induction w generalizing i with
@@ -2130,7 +2138,7 @@ lemma alternating_edge' (p : G.Walk u u) (M : Subgraph G) (h : p.IsAlternating M
       exact ⟨this.mp hM, hpvx, hxw.symm⟩
 
 
-
+-- In #14976
 def Subgraph.symDiff (M : Subgraph G) (C : Subgraph G) : Subgraph G := {
   verts := M.verts ∪ C.verts,
   Adj := fun v w ↦ (¬ M.Adj v w ∧ C.Adj v w) ∨ (M.Adj v w ∧ ¬ C.Adj v w),
@@ -2161,18 +2169,19 @@ def Subgraph.symDiff (M : Subgraph G) (C : Subgraph G) : Subgraph G := {
       exact ⟨h2.1.symm, fun h ↦ h2.2 h.symm⟩
   }
 
+-- In #14976
 @[simp]
 lemma Subgraph.symDiff_verts (M : Subgraph G) (C : Subgraph G) : (M.symDiff C).verts = M.verts ∪ C.verts := by rfl
-
+-- In #14976
 @[simp]
 lemma Subgraph.symDiff_adj (M : Subgraph G) (C : Subgraph G) : (M.symDiff C).Adj v w = ((¬ M.Adj v w ∧ C.Adj v w) ∨ (M.Adj v w ∧ ¬ C.Adj v w)) := rfl
-
+-- In #14976
 lemma Subgraph.symDiff_adj_comm (M : Subgraph G) (C : Subgraph G) : (M.symDiff C).Adj v w = (C.symDiff M).Adj v w := by
   unfold symDiff
   simp
   tauto
 
-
+-- In #14976
 lemma Subgraph.symDiffSingletonAdj {M : Subgraph G} : (M.symDiff (G.singletonSubgraph u)).Adj v w = M.Adj v w := by
   unfold symDiff
   simp [singletonSubgraph_adj, Pi.bot_apply, eq_iff_iff, Prop.bot_eq_false]
@@ -2505,6 +2514,7 @@ lemma alternatingCycleSymDiffMatch' {M : Subgraph G} {C : Subgraph G} (hM : M.Is
           exact h2.1
         }
 
+-- In #12960
 lemma SimpleGraph.subgraphOfAdj_IsMatching (h : G.Adj u v) : (G.subgraphOfAdj h).IsMatching := by
   intro w hw
   by_cases hwu : w = u
@@ -2583,12 +2593,13 @@ lemma Walk.mem_toSubgraph_support_mem_support {p : G.Walk u v} (hnp : ¬ p.Nil) 
           exact (Walk.mem_toSubgraph_support_mem_support not_nil_cons _).mpr hr
 termination_by p.length
 
+-- In getVert PR
 @[simp]
 lemma Walk.cons_sndOfNotNil (q : G.Walk v w) (hadj : G.Adj u v) : (Walk.cons hadj q).sndOfNotNil (not_nil_cons) = v := by
   unfold sndOfNotNil
   simp only [notNilRec_cons]
 
-
+-- In getVert PR
 lemma Walk.getVert_one (p : G.Walk u v) (hnp : ¬ p.Nil) : p.getVert 1 = p.sndOfNotNil hnp :=
   p.notNilRec (by
     intro u v w h q
