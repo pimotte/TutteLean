@@ -1588,6 +1588,7 @@ lemma cons_tail (p : G.Walk u v) (h : G.Adj t u) : (Walk.cons h p).tail (Walk.no
   unfold Walk.tail
   simp only [notNilRec_cons]
 
+-- In getVert PRg
 lemma tail_support_eq_support_tail (p : G.Walk u v) (hnp : ¬p.Nil) : (p.tail hnp).support = p.support.tail :=
   p.notNilRec (by
     intro u v w huv q
@@ -1780,6 +1781,7 @@ theorem toSubgraph_getVert_succ {u v} (w : G.Walk u v) {i : ℕ} (hi : i < w.len
       right
       exact ih (Nat.succ_lt_succ_iff.mp hi)
 
+-- In getVert PR
 theorem toSubgraph_adj_exists {u v} (w : G.Walk u v)
     (hadj : (w.toSubgraph).Adj u' v') : ∃ i, (u' = w.getVert i ∧ v' = w.getVert (i + 1) ∨ v' = w.getVert i ∧ u' = w.getVert (i + 1)) ∧ i < w.length := by
   unfold Walk.toSubgraph at hadj
@@ -3974,7 +3976,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
         · obtain ⟨u, hu ⟩ := this
           use u
           exact lt_of_lt_of_le hu (by
-            haveI := Gmax.hDec
+            haveI : DecidableRel Gmax.G'.Adj := Classical.decRel _
             exact oddComponentsIncrease G Gmax.G' Gmax.hSubgraph u
             )
 
