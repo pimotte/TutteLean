@@ -27,19 +27,6 @@ lemma ConnectedComponent.isOdd_iff (c : G.ConnectedComponent) [Fintype c.supp] :
     c.isOdd ↔ Odd (Fintype.card c.supp) := by
   rw [isOdd, Nat.card_eq_fintype_card]
 
-/-- This is `Quot.recOn` specialized to connected components.
-For convenience, it strengthens the assumptions in the hypothesis
-to provide a path between the vertices. -/
-@[elab_as_elim]
-def ConnectedComponent.recOn
-    {motive : G.ConnectedComponent → Sort*}
-    (c : G.ConnectedComponent)
-    (f : (v : V) → motive (G.connectedComponentMk v))
-    (h : ∀ (u v : V) (p : G.Walk u v) (_ : p.IsPath),
-      ConnectedComponent.sound p.reachable ▸ f u = f v) :
-    motive c :=
-  Quot.recOn c f (fun u v r => r.elim_path fun p => h u v p p.2)
-
 instance [Fintype V] [DecidableEq V] [DecidableRel G.Adj]
     (c : G.ConnectedComponent) (v : V) : Decidable (v ∈ c.supp) :=
   c.recOn
@@ -476,7 +463,7 @@ noncomputable def maximalWithoutMatching' [Fintype V] {G : SimpleGraph V} [Decid
       let h := h'.choose_spec.choose_spec.choose
       exact maximalWithoutMatching'
         ⟨ GExt.G' ⊔ singleEdge h ,
-          by infer_instance ,
+          Classical.decRel _ ,
           by exact le_trans GExt.hSubgraph (distribLattice.proof_7 GExt.G' (singleEdge h)) ,
           h'.choose_spec.choose_spec.choose_spec.2 ⟩
     else
@@ -778,6 +765,7 @@ lemma oddComponentsIncrease [Fintype V] [Inhabited V] [DecidableEq V] (G G' : Si
           have : compSet G'' = ∅ := by
             ext v
             have := v.exists_rep.choose
+            have I : DecidableRel G''.Adj := Classical.decRel _
             rw [deleteAll] at this
             rw [SimpleGraph.Subgraph.verts_bot] at this
             exact ((Equiv.Set.empty _) this).elim
@@ -2595,19 +2583,6 @@ lemma Walk.mem_toSubgraph_support_mem_support {p : G.Walk u v} (hnp : ¬ p.Nil) 
           exact (Walk.mem_toSubgraph_support_mem_support not_nil_cons _).mpr hr
 termination_by p.length
 
--- In getVert PR
-@[simp]
-lemma Walk.cons_sndOfNotNil (q : G.Walk v w) (hadj : G.Adj u v) : (Walk.cons hadj q).sndOfNotNil (not_nil_cons) = v := by
-  unfold sndOfNotNil
-  simp only [notNilRec_cons]
-
--- In getVert PR
-lemma Walk.getVert_one (p : G.Walk u v) (hnp : ¬ p.Nil) : p.getVert 1 = p.sndOfNotNil hnp :=
-  p.notNilRec (by
-    intro u v w h q
-    simp only [cons_getVert_succ, getVert_zero, cons_sndOfNotNil]
-    ) hnp
-
 theorem toSubgraph_adj_sndOfNotNil {u v} (p : G.Walk u v) (hp : ¬ p.Nil) (hpp : p.IsPath)
     (hadj : (p.toSubgraph).Adj u v') : p.sndOfNotNil hp = v' := by
   have ⟨i, hi⟩ := toSubgraph_adj_exists _ hadj
@@ -3043,7 +3018,7 @@ lemma matching_union_left (M : (G ⊔ G').Subgraph) (hM : M.IsPerfectMatching) (
   use M'
   rw [@Subgraph.isPerfectMatching_iff]
   intro v
-  obtain ⟨w, hw⟩ := M.isPerfectMatching_iff.mp hM v
+  obtain ⟨w, hw⟩ := Subgraph.isPerfectMatching_iff.mp hM v
   use w
 
 -- noncomputable def altWalk {v a b x : V} [Fintype V] [DecidableEq V] {G1 G2 : SimpleGraph V} {M1 : Subgraph G1} {M2 : Subgraph G2}[DecidableRel M1.Adj]
@@ -3539,14 +3514,6 @@ lemma Walk.getVert_length_sub_one {p : G.Walk u v} (hnp : ¬ p.Nil)  : p.getVert
   rw [← SimpleGraph.Walk.getVert_reverse]
   exact getVert_one p.reverse (lastButOneOfNotNil.proof_1 p hnp)
 
-lemma Walk.cons_getVert {p : G.Walk u v} {hadj : G.Adj t u} (h : 0 < i): (Walk.cons hadj p).getVert i = p.getVert (i - 1) := by
-  rw [← SimpleGraph.Walk.getVert.eq_3 _ hadj (i - 1)]
-  simp only [Nat.succ_eq_add_one]
-  congr
-  omega
-
-
-
 lemma Walk.IsPath.start_ne_lastButOne {p : G.Walk u v} (hnp : ¬ p.Nil) (hnp' : ¬ (p.tail hnp).Nil) (hadj : G.Adj w (p.sndOfNotNil hnp))
     (hpath : (Walk.cons hadj (p.tail hnp)).IsPath) : (Walk.cons hadj (p.tail hnp)).lastButOneOfNotNil (Walk.not_nil_cons) ≠ w := by
   intro h
@@ -3606,9 +3573,7 @@ lemma Walk.IsPath.start_ne_lastButOne' {p : G.Walk u v} (hnp : ¬ p.Nil)  (hadj 
     rw [length_support]
     omega)
   rw [← getVert_support_get _ (by omega)] at this
-  rw [← getVert_support_get _ (by
-    omega
-    )] at this
+  rw [← getVert_support_get _ (by omega)] at this
   apply this
   simp only [getVert_zero, length_cons, length_tail_add_one, Option.some.injEq]
   have : p.length = (Walk.cons hadj p).length - 1 := by
@@ -3616,10 +3581,11 @@ lemma Walk.IsPath.start_ne_lastButOne' {p : G.Walk u v} (hnp : ¬ p.Nil)  (hadj 
     omega
   rw [this]
   simp only [length_cons, add_tsub_cancel_right]
-  rw [Walk.cons_getVert hpl]
+  rw [cons_getVert p hadj (by omega)]
   rw [getVert_length_sub_one hnp]
   rw [Walk.cons_lastButOneOfNotNil hnp] at h
   exact h.symm
+
 
 lemma Walk.IsCircuit.reverse {p: G.Walk u u} (hp : p.IsCircuit) : p.reverse.IsCircuit := by
   constructor
@@ -3630,73 +3596,91 @@ lemma Walk.IsCircuit.reverse {p: G.Walk u u} (hp : p.IsCircuit) : p.reverse.IsCi
     apply hp.2
     exact nil_iff_eq_nil.mp h
 
+@[simp]
+lemma List.getElem?_tail {l : List α} {n : ℕ} : l.tail[n]? = l[n + 1]? := by
+  induction l with
+  | nil => simp only [List.tail_nil, List.getElem?_nil]
+  | cons h q _ => simp only [List.tail_cons, List.getElem?_cons_succ]
+
+
+lemma getVert_support_getElem? (p : G.Walk u v) (h2 : n ≤ p.length) : p.getVert n = p.support[n]? := by
+  match p, n with
+  | .nil, 0 =>
+    simp only [Walk.getVert_zero, Walk.support_nil, List.length_singleton, zero_lt_one,
+      List.getElem?_eq_getElem, List.getElem_cons_zero]
+  | .nil, (n + 1) =>
+    simp only [Walk.length_nil, nonpos_iff_eq_zero, add_eq_zero, one_ne_zero, and_false] at h2
+  | .cons h q, 0 =>
+    simp only [Walk.getVert_zero, Walk.support_cons, List.length_cons, Walk.length_support,
+      lt_add_iff_pos_left, add_pos_iff, Nat.ofNat_pos, or_true, List.getElem?_eq_getElem,
+      List.getElem_cons_zero]
+  | .cons h q, (n + 1) =>
+    simp only [Walk.cons_getVert_succ, Walk.support_cons, List.getElem?_cons_succ]
+    apply getVert_support_getElem?
+    rw [@Walk.length_cons] at h2
+    omega
+
+lemma Walk.IsCycle.getVert_internal_neq_endpoint {i : ℕ} {p : G.Walk u u} (hp : p.IsCycle)
+    (h : 0 < i) (h' : i < p.length) : p.getVert i ≠ u := by
+  have hnodup := hp.2
+  rw [List.nodup_iff_getElem?_ne_getElem?] at hnodup
+  have := hnodup (i - 1) (p.length - 1) (by omega) (by rw [support_tail_length]; omega)
+  simp only [List.getElem?_tail] at this ⊢
+  rw [← getVert_support_getElem? _ (by omega), ← getVert_support_getElem? _ (by omega)] at this
+  rw [(by omega : i - 1 + 1 = i), (by omega : p.length - 1 + 1 = p.length)] at this
+  simpa only [getVert_length, ne_eq, Option.some.injEq] using this
+
+/--
+  Private because it's a strict subcase of nodup and nodup'
+-/
+private lemma Walk.IsCycle.getVert_internal_nodup {i j : ℕ} {p : G.Walk u u} (hp : p.IsCycle) (hi : 0 < i) (hij : i < j)
+    (hjl : j < p.length) : p.getVert i ≠ p.getVert j := by
+  have hnodup := hp.2
+  rw [List.nodup_iff_getElem?_ne_getElem?] at hnodup
+  have := hnodup (i - 1) (j - 1) (by omega) (by rw [support_tail_length]; omega)
+  simp only [List.getElem?_tail] at this ⊢
+  rw [← getVert_support_getElem? _ (by omega), ← getVert_support_getElem? _ (by omega)] at this
+  rw [(by omega : i - 1 + 1 = i), (by omega : j - 1 + 1 = j)] at this
+  simpa only [getVert_length, ne_eq, Option.some.injEq] using this
+
+lemma Walk.IsCycle.getVert_nodup {i j : ℕ} {p : G.Walk u u} (hp : p.IsCycle) (hij : i < j)
+    (hjl : j < p.length - 1) : p.getVert i ≠ p.getVert j := by
+  by_cases h : i = 0
+  · simp only [h, getVert_zero]
+    exact (hp.getVert_internal_neq_endpoint (by omega) (by omega)).symm
+  · exact hp.getVert_internal_nodup (by omega) (by omega) (by omega)
+
+lemma Walk.IsCycle.getVert_nodup' {i j : ℕ} {p : G.Walk u u} (hp : p.IsCycle) (hi : 0 < i) (hij : i < j)
+    (hjl : j ≤ p.length): p.getVert i ≠ p.getVert j := by
+  by_cases h : j = p.length
+  · simp only [h, getVert_length, ne_eq]
+    exact (hp.getVert_internal_neq_endpoint (by omega) (by omega))
+  · exact hp.getVert_internal_nodup (by omega) (by omega) (by omega)
+
 lemma Walk.tail_nodup_reverse {p : G.Walk u u} [DecidableEq V] (hp : p.IsCycle): p.reverse.support.tail.Nodup  := by
   have hp3 : p.length ≥ 3 := IsCycle.three_le_length hp
-  rw [@support_reverse]
-  have hnodup := hp.2
-  rw [@List.nodup_iff_get?_ne_get?] at hnodup ⊢
+  rw [support_reverse, List.nodup_iff_get?_ne_get?]
   intro i j hij hj
-  simp [List.length_tail, List.length_reverse, tail_get?] at hj hnodup
-  simp only [tail_get?]
-  by_cases h : j = p.support.tail.length - 1
-  · simp [List.length_tail, support_length] at h
-    have := hnodup (p.length - i - 2) (p.length - 1) (by omega) (by omega)
-    intro heq
-    apply this
-    rw [List.get?_reverse _ (by
-      rw [support_length]
-      omega
-      )] at heq
-    rw [List.get?_reverse _ (by
-      rw [support_length]
-      omega)] at heq
-    rw [support_length] at heq
-    have : p.length - 1 + 1 = p.length := by omega
-    rw [this]
-    rw [← getVert_support_get _ (by omega)]
-    rw [← getVert_support_get _ (by omega)]
-    simp only [getVert_length, Option.some.injEq]
-    rw [← getVert_support_get _ (by omega)] at heq
-    rw [← getVert_support_get _ (by omega)] at heq
-    simp only [add_tsub_cancel_right, Option.some.injEq] at heq
-    rw [h] at heq
-    have : p.length - (p.length - 1 + 1) = 0 := by omega
-    rw [this] at heq
-    simp only [getVert_zero] at heq
-    have : p.length - (i + 1) = p.length - i - 2 + 1 := by omega
-    rw [← this]
-    exact heq
-  · rw [List.length_tail] at h
-    rw [support_length] at h
-    push_neg at h
-    have := hnodup (p.length - j - 2) (p.length - i - 2)
-      (by omega) (by omega)
-    intro heq
+  simp only [List.length_tail, List.length_reverse, length_support, add_tsub_cancel_right] at hj
+  simp [List.length_tail, List.length_reverse, tail_get?]
+  rw [List.getElem?_reverse (by rw [support_length]; omega),
+    List.getElem?_reverse (by rw [support_length]; omega)]
+  rw [← getVert_support_getElem? _ (by rw [support_length]; omega)]
+  rw [← getVert_support_getElem? _ (by rw [support_length]; omega)]
+  simp only [length_support, add_tsub_cancel_right, Option.some.injEq]
+  by_cases hj' : j = p.length
+  · simp only [hj', le_add_iff_nonneg_right, zero_le, tsub_eq_zero_of_le, getVert_zero]
+    exact hp.getVert_internal_neq_endpoint (by omega) (by omega)
+  · by_cases hj'' : j = p.length - 1
+    · simp only [hj'', (by omega : p.length - (p.length - 1 + 1) = 0), getVert_zero]
+      exact hp.getVert_internal_neq_endpoint (by omega) (by omega)
+    · exact (hp.getVert_nodup' (by omega) (by omega) (by omega)).symm
 
-    apply this
-
-    rw [List.get?_reverse _ (by
-      rw [support_length]
-      omega
-      )] at heq
-    rw [List.get?_reverse _ (by
-      rw [support_length]
-      omega)] at heq
-    rw [support_length] at heq
-    have : p.length - j - 2 + 1 = p.length + 1 - 1 - (j + 1) := by omega
-
-    rw [this]
-    have : p.length - i - 2 + 1 = p.length + 1 - 1 - (i + 1) := by omega
-    rw [this]
-    exact heq.symm
 
 lemma Walk.IsCycle.reverse {p : G.Walk u u} [DecidableEq V] (hp : p.IsCycle) : p.reverse.IsCycle := by
   constructor
   · exact hp.1.reverse
   · exact Walk.tail_nodup_reverse hp
-
-
-
 
 
 lemma Walk.IsCycle.decompose_mem_support_part' {p : G.Walk u u} {q : G.Walk u v} {r : G.Walk v u} (hp : p.IsCycle) (h : p = q.append r)
@@ -3940,7 +3924,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
         obtain ⟨ v' , hv' ⟩ := (OddComponentHasNodeMatchedOutside M hM u y hy).choose_spec
 
 
-        have ⟨ w , hw ⟩ := (Subgraph.isPerfectMatching_iff M).mp hM (f ⟨ x , hx ⟩)
+        have ⟨ w , hw ⟩ := (M.isPerfectMatching_iff).mp hM (f ⟨ x , hx ⟩)
         have h'' := hw.2 _ hv.1.symm
         rw [hxy] at hw
         have h''' := hw.2 _ hv'.1.symm
@@ -4536,8 +4520,8 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
         intro h
         exact hc.1 h
 
-      obtain ⟨M1, hM1⟩ := Decidable.not_forall_not.mp (Gmax.hMaximal _ hG1)
-      obtain ⟨M2, hM2⟩ := Decidable.not_forall_not.mp (Gmax.hMaximal _ hG2)
+      obtain ⟨M1, hM1⟩ := not_forall_not.mp (Gmax.hMaximal _ hG1)
+      obtain ⟨M2, hM2⟩ := not_forall_not.mp (Gmax.hMaximal _ hG2)
 
       have hM1' : M1.Adj x b := by
 
@@ -4750,8 +4734,8 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
                   exfalso
                   apply SimpleGraph.Adj.ne' hxab.1
                   exact Subtype.val_injective (Subtype.val_injective h4.1.symm)
-            · save
-              obtain ⟨p, _⟩ := SimpleGraph.Reachable.exists_walk_of_dist this
+            ·
+              obtain ⟨p, _⟩ := SimpleGraph.Reachable.exists_path_of_dist this
               push_neg at hvc
               have hnp : ¬ p.Nil:= p.not_nil_of_ne (by
                 intro h
@@ -5124,7 +5108,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
             have hp'alt : p'.toSubgraph.IsAlternating M2' := by
               refine hp'c.IsAlternating_cons (Walk.not_nil_cons) ?halt ?ha ?hb
               · refine hconsrPath.IsAlternating_cons hrn hralt ?ha'
-                simp only [hM2'nax, false_iff, Decidable.not_not]
+                simp only [hM2'nax, false_iff, not_not]
                 exact hM2'Adjxr2
               · simp only [hM'2ca.symm, Walk.cons_sndOfNotNil, true_iff]
                 intro hM2'a
@@ -5514,7 +5498,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
               · refine hconsrPath.IsAlternating_cons hqrn ?_ ?_
                 · rw [@Walk.toSubgraph_reverse]
                   exact hqalt
-                · simp only [hM2'nax, false_iff, Decidable.not_not]
+                · simp only [hM2'nax, false_iff, not_not]
                   have := hpadjqrs
                   rw [hp.2] at this
                   have := hadjImp this
