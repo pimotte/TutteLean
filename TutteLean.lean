@@ -115,50 +115,50 @@ theorem mem_supp_of_adj' [Fintype V] [DecidableEq V] [DecidableRel G.Adj]  (c : 
 
       · dsimp
 
-lemma OddComponentHasNodeMatchedOutside [Fintype V] [DecidableEq V] [DecidableRel G.Adj]
-  (M : Subgraph G) (hM : Subgraph.IsPerfectMatching M) (u : Set V) (c : ConnectedComponent ((⊤ : Subgraph G).deleteVerts u).coe)
-  (codd : c.isOdd) : ∃ (w : Set.Elem u) (v : Set.Elem ((⊤ : G.Subgraph).deleteVerts u).verts) ,  M.Adj v w ∧ v ∈ c.supp := by
-      rw [ConnectedComponent.isOdd_iff] at codd
+-- lemma OddComponentHasNodeMatchedOutside [Fintype V] [DecidableEq V] [DecidableRel G.Adj]
+--   (M : Subgraph G) (hM : Subgraph.IsPerfectMatching M) (u : Set V) (c : ConnectedComponent ((⊤ : Subgraph G).deleteVerts u).coe)
+--   (codd : c.isOdd) : ∃ (w : Set.Elem u) (v : Set.Elem ((⊤ : G.Subgraph).deleteVerts u).verts) ,  M.Adj v w ∧ v ∈ c.supp := by
+--       rw [ConnectedComponent.isOdd_iff] at codd
 
-      by_contra! h
+--       by_contra! h
 
-      have h' : (Subgraph.IsMatching (M.induce c.supp)) := by
-        intro v hv
-        obtain ⟨ w , hw ⟩ := hM.1 (hM.2 v)
-        obtain ⟨ v' , hv' ⟩ := hv
-        use w
-        dsimp at *
-        constructor
-        · constructor
-          · exact ⟨ v' , hv' ⟩
-          · constructor
-            · have h'' : w ∉ u := by
-                intro hw'
-                apply h ⟨ w , hw' ⟩ v' _
-                · exact hv'.1
-                rw [hv'.2]
-                exact hw.1
-                done
+--       have h' : (Subgraph.IsMatching (M.induce c.supp)) := by
+--         intro v hv
+--         obtain ⟨ w , hw ⟩ := hM.1 (hM.2 v)
+--         obtain ⟨ v' , hv' ⟩ := hv
+--         use w
+--         dsimp at *
+--         constructor
+--         · constructor
+--           · exact ⟨ v' , hv' ⟩
+--           · constructor
+--             · have h'' : w ∉ u := by
+--                 intro hw'
+--                 apply h ⟨ w , hw' ⟩ v' _
+--                 · exact hv'.1
+--                 rw [hv'.2]
+--                 exact hw.1
+--                 done
 
-              apply mem_supp_of_adj' c v' w ⟨ v' , ⟨ hv'.1 , rfl ⟩ ⟩ ⟨ by trivial , h'' ⟩
-              rw [hv'.2]
-              exact Subgraph.adj_sub _ hw.1
-            · exact hw.1
-        · intro y hy
-          apply hw.2
-          exact hy.2.2
-        done
+--               apply mem_supp_of_adj' c v' w ⟨ v' , ⟨ hv'.1 , rfl ⟩ ⟩ ⟨ by trivial , h'' ⟩
+--               rw [hv'.2]
+--               exact Subgraph.adj_sub _ hw.1
+--             · exact hw.1
+--         · intro y hy
+--           apply hw.2
+--           exact hy.2.2
+--         done
 
-      apply Nat.odd_iff_not_even.mp codd
-      have h'' := Subgraph.IsMatching.even_card h'
-      simp only [Subgraph.induce_verts, Subgraph.verts_top] at h''
-      unfold Fintype.card
-      rw [Nat.even_iff] at h'' ⊢
-      rw [← h'']
-      rw [ Set.toFinset_image ]
-      rw [Finset.card_image_of_injective _ (Subtype.val_injective)]
-      simp only [Subgraph.induce_verts, Subgraph.verts_top, Set.toFinset_card]
-      rfl
+--       apply Nat.odd_iff_not_even.mp codd
+--       have h'' := Subgraph.IsMatching.even_card h'
+--       simp only [Subgraph.induce_verts, Subgraph.verts_top] at h''
+--       unfold Fintype.card
+--       rw [Nat.even_iff] at h'' ⊢
+--       rw [← h'']
+--       rw [ Set.toFinset_image ]
+--       rw [Finset.card_image_of_injective _ (Subtype.val_injective)]
+--       simp only [Subgraph.induce_verts, Subgraph.verts_top, Set.toFinset_card]
+--       rfl
 
 
 
@@ -3803,7 +3803,9 @@ lemma ConnectedComponent.supp_induce_connected {H : Subgraph G} (hH : H.IsSpanni
 
 
 
-
+theorem setOf_ncard_le_ncard_of_injOn {α : Type u_2} {p : α → Prop} {β : Type u_1} {t : Set β} (f : α → β)
+    (hf : ∀ (a : α), a ∈ setOf p → f a ∈ t) (f_inj : Set.InjOn f (setOf p)) (ht : t.Finite) : (setOf p).ncard ≤ t.ncard := by
+  sorry
 
 
 theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
@@ -3814,60 +3816,15 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
   {
     rintro ⟨M, hM⟩ u
     unfold cardOddComponents
+    #check (c : G.ConnectedComponent) →  ∃ w ∈ u, ∃ v, M.Adj (↑v) w ∧ v ∈ c.supp
     let f : {c : ConnectedComponent ((⊤ : Subgraph G).deleteVerts u).coe | ConnectedComponent.isOdd c} → u :=
-      fun c => Exists.choose (OddComponentHasNodeMatchedOutside M hM u c c.2)
-
-    let g : ConnectedComponent ((⊤ : Subgraph G).deleteVerts u).coe → V := fun c =>
-      if h : Odd (Fintype.card c.supp) then f ⟨ c , (by
-            rw [← ConnectedComponent.isOdd_iff] at h
-            exact h
-      ) ⟩ else default
-
-    exact Set.ncard_le_ncard_of_injOn g (by
-      intro a ha
-      dsimp at ha
-      have h : g a = f ⟨ a , ha ⟩ := by
-        rw [dite_eq_iff]
-        left
-        use (ConnectedComponent.isOdd_iff _).mp ha
-        done
-      rw [h]
-      dsimp
-      rw [Set.mem_def]
-      -- simp only [ConnectedComponent.mem_supp_iff, Subtype.exists, Set.mem_diff, Set.mem_univ,
-      --   true_and, exists_and_left]
-      apply Subtype.prop
-      ) (by
-        intro x hx y hy hxy
-        have h : g x = f ⟨ x , hx ⟩ := by
-          rw [dite_eq_iff]
-          left
-          use (ConnectedComponent.isOdd_iff _).mp hx
-          done
-        have h' : g y = f ⟨ y , hy ⟩ := by
-          rw [dite_eq_iff]
-          left
-          use (ConnectedComponent.isOdd_iff _).mp hy
-          done
-        rw [h, h'] at hxy
-
-        dsimp at hxy
-        obtain ⟨ v , hv ⟩ := (OddComponentHasNodeMatchedOutside M hM u x hx).choose_spec
-        obtain ⟨ v' , hv' ⟩ := (OddComponentHasNodeMatchedOutside M hM u y hy).choose_spec
-
-
-        have ⟨ w , hw ⟩ := (M.isPerfectMatching_iff).mp hM (f ⟨ x , hx ⟩)
-        have h'' := hw.2 _ hv.1.symm
-        rw [hxy] at hw
-        have h''' := hw.2 _ hv'.1.symm
-        rw [← h'''] at h''
-        rw [← ((ConnectedComponent.mem_supp_iff x v).mp hv.2)]
-        rw [← ((ConnectedComponent.mem_supp_iff y v').mp hv'.2)]
-        rw [Subtype.val_injective h'']
-      ) (Set.toFinite u)
+      fun c => ⟨(c.1.odd_matches_node_outside hM c.2).choose,(c.1.odd_matches_node_outside hM c.2).choose_spec.1⟩
+    have := Finite.card_le_of_injective f (by sorry)
+    simp only [Set.Nat.card_coe_set_eq] at this
+    exact this
   }
   {
-
+    stop
     contrapose!
     intro h
     if hvOdd : Odd (Finset.univ : Finset V).card
