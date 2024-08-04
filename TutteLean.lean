@@ -3586,7 +3586,6 @@ lemma Walk.IsPath.start_ne_lastButOne' {p : G.Walk u v} (hnp : ¬ p.Nil)  (hadj 
   rw [Walk.cons_lastButOneOfNotNil hnp] at h
   exact h.symm
 
-
 lemma Walk.IsCircuit.reverse {p: G.Walk u u} (hp : p.IsCircuit) : p.reverse.IsCircuit := by
   constructor
   · exact hp.1.reverse
@@ -3601,7 +3600,6 @@ lemma List.getElem?_tail {l : List α} {n : ℕ} : l.tail[n]? = l[n + 1]? := by
   induction l with
   | nil => simp only [List.tail_nil, List.getElem?_nil]
   | cons h q _ => simp only [List.tail_cons, List.getElem?_cons_succ]
-
 
 lemma getVert_support_getElem? (p : G.Walk u v) (h2 : n ≤ p.length) : p.getVert n = p.support[n]? := by
   match p, n with
