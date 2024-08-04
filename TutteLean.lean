@@ -27,12 +27,6 @@ lemma ConnectedComponent.isOdd_iff (c : G.ConnectedComponent) [Fintype c.supp] :
     c.isOdd ↔ Odd (Fintype.card c.supp) := by
   rw [isOdd, Nat.card_eq_fintype_card]
 
-instance [Fintype V] [DecidableEq V] [DecidableRel G.Adj]
-    (c : G.ConnectedComponent) (v : V) : Decidable (v ∈ c.supp) :=
-  c.recOn
-    (fun w => by simp only [ConnectedComponent.mem_supp_iff, ConnectedComponent.eq]; infer_instance)
-    (fun _ _ _ _ => Subsingleton.elim _ _)
-
 
 lemma deleteVerts_verts_notmem_deleted (a : ((⊤ : G.Subgraph).deleteVerts u).verts) : a.val ∉ u := a.prop.2
 
@@ -63,66 +57,6 @@ instance myInst3 [r : DecidableRel G.Adj] : DecidableRel (((⊤ : G.Subgraph).de
 
     )
   }
-
-instance myInst2 [r : DecidableRel G.Adj] : DecidableRel (Subgraph.coe (⊤ : Subgraph G)).Adj := by
-  intro x y
-  cases (r x y) with
-  | isFalse nh => {
-    exact .isFalse (by
-      intro w
-      exact nh (Subgraph.coe_adj_sub _ _ _ w)
-      )
-  }
-  | isTrue h => {
-    exact .isTrue (by
-      apply (Subgraph.coe_adj_sub _ _ _ _)
-      exact h
-    )
-  }
-
-instance myInst [Fintype V] [DecidableEq V] [DecidableRel G.Adj] (u : ConnectedComponent G) :
-    Fintype u.supp := inferInstance
-
-
-lemma SimpleGraph.PerfectMatchingInducesMatchingOnComponent [Fintype V] [DecidableEq V] [DecidableRel G.Adj]
-  (M : Subgraph G) (hM : Subgraph.IsPerfectMatching M) (c : ConnectedComponent G) : (Subgraph.IsMatching (M.induce c.supp)) := by
-    intro v hv
-    have vM : v ∈ M.verts := by
-      apply hM.2
-    have h := hM.1 vM
-    obtain ⟨ w, hw ⟩ := h
-    use w
-    dsimp at *
-    constructor
-    · constructor
-      · assumption
-      · constructor
-        · rw [ConnectedComponent.mem_supp_iff]
-          rw [ConnectedComponent.mem_supp_iff] at hv
-          rw [← hv]
-          apply ConnectedComponent.connectedComponentMk_eq_of_adj
-          apply M.adj_sub
-          rw [Subgraph.adj_comm]
-          exact hw.1
-        · exact hw.1
-    · intro y hy
-      apply hw.2
-      exact hy.2.2
-    done
-
-
-lemma SimpleGraph.PerfectMatchingConnectedComponentEven [Fintype V] [DecidableEq V] [DecidableRel G.Adj]
-  (M : Subgraph G) (hM : Subgraph.IsPerfectMatching M) (c : ConnectedComponent G) : Even (Fintype.card ↑(ConnectedComponent.supp c)) := by
-    classical
-    have h : Even (M.induce c.supp).verts.toFinset.card := by exact Subgraph.IsMatching.even_card (SimpleGraph.PerfectMatchingInducesMatchingOnComponent M hM c)
-    obtain ⟨ k , hk ⟩ := h
-    use k
-    rw [← hk, Subgraph.induce_verts, @Fintype.card_ofFinset]
-    congr
-    simp only [ConnectedComponent.mem_supp_iff]
-    exact Set.filter_mem_univ_eq_toFinset fun x => connectedComponentMk G x = c
-
-    done
 
 instance [Fintype V] [DecidableEq V] [DecidableRel G.Adj] : DecidableEq (ConnectedComponent G) := by
   intro c c'
@@ -3979,6 +3913,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
 
       if h' : ∀ (K : ConnectedComponent Gsplit.coe), Gsplit.coe.IsClique K.supp
       then
+
         let f' := fun (c : {(c : ConnectedComponent Gsplit.coe) | ConnectedComponent.isOdd c}) => (componentExistsRep c.val).choose
         have f'mem  (c : {(c : ConnectedComponent Gsplit.coe) | ConnectedComponent.isOdd c}) : f' c ∈ c.val.supp := by
           simp only [Set.mem_setOf_eq, ConnectedComponent.mem_supp_iff]
@@ -5534,32 +5469,6 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
 
             use p'.toSubgraph
 
-
-
-        -- let p' := p.coeWalk
-        -- have hnp' := p.coeWalkNotNil hnp
-        -- let x2 := p'.sndOfNotNil hnp'
-        -- let c2 := p'.lastButOneOfNotNil hnp'
-
-        -- have G12ab : G12.Adj a b := by
-        --   rw [sup_adj]
-        --   rw [sup_adj]
-        --   left ; left
-        --   have := hxab.2.1
-        --   simp only [comap_adj, Function.Embedding.coe_subtype, Subgraph.coe_adj] at this
-        --   exact Gsplit.coe_adj_sub _ _ this
-
-        -- let p' := p.coeWalk
-        -- by_cases hxb : x2 = b
-        -- · by_cases hac : c2 = a
-        --   · let pC := Walk.cons (hxb ▸ G12ab) (p'.tail hnp')
-
-        --     sorr
-        --   · sorr
-
-        -- · sorr
-
-
       ·
         let Mcon := M2'.symDiff cycle
         have hMcon := alternatingCycleSymDiffMatch' hM2'' cycleIsCycle cycleAlt
@@ -5679,74 +5588,4 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
             rw [Subgraph.map_adj] at hr
             simp only [Hom.coe_ofLE, Relation.map_id_id] at hr
             exact hr.1
-
-
-
-      -- have hM1' : M1'.IsPerfectMatching := by exact?
-
-      -- let auxAltWalk (l : List V) (h : l.length > 1) : List V :=
-      --   let v := l.head (by
-      --     intro hl
-      --     rw [List.length_eq_zero.mpr hl] at h
-      --     omega
-      --     )
-      --   let w := l.get ⟨1, h⟩
-      --   if hv : v = a then
-      --     c :: []
-      --   else
-      --     if hv' : v = x ∨ v = b then
-      --       c :: a :: []
-      --     else
-      --       if M1.Adj v w then
-      --         (hM2.1 (hM2.2 v)).choose :: []
-      --       else
-      --         (hM1.1 (hM1.2 v)).choose :: []
-
-
-      -- let C := f ((hM1.1 (hM1.2 c)).choose :: c :: []) (by simp)
-
-
-
-
-
-      -- let C := altWalk (.cons (by sorr: G2.Adj (hM1.1 (hM1.2 c)).choose c) Walk.nil) (by sory)
-
-
-
-
   }
-
-
--- lemma cycle_two_neighbors (p : G.Walk u u) (hpc : p.IsCycle) (h : v ∈ p.support): (p.toSubgraph.neighborSet v).ncard = 2 := by
---   unfold Subgraph.neighborSet
---   by_cases hu : v = u
---   · sorr
---   ·
---   --   have hv' : v ∈ p.support.tail := by
---   --     cases (Walk.mem_support_iff _).mp h with
---   --     | inl h1 => exact (hu h1).elim
---   --     | inr h2 => exact h2
---     -- rw [← tail_support_eq_support_tail p (cycle_neq_not_nil p hpc)]
-
---     obtain ⟨q, r, hqr⟩ := SimpleGraph.Walk.mem_support_iff_exists_append.mp h
---     rw [hqr]
---     rw [SimpleGraph.Walk.toSubgraph_append]
---     rw [@Set.ncard_eq_two]
---     let firstNode := r.sndOfNotNil (Walk.not_nil_of_ne hu)
---     let secondNode := q.lastButOneOfNotNil (by
---       exact Walk.not_nil_of_ne fun a => hu a.symm
---       )
---     use firstNode
---     use secondNode
---     constructor
---     · intro hrq
---       have hf : firstNode ∈ p.support := by
---         rw [hqr, SimpleGraph.Walk.mem_support_append_iff]
---         right
---         exact sndOfNotNil_mem_support r (Walk.not_nil_of_ne hu)
---       have := hpc.1.1
---       by_cases h2 : secondNode = u
---       ·
---         sorr
---       · sorr
---     · sorr
