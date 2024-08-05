@@ -69,12 +69,14 @@ instance [Fintype V] [DecidableEq V] [DecidableRel G.Adj] : DecidableEq (Connect
     (fun _ _ _ _ => Subsingleton.elim _ _)
 
 
-noncomputable instance myInst5 [Fintype V] [DecidableEq V] (u : Set V) : Fintype u := by
-  exact Fintype.ofFinite ↑u
+-- noncomputable instance myInst5 [Fintype V] [DecidableEq V] (u : Set V) : Fintype u := by
+--   exact Fintype.ofFinite ↑u
 
 noncomputable instance myInst4 [Fintype V] [DecidableEq V] [DecidableRel G.Adj]
-    (u : Set V) [Fintype u]:
+    (u : Set V):
     Fintype ((⊤ : G.Subgraph).deleteVerts u).verts := by
+      haveI : Fintype u := by
+        exact Fintype.ofFinite u
       simp only [Subgraph.induce_verts, Subgraph.verts_top]
       infer_instance
 
@@ -117,7 +119,6 @@ theorem mem_supp_of_adj' [Fintype V] [DecidableEq V] [DecidableRel G.Adj]  (c : 
 
 
 def isMatchingFree (G : SimpleGraph V) := ∀ (M : Subgraph G), ¬Subgraph.IsPerfectMatching M
-
 
 
 def singleEdge {v w : V} (h : v ≠ w) : SimpleGraph V where
@@ -379,29 +380,29 @@ lemma exclUnion [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] (
     rw [@Set.toFinset_card]
     rw [Nat.card_eq_fintype_card]
 
-lemma cardUnion [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] (s : Finset (ConnectedComponent G))
-      : Fintype.card (⋃₀ (ConnectedComponent.supp '' s.toSet)) = Finset.sum s (Set.ncard ∘ ConnectedComponent.supp) := by
-  simp only [Set.sUnion_image, Finset.mem_coe, Function.comp_apply]
-  have hp :  Pairwise fun i j => Disjoint (⋃ (_ : i ∈ s), ConnectedComponent.supp i)
-    (⋃ (_ : j ∈ s), ConnectedComponent.supp j) := by
-    intro x y hxy s' hx hy
-    simp only [Set.bot_eq_empty, Set.le_eq_subset]
-    rw [@Set.subset_empty_iff]
-    by_contra! hc
-    obtain ⟨ v , hv ⟩ := hc
-    obtain ⟨ a , ha ⟩ := hx hv
-    obtain ⟨ b , hb ⟩ := hy hv
-    simp only [ne_eq, Set.le_eq_subset, Set.mem_range, exists_prop] at *
-    have h1 := ha.1.2.symm ▸ ha.2
-    have h2 := hb.1.2.symm ▸ hb.2
-    rw [SimpleGraph.ConnectedComponent.mem_supp_iff] at *
-    exact hxy (h1.symm ▸ h2)
-    done
+-- lemma cardUnion [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj]  (s : Finset (ConnectedComponent G))
+--       : Fintype.card (⋃₀ (ConnectedComponent.supp '' s.toSet)) = Finset.sum s (Set.ncard ∘ ConnectedComponent.supp) := by
+--   simp only [Set.sUnion_image, Finset.mem_coe, Function.comp_apply]
+--   have hp :  Pairwise fun i j => Disjoint (⋃ (_ : i ∈ s), ConnectedComponent.supp i)
+--     (⋃ (_ : j ∈ s), ConnectedComponent.supp j) := by
+--     intro x y hxy s' hx hy
+--     simp only [Set.bot_eq_empty, Set.le_eq_subset]
+--     rw [@Set.subset_empty_iff]
+--     by_contra! hc
+--     obtain ⟨ v , hv ⟩ := hc
+--     obtain ⟨ a , ha ⟩ := hx hv
+--     obtain ⟨ b , hb ⟩ := hy hv
+--     simp only [ne_eq, Set.le_eq_subset, Set.mem_range, exists_prop] at *
+--     have h1 := ha.1.2.symm ▸ ha.2
+--     have h2 := hb.1.2.symm ▸ hb.2
+--     rw [SimpleGraph.ConnectedComponent.mem_supp_iff] at *
+--     exact hxy (h1.symm ▸ h2)
+--     done
 
-  rw [exclUnion]
-  congr
-  ext x
-  exact Set.Nat.card_coe_set_eq (ConnectedComponent.supp x)
+--   rw [exclUnion]
+--   congr
+--   ext x
+--   exact Set.Nat.card_coe_set_eq (ConnectedComponent.supp x)
 
 lemma evenFinsetSum {a : Finset α} (f : α → ℕ) (h : ∀ (c : a), Even (f c)) : Even (Finset.sum a f) := by
   rw [@Nat.even_iff]
@@ -419,35 +420,73 @@ lemma evenFinsetSum {a : Finset α} (f : α → ℕ) (h : ∀ (c : a), Even (f c
 
 
 
-lemma oddSubComponent [Fintype V] [Inhabited V] [DecidableEq V] (G G' : SimpleGraph V) [DecidableRel G.Adj] [DecidableRel G'.Adj]
-    (h : G ≤ G') (c : ConnectedComponent G') (ho : c.isOdd) : ∃ v ∈ c.supp, (G.connectedComponentMk v).isOdd := by
+-- lemma oddSubComponent [Fintype V] [Inhabited V] [DecidableEq V] (G G' : SimpleGraph V) [DecidableRel G.Adj] [DecidableRel G'.Adj]
+--     (h : G ≤ G') (c : ConnectedComponent G') (ho : c.isOdd) : ∃ v ∈ c.supp, (G.connectedComponentMk v).isOdd := by
 
-      simp_rw [ConnectedComponent.isOdd_iff, Nat.odd_iff_not_even]
-      by_contra! hc
+--       simp_rw [ConnectedComponent.isOdd_iff, Nat.odd_iff_not_even]
+--       by_contra! hc
 
-      have : Even (Fintype.card c.supp) := by
-        obtain ⟨ a , ha ⟩ := subdivide h c
+--       have : Even (Fintype.card c.supp) := by
+--         obtain ⟨ a , ha ⟩ := subdivide h c
 
-        rw [← ha]
-        rw [cardUnion]
-        apply evenFinsetSum
+--         rw [← ha]
+--         rw [cardUnion]
+--         apply evenFinsetSum
 
-        intro c'
-        rw [@Function.comp_apply]
-        have ⟨ v , hv ⟩:= c'.val.exists_rep
-        rw [← SimpleGraph.connectedComponentMk] at hv
-        rw [← hv]
-        have vMem : v ∈ ConnectedComponent.supp c := by
-          rw [← ha]
-          simp only [Set.sUnion_image, Finset.mem_coe, Set.mem_iUnion,
-            ConnectedComponent.mem_supp_iff, exists_prop, exists_eq_right']
-          rw [hv]
-          exact Finset.coe_mem c'
-        rw [Set.ncard_eq_toFinset_card', Set.toFinset_card]
-        exact hc v vMem
+--         intro c'
+--         rw [@Function.comp_apply]
+--         have ⟨ v , hv ⟩:= c'.val.exists_rep
+--         rw [← SimpleGraph.connectedComponentMk] at hv
+--         rw [← hv]
+--         have vMem : v ∈ ConnectedComponent.supp c := by
+--           rw [← ha]
+--           simp only [Set.sUnion_image, Finset.mem_coe, Set.mem_iUnion,
+--             ConnectedComponent.mem_supp_iff, exists_prop, exists_eq_right']
+--           rw [hv]
+--           exact Finset.coe_mem c'
+--         rw [Set.ncard_eq_toFinset_card', Set.toFinset_card]
+--         exact hc v vMem
 
-      rw [@ConnectedComponent.isOdd_iff] at ho
-      exact Nat.odd_iff_not_even.mp ho this
+--       rw [@ConnectedComponent.isOdd_iff] at ho
+--       exact Nat.odd_iff_not_even.mp ho this
+
+theorem ConnectedComponent.connectedComponentMk_subset {V : Type u_1} {G G' : SimpleGraph V} {v : V} (h : G ≤ G')
+  (c' : G'.ConnectedComponent) (hc' : v ∈ c'.supp) : (G.connectedComponentMk v).supp ⊆ c'.supp := by
+  intro v' hv'
+  simp only [mem_supp_iff, ConnectedComponent.eq] at hv' ⊢
+  rw [ConnectedComponent.sound (hv'.mono h)]
+  exact hc'
+
+lemma ConnectedComponent.union_supps_eq_supp {G G' : SimpleGraph V}
+    (h : G ≤ G') (c' : ConnectedComponent G') : ⋃ c : {c : ConnectedComponent G | c.supp ≤ c'.supp}, c.1.supp = c'.supp := by
+  ext v
+  simp_rw [Set.mem_iUnion]
+  refine ⟨fun ⟨i, hi⟩ ↦ i.2 hi, ?_⟩
+  intro hv
+  use ⟨G.connectedComponentMk v, by
+    simp only [Set.le_eq_subset, Set.mem_setOf_eq]
+    exact connectedComponentMk_subset h c' hv
+    ⟩
+  rfl
+
+
+lemma oddSubComponent' [Fintype V] [Inhabited V] [DecidableEq V] (G G' : SimpleGraph V) [DecidableRel G.Adj] [DecidableRel G'.Adj]
+    (h : G ≤ G') (c' : ConnectedComponent G') : Odd (Nat.card c'.supp) ↔  Odd (Nat.card ({(c' : ConnectedComponent G) | Odd (Nat.card c'.supp) ∧ c'.supp ⊆ c.supp})) := by
+  rw [Nat.card_eq_fintype_card]
+  -- haveI : Fintype {c' : ConnectedComponent G | c'.supp ≤ c.supp} := by sorry
+  -- haveI (u : Set V) : Fintype u := by
+  --   exact Fintype.ofFinite ↑u
+  rw [← c'.union_supps_eq_supp h]
+  conv =>
+    lhs
+
+    rw [← Set.toFinset_card]
+    rw [@Set.toFinset_iUnion V {c : ConnectedComponent G | c.supp ≤ c'.supp} _ _ (fun c ↦ c.1.supp)]
+
+
+
+  sorry
+
 
 -- In #14623
 lemma oddComponent [Fintype V] [DecidableEq V] (G : SimpleGraph V) [DecidableRel G.Adj]
