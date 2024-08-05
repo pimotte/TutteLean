@@ -380,30 +380,6 @@ lemma exclUnion [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] (
     rw [@Set.toFinset_card]
     rw [Nat.card_eq_fintype_card]
 
--- lemma cardUnion [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj]  (s : Finset (ConnectedComponent G))
---       : Fintype.card (⋃₀ (ConnectedComponent.supp '' s.toSet)) = Finset.sum s (Set.ncard ∘ ConnectedComponent.supp) := by
---   simp only [Set.sUnion_image, Finset.mem_coe, Function.comp_apply]
---   have hp :  Pairwise fun i j => Disjoint (⋃ (_ : i ∈ s), ConnectedComponent.supp i)
---     (⋃ (_ : j ∈ s), ConnectedComponent.supp j) := by
---     intro x y hxy s' hx hy
---     simp only [Set.bot_eq_empty, Set.le_eq_subset]
---     rw [@Set.subset_empty_iff]
---     by_contra! hc
---     obtain ⟨ v , hv ⟩ := hc
---     obtain ⟨ a , ha ⟩ := hx hv
---     obtain ⟨ b , hb ⟩ := hy hv
---     simp only [ne_eq, Set.le_eq_subset, Set.mem_range, exists_prop] at *
---     have h1 := ha.1.2.symm ▸ ha.2
---     have h2 := hb.1.2.symm ▸ hb.2
---     rw [SimpleGraph.ConnectedComponent.mem_supp_iff] at *
---     exact hxy (h1.symm ▸ h2)
---     done
-
---   rw [exclUnion]
---   congr
---   ext x
---   exact Set.Nat.card_coe_set_eq (ConnectedComponent.supp x)
-
 lemma evenFinsetSum {a : Finset α} (f : α → ℕ) (h : ∀ (c : a), Even (f c)) : Even (Finset.sum a f) := by
   rw [@Nat.even_iff]
   rw [Finset.sum_nat_mod]
@@ -417,38 +393,6 @@ lemma evenFinsetSum {a : Finset α} (f : α → ℕ) (h : ∀ (c : a), Even (f c
       )
   rw [this]
   simp only [Finset.sum_const_zero, Nat.zero_mod]
-
-
-
--- lemma oddSubComponent [Fintype V] [Inhabited V] [DecidableEq V] (G G' : SimpleGraph V) [DecidableRel G.Adj] [DecidableRel G'.Adj]
---     (h : G ≤ G') (c : ConnectedComponent G') (ho : c.isOdd) : ∃ v ∈ c.supp, (G.connectedComponentMk v).isOdd := by
-
---       simp_rw [ConnectedComponent.isOdd_iff, Nat.odd_iff_not_even]
---       by_contra! hc
-
---       have : Even (Fintype.card c.supp) := by
---         obtain ⟨ a , ha ⟩ := subdivide h c
-
---         rw [← ha]
---         rw [cardUnion]
---         apply evenFinsetSum
-
---         intro c'
---         rw [@Function.comp_apply]
---         have ⟨ v , hv ⟩:= c'.val.exists_rep
---         rw [← SimpleGraph.connectedComponentMk] at hv
---         rw [← hv]
---         have vMem : v ∈ ConnectedComponent.supp c := by
---           rw [← ha]
---           simp only [Set.sUnion_image, Finset.mem_coe, Set.mem_iUnion,
---             ConnectedComponent.mem_supp_iff, exists_prop, exists_eq_right']
---           rw [hv]
---           exact Finset.coe_mem c'
---         rw [Set.ncard_eq_toFinset_card', Set.toFinset_card]
---         exact hc v vMem
-
---       rw [@ConnectedComponent.isOdd_iff] at ho
---       exact Nat.odd_iff_not_even.mp ho this
 
 theorem ConnectedComponent.connectedComponentMk_subset {V : Type u_1} {G G' : SimpleGraph V} {v : V} (h : G ≤ G')
   (c' : G'.ConnectedComponent) (hc' : v ∈ c'.supp) : (G.connectedComponentMk v).supp ⊆ c'.supp := by
@@ -619,6 +563,7 @@ lemma oddComponentsIncrease [Fintype V] [Inhabited V] [DecidableEq V] (G G' : Si
                 Subgraph.coe_adj, Subgraph.induce_adj, Set.mem_diff, Set.mem_univ, true_and,
                 Subgraph.top_adj] at *
               exact ⟨ hxy.1 , ⟨ hxy.2.1 , h hxy.2.2 ⟩ ⟩
+            -- TODO fix
 
             rw [@ConnectedComponent.isOdd_iff] at hc
             rw [@Fintype.card_eq_nat_card] at hc
