@@ -73,7 +73,7 @@ instance [Fintype V] [DecidableEq V] [DecidableRel G.Adj] : DecidableEq (Connect
 --   exact Fintype.ofFinite ↑u
 
 noncomputable instance myInst4 [Fintype V] [DecidableEq V] [DecidableRel G.Adj]
-    (u : Set V):
+    (u : Set V) :
     Fintype ((⊤ : G.Subgraph).deleteVerts u).verts := by
       haveI : Fintype u := by
         exact Fintype.ofFinite u
@@ -458,7 +458,7 @@ theorem ConnectedComponent.connectedComponentMk_subset {V : Type u_1} {G G' : Si
   exact hc'
 
 lemma ConnectedComponent.union_supps_eq_supp {G G' : SimpleGraph V}
-    (h : G ≤ G') (c' : ConnectedComponent G') : ⋃ c : {c : ConnectedComponent G | c.supp ≤ c'.supp}, c.1.supp = c'.supp := by
+    (h : G ≤ G') (c' : ConnectedComponent G') : ⋃ c : {c : ConnectedComponent G | c.supp ⊆ c'.supp}, c.1.supp = c'.supp := by
   ext v
   simp_rw [Set.mem_iUnion]
   refine ⟨fun ⟨i, hi⟩ ↦ i.2 hi, ?_⟩
@@ -471,21 +471,49 @@ lemma ConnectedComponent.union_supps_eq_supp {G G' : SimpleGraph V}
 
 
 lemma oddSubComponent' [Fintype V] [Inhabited V] [DecidableEq V] (G G' : SimpleGraph V) [DecidableRel G.Adj] [DecidableRel G'.Adj]
-    (h : G ≤ G') (c' : ConnectedComponent G') : Odd (Nat.card c'.supp) ↔  Odd (Nat.card ({(c' : ConnectedComponent G) | Odd (Nat.card c'.supp) ∧ c'.supp ⊆ c.supp})) := by
+    (h : G ≤ G') (c' : ConnectedComponent G') : Odd (Nat.card c'.supp) ↔  Odd (Nat.card ({(c : {c : ConnectedComponent G | c.supp ⊆ c'.supp}) | Odd (Nat.card c.1.supp) })) := by
   rw [Nat.card_eq_fintype_card]
-  -- haveI : Fintype {c' : ConnectedComponent G | c'.supp ≤ c.supp} := by sorry
+  -- TODO fixup
+  -- haveI : Fintype {c : ConnectedComponent G | c.supp ≤ c'.supp} := by sorry
   -- haveI (u : Set V) : Fintype u := by
   --   exact Fintype.ofFinite ↑u
-  rw [← c'.union_supps_eq_supp h]
-  conv =>
-    lhs
+  rw [@Fintype.card_ofFinset]
+  rw [@Set.filter_mem_univ_eq_toFinset]
+  -- rw [@Set.Nat.card_coe_set_eq]
+  rw [@Set.toFinset_card]
+  haveI : DecidablePred (fun c : ConnectedComponent G ↦ c.supp ⊆ c'.supp) := by
+    exact Classical.decPred _
+  -- haveI : Fintype (⋃ c : {c : ConnectedComponent G | c.supp ≤ c'.supp}, c.1.supp) := by
+  --   rw [ConnectedComponent.union_supps_eq_supp h c']
+  --   infer_instance
+  -- haveI inst1 : Fintype {c : ConnectedComponent G | c.supp ⊆ c'.supp} := by
+  --   sorry
+  -- haveI inst2 : Fintype {x : ConnectedComponent G | x.supp ⊆ c'.supp ∧ Odd (Nat.card ↑x.supp)} :=
+  --   Fintype.ofFinset (by sorry) (by sorry)
+  simp_rw [(c'.union_supps_eq_supp h).symm]
+  rw [← @Set.toFinset_card]
+  rw [@Set.toFinset_iUnion V {c : ConnectedComponent G | c.supp ⊆ c'.supp} _ _ (fun c => c.1.supp)]
+  rw [Finset.card_biUnion
+    (fun x _ y _ hxy ↦ Set.disjoint_toFinset.mpr (pairwise_disjoint_supp_connectedComponent _ (Subtype.coe_ne_coe.mpr hxy
+      )))]
+  simp_rw [Set.toFinset_card, ← Nat.card_eq_fintype_card]
+  rw [Nat.card_eq_fintype_card, Fintype.card_ofFinset]
+  apply Finset.odd_sum_iff_odd_card_odd
+  -- rw [(c'.union_supps_eq_supp h)]
+  -- simp only [Set.toFinset_card]
+  -- simp only [← Nat.card_eq_fintype_card]
+  -- rw [Nat.card_eq_fintype_card]
+  -- rw [@Fintype.card_ofFinset]
 
-    rw [← Set.toFinset_card]
-    rw [@Set.toFinset_iUnion V {c : ConnectedComponent G | c.supp ≤ c'.supp} _ _ (fun c ↦ c.1.supp)]
+  -- rw [Finset.odd_sum_iff_odd_card_odd]
 
+  -- -- rw [← @Fintype.card_ofFinset]
+  -- rw [@Set.filter_mem_univ_eq_toFinset]
+  -- rw [@Set.toFinset_setOf]
+  -- rw [@Finset.filter_and]
+  -- nth_rewrite 2 [← @Set.toFinset_setOf]
 
-
-  sorry
+  -- rw [@Set.toFinset_card]
 
 
 -- In #14623
