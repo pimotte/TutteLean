@@ -3802,11 +3802,10 @@ lemma ConnectedComponent.supp_induce_connected {H : Subgraph G} (hH : H.IsSpanni
   exact reachable_in_connected_component_induce_coe hH _ _ _
 
 
-
-theorem setOf_ncard_le_ncard_of_injOn {α : Type u_2} {p : α → Prop} {β : Type u_1} {t : Set β} (f : α → β)
-    (hf : ∀ (a : α), a ∈ setOf p → f a ∈ t) (f_inj : Set.InjOn f (setOf p)) (ht : t.Finite) : (setOf p).ncard ≤ t.ncard := by
-  sorry
-
+lemma ConnectedComponent.supp_eq_of_mem_supp {c c' : ConnectedComponent G} {v} (h : v ∈ c.supp) (h' : v ∈ c'.supp) : c = c' := by
+  simp [SimpleGraph.ConnectedComponent.mem_supp_iff] at h h'
+  subst h h'
+  rfl
 
 theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
     (∃ (M : Subgraph G) , M.IsPerfectMatching) ↔
@@ -3815,16 +3814,24 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
   constructor
   {
     rintro ⟨M, hM⟩ u
-    unfold cardOddComponents
-    #check (c : G.ConnectedComponent) →  ∃ w ∈ u, ∃ v, M.Adj (↑v) w ∧ v ∈ c.supp
+    -- unfold cardOddComponents
+    -- #check (c : G.ConnectedComponent) →  ∃ w ∈ u, ∃ v, M.Adj (↑v) w ∧ v ∈ c.supp
     let f : {c : ConnectedComponent ((⊤ : Subgraph G).deleteVerts u).coe | ConnectedComponent.isOdd c} → u :=
       fun c => ⟨(c.1.odd_matches_node_outside hM c.2).choose,(c.1.odd_matches_node_outside hM c.2).choose_spec.1⟩
-    have := Finite.card_le_of_injective f (by sorry)
+    have := Finite.card_le_of_injective f (by
+      intro x y hxy
+      obtain ⟨v, hv⟩:= (x.1.odd_matches_node_outside hM x.2).choose_spec.2
+      obtain ⟨w, hw⟩:= (y.1.odd_matches_node_outside hM y.2).choose_spec.2
+      rw [Subtype.mk_eq_mk.mp hxy] at hv
+      obtain ⟨v', hv'⟩ := (M.isPerfectMatching_iff).mp hM (f y)
+      rw [(Subtype.val_injective (hv'.2 _ hw.1.symm ▸ hv'.2 _ hv.1.symm) : v = w)] at hv
+      rw [Subtype.mk_eq_mk]
+      exact ConnectedComponent.supp_eq_of_mem_supp hv.2 hw.2
+      )
     simp only [Set.Nat.card_coe_set_eq] at this
     exact this
   }
   {
-    stop
     contrapose!
     intro h
     if hvOdd : Odd (Finset.univ : Finset V).card
