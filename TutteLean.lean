@@ -473,23 +473,11 @@ lemma ConnectedComponent.union_supps_eq_supp {G G' : SimpleGraph V}
 lemma oddSubComponent' [Fintype V] [Inhabited V] [DecidableEq V] (G G' : SimpleGraph V) [DecidableRel G.Adj] [DecidableRel G'.Adj]
     (h : G ≤ G') (c' : ConnectedComponent G') : Odd (Nat.card c'.supp) ↔  Odd (Nat.card ({(c : {c : ConnectedComponent G | c.supp ⊆ c'.supp}) | Odd (Nat.card c.1.supp) })) := by
   rw [Nat.card_eq_fintype_card]
-  -- TODO fixup
-  -- haveI : Fintype {c : ConnectedComponent G | c.supp ≤ c'.supp} := by sorry
-  -- haveI (u : Set V) : Fintype u := by
-  --   exact Fintype.ofFinite ↑u
   rw [@Fintype.card_ofFinset]
   rw [@Set.filter_mem_univ_eq_toFinset]
-  -- rw [@Set.Nat.card_coe_set_eq]
   rw [@Set.toFinset_card]
   haveI : DecidablePred (fun c : ConnectedComponent G ↦ c.supp ⊆ c'.supp) := by
     exact Classical.decPred _
-  -- haveI : Fintype (⋃ c : {c : ConnectedComponent G | c.supp ≤ c'.supp}, c.1.supp) := by
-  --   rw [ConnectedComponent.union_supps_eq_supp h c']
-  --   infer_instance
-  -- haveI inst1 : Fintype {c : ConnectedComponent G | c.supp ⊆ c'.supp} := by
-  --   sorry
-  -- haveI inst2 : Fintype {x : ConnectedComponent G | x.supp ⊆ c'.supp ∧ Odd (Nat.card ↑x.supp)} :=
-  --   Fintype.ofFinset (by sorry) (by sorry)
   simp_rw [(c'.union_supps_eq_supp h).symm]
   rw [← @Set.toFinset_card]
   rw [@Set.toFinset_iUnion V {c : ConnectedComponent G | c.supp ⊆ c'.supp} _ _ (fun c => c.1.supp)]
@@ -499,21 +487,6 @@ lemma oddSubComponent' [Fintype V] [Inhabited V] [DecidableEq V] (G G' : SimpleG
   simp_rw [Set.toFinset_card, ← Nat.card_eq_fintype_card]
   rw [Nat.card_eq_fintype_card, Fintype.card_ofFinset]
   apply Finset.odd_sum_iff_odd_card_odd
-  -- rw [(c'.union_supps_eq_supp h)]
-  -- simp only [Set.toFinset_card]
-  -- simp only [← Nat.card_eq_fintype_card]
-  -- rw [Nat.card_eq_fintype_card]
-  -- rw [@Fintype.card_ofFinset]
-
-  -- rw [Finset.odd_sum_iff_odd_card_odd]
-
-  -- -- rw [← @Fintype.card_ofFinset]
-  -- rw [@Set.filter_mem_univ_eq_toFinset]
-  -- rw [@Set.toFinset_setOf]
-  -- rw [@Finset.filter_and]
-  -- nth_rewrite 2 [← @Set.toFinset_setOf]
-
-  -- rw [@Set.toFinset_card]
 
 
 -- In #14623
@@ -646,7 +619,9 @@ lemma oddComponentsIncrease [Fintype V] [Inhabited V] [DecidableEq V] (G G' : Si
                 Subgraph.coe_adj, Subgraph.induce_adj, Set.mem_diff, Set.mem_univ, true_and,
                 Subgraph.top_adj] at *
               exact ⟨ hxy.1 , ⟨ hxy.2.1 , h hxy.2.2 ⟩ ⟩
-            obtain ⟨ v , hv ⟩ := (oddSubComponent ((⊤ : Subgraph G).deleteVerts u).coe ((⊤ : Subgraph G').deleteVerts u).coe b c hc)
+            -- TODO fix
+            stop
+            obtain ⟨ v , hv ⟩ := ((oddSubComponent' ((⊤ : Subgraph G).deleteVerts u).coe ((⊤ : Subgraph G').deleteVerts u).coe b c hc).mp _)
             use ((((⊤ : Subgraph G).deleteVerts u).coe ).connectedComponentMk v)
             constructor
             · exact hv.2
@@ -783,6 +758,7 @@ decreasing_by
 
 lemma evenCliqueMatches [Fintype V] [DecidableEq V]
   (u : Set V) (h : G.IsClique u) (uEven : Even (u.ncard)) : ∃ (M : Subgraph G), M.support = u ∧ M.IsMatching := by
+  haveI : Fintype u := Fintype.ofFinite _
   obtain ⟨ u' , hu'⟩ := evenSplit u.toFinset (Set.ncard_eq_toFinset_card' u ▸ uEven)
   have f := Finset.equivOfCardEq hu'.2
   let M : Subgraph G := (⨆ (v : u'), G.subgraphOfAdj ((by
@@ -1097,8 +1073,11 @@ lemma oddSubOneEven (n : Nat) (h : Odd n) : Even (n - 1) := by
 
 
 lemma oddCliqueAlmostMatches [Fintype V] [DecidableEq V]
-  {u : Set V} {v : V} (hv : v ∈ u) (h : G.IsClique u) (uOdd : Odd (Fintype.card u)) : ∃ (M : Subgraph G), insert v M.verts = u ∧ M.IsMatching := by
+  {u : Set V} {v : V} (hv : v ∈ u) (h : G.IsClique u) (uOdd : Odd (Nat.card u)) : ∃ (M : Subgraph G), insert v M.verts = u ∧ M.IsMatching := by
+  haveI : Fintype u := Fintype.ofFinite _
+  rw [@Nat.card_eq_card_toFinset, @Set.toFinset_card] at uOdd
   have u'Even : Even ((u \ {v}).ncard) := by
+
     rw [Set.ncard_eq_toFinset_card']
     rw [Set.toFinset_diff]
     simp only [Set.mem_setOf_eq, Set.toFinset_singleton]
@@ -1117,7 +1096,8 @@ lemma oddCliqueAlmostMatches [Fintype V] [DecidableEq V]
   · exact hM.2
 
 lemma oddCliqueAlmostMatchesDoesNotContainNode [Fintype V] [DecidableEq V]
-  {u : Set V} {v : V} (hv : v ∈ u) (h : G.IsClique u) (uOdd : Odd (Fintype.card u)) : v ∉ (oddCliqueAlmostMatches hv h uOdd).choose.verts := by
+  {u : Set V} {v : V} (hv : v ∈ u) (h : G.IsClique u) (uOdd : Odd (Nat.card u)) : v ∉ (oddCliqueAlmostMatches hv h uOdd).choose.verts := by
+  haveI (s : Set V) : Fintype s := Fintype.ofFinite _
   have hM := (oddCliqueAlmostMatches hv h uOdd).choose_spec
 
   have : Even (Fintype.card (oddCliqueAlmostMatches hv h uOdd).choose.verts) := by
@@ -1128,11 +1108,12 @@ lemma oddCliqueAlmostMatchesDoesNotContainNode [Fintype V] [DecidableEq V]
 
   rw [← hM.1] at uOdd
   rw [@Nat.even_iff_not_odd] at this
+  rw [@Nat.card_eq_card_toFinset, @Set.toFinset_card] at uOdd
   exact this uOdd
 
 
 lemma oddCliqueAlmostMatchesSubset [Fintype V] [DecidableEq V]
-  {u : Set V} {v : V} (hv : v ∈ u) (h : G.IsClique u) (uOdd : Odd (Fintype.card u)) : (oddCliqueAlmostMatches hv h uOdd).choose.verts ⊆ u := by
+  {u : Set V} {v : V} (hv : v ∈ u) (h : G.IsClique u) (uOdd : Odd (Nat.card u)) : (oddCliqueAlmostMatches hv h uOdd).choose.verts ⊆ u := by
   intro x hx
   rw [← (oddCliqueAlmostMatches hv h uOdd).choose_spec.1]
   exact Set.subset_insert _ _ hx
@@ -3797,17 +3778,16 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
       if h' : ∀ (K : ConnectedComponent Gsplit.coe), Gsplit.coe.IsClique K.supp
       then
 
-        let f' := fun (c : {(c : ConnectedComponent Gsplit.coe) | ConnectedComponent.isOdd c}) => (componentExistsRep c.val).choose
-        have f'mem  (c : {(c : ConnectedComponent Gsplit.coe) | ConnectedComponent.isOdd c}) : f' c ∈ c.val.supp := by
+        let f' := fun (c : {(c : ConnectedComponent Gsplit.coe) | Odd (Nat.card c.supp)}) => (componentExistsRep c.val).choose
+        have f'mem  (c : {(c : ConnectedComponent Gsplit.coe) | Odd (Nat.card c.supp)}) : f' c ∈ c.val.supp := by
           simp only [Set.mem_setOf_eq, ConnectedComponent.mem_supp_iff]
           rw [← (componentExistsRep c.val).choose_spec]
-
-
+        haveI hFin (s : Set V) : Fintype s := Fintype.ofFinite _
+        -- rw [@Nat.card_eq_card_toFinset, @Set.toFinset_card] at uOdd
         let M1 : Subgraph Gmax.G' := (⨆ (c : {c : ConnectedComponent Gsplit.coe | ConnectedComponent.isOdd c}),
           let v := f' c
-
-
-          let M := (oddCliqueAlmostMatches (f'mem c) (h' c) (c.val.isOdd_iff.mp c.2)).choose
+          -- have uOdd :=
+          let M := (oddCliqueAlmostMatches (f'mem c) (h' c) c.2).choose
 
           SimpleGraph.Subgraph.coeSubgraph M ⊔ Gmax.G'.subgraphOfAdj ((by
             apply (f c).2
@@ -3822,7 +3802,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
           exact iSup_IsMatching (by
             intro i
             dsimp
-            let oddMatches := oddCliqueAlmostMatches (f'mem i) (h' i) (i.val.isOdd_iff.mp i.2)
+            let oddMatches := oddCliqueAlmostMatches (f'mem i) (h' i) i.2
             exact sup_IsMatching (by
 
               exact coe_IsMatching (oddMatches.choose_spec).2
@@ -3835,7 +3815,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
                   · intro hf'i
                     have := SimpleGraph.Subgraph.support_subset_verts _ hf'i
                     simp at this
-                    exact (oddCliqueAlmostMatchesDoesNotContainNode (f'mem i) (h' i) (i.val.isOdd_iff.mp i.2)) this
+                    exact (oddCliqueAlmostMatchesDoesNotContainNode (f'mem i) (h' i) (i.2)) this
                   · intro hfi
                     have := SimpleGraph.Subgraph.support_subset_verts _ hfi
                     rw [coe_verts] at this
@@ -3847,8 +3827,8 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
             ) (by
 
               intro i j hij s hs1 hs2
-              have hi := oddCliqueAlmostMatchesSubset (f'mem i) (h' i) (i.val.isOdd_iff.mp i.2)
-              have hj := oddCliqueAlmostMatchesSubset (f'mem j) (h' j) (j.val.isOdd_iff.mp j.2)
+              have hi := oddCliqueAlmostMatchesSubset (f'mem i) (h' i) (i.2)
+              have hj := oddCliqueAlmostMatchesSubset (f'mem j) (h' j) (j.2)
               simp only [Subgraph.induce_verts, Subgraph.verts_top, Set.coe_setOf, ne_eq,
                 Set.mem_setOf_eq, Set.le_eq_subset, Set.bot_eq_empty] at *
               rw [sup_support_eq_support_union] at *
@@ -4017,7 +3997,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
             left
             rw [@Set.mem_image] at *
             obtain ⟨ j , hj ⟩ := hl
-            have hji := (oddCliqueAlmostMatchesSubset (f'mem i) (h' i) (i.val.isOdd_iff.mp i.2)) hj.1
+            have hji := (oddCliqueAlmostMatchesSubset (f'mem i) (h' i) (i.2)) hj.1
             use ⟨ v , Set.image_val_subset ⟨ j , hj ⟩ ⟩
             refine ⟨ ?_ , rfl ⟩
             rw [@Set.mem_iUnion]
@@ -4121,7 +4101,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
           rw [Subgraph.verts_sup]
           rw [Set.mem_union]
           rw [coe_verts]
-          have := (oddCliqueAlmostMatches (f'mem i'') (h' i''.1) ((ConnectedComponent.isOdd_iff i''.1).mp i''.2)).choose_spec
+          have := (oddCliqueAlmostMatches (f'mem i'') (h' i''.1) (i''.2)).choose_spec
           rw [← hv'.2]
           rw [← this.1] at hi'
           rw [Set.mem_insert_iff ] at hi'
