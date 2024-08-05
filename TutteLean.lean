@@ -619,22 +619,19 @@ lemma oddComponentsIncrease [Fintype V] [Inhabited V] [DecidableEq V] (G G' : Si
                 Subgraph.coe_adj, Subgraph.induce_adj, Set.mem_diff, Set.mem_univ, true_and,
                 Subgraph.top_adj] at *
               exact ⟨ hxy.1 , ⟨ hxy.2.1 , h hxy.2.2 ⟩ ⟩
-            -- TODO fix
-            stop
-            obtain ⟨ v , hv ⟩ := ((oddSubComponent' ((⊤ : Subgraph G).deleteVerts u).coe ((⊤ : Subgraph G').deleteVerts u).coe b c hc).mp _)
-            use ((((⊤ : Subgraph G).deleteVerts u).coe ).connectedComponentMk v)
+
+            rw [@ConnectedComponent.isOdd_iff] at hc
+            rw [@Fintype.card_eq_nat_card] at hc
+            have := Odd.pos <| (oddSubComponent' ((⊤ : Subgraph G).deleteVerts u).coe ((⊤ : Subgraph G').deleteVerts u).coe b c).mp hc
+            rw [@Finite.card_pos_iff] at this
+            obtain ⟨ v , hv ⟩ := Classical.inhabited_of_nonempty this
+
+            use v.1
             constructor
-            · exact hv.2
-            ·
-              rw [@Set.subset_def]
-              intro x hx
-              rw [@ConnectedComponent.mem_supp_iff]
-              have h' := hv.1
-              rw [@ConnectedComponent.mem_supp_iff] at h'
-              rw [← h']
-              rw [@ConnectedComponent.mem_supp_iff] at hx
-              rw [SimpleGraph.ConnectedComponent.eq] at *
-              exact SimpleGraph.Reachable.mono b hx
+            · rw [@ConnectedComponent.isOdd_iff]
+              rw [@Fintype.card_eq_nat_card]
+              exact hv
+            · exact v.2
 
         have hb : ((⊤ : Subgraph G).deleteVerts u).coe ≤ ((⊤ : Subgraph G').deleteVerts u).coe := by
               intro x y hxy
