@@ -428,7 +428,7 @@ lemma oddComponentsIncrease [Fintype V] [Inhabited V] [DecidableEq V] (G G' : Si
                 Subgraph.coe_adj, Subgraph.induce_adj, Set.mem_diff, Set.mem_univ, true_and,
                 Subgraph.top_adj] at *
               exact ⟨ hxy.1 , ⟨ hxy.2.1 , h hxy.2.2 ⟩ ⟩
-            -- TODO fix
+
 
             rw [@ConnectedComponent.isOdd_iff] at hc
             rw [@Fintype.card_eq_nat_card] at hc
@@ -806,35 +806,6 @@ lemma subgraphOfAdj_IsMatching [Fintype V] [Inhabited V] [DecidableEq V] [Decida
         exact hr.symm
       | inr h2 =>
         exact h2.1.symm
-
--- --First TODO
--- --Alternative proof through IsMatching
--- lemma subgraphOfAdj_support
---   (h : G.Adj v w) : (G.subgraphOfAdj h).support = {v , w} := by
---   ext v'
---   rw [SimpleGraph.Subgraph.mem_support]
---   constructor
---   · rintro ⟨ w , hw ⟩
---     simp only [Set.mem_insert_iff, Set.mem_singleton_iff]
---     simp only [subgraphOfAdj_adj, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk] at hw
---     cases hw with
---     | inl h1 => exact .inl h1.1.symm
---     | inr hr => exact .inr hr.2.symm
---   · intro hv'
---     simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hv'
---     cases hv' with
---     | inl hl =>
---       use w
---       simp only [subgraphOfAdj_adj, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, and_true,
---         Prod.swap_prod_mk]
---       exact .inl hl.symm
---     | inr hr =>
---       use v
---       simp only [subgraphOfAdj_adj, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk,
---         true_and]
---       exact .inr hr.symm
-
-
 
 lemma componentExistsRep (c : ConnectedComponent G) : ∃ v, SimpleGraph.connectedComponentMk G v = c := c.exists_rep
 
