@@ -204,27 +204,15 @@ theorem cardEdgeSetLessThanSquare (H : SimpleGraph V) [Fintype V] [DecidableRel 
     have : Fintype.card V > 0 := Nat.zero_lt_of_ne_zero h'
     omega
 
---First (done)
-lemma isMatchingHom (G G' : SimpleGraph V) (x : Subgraph G) (h : G ≤ G') (hM : x.IsMatching) : (x.map (SimpleGraph.Hom.ofLE h)).IsMatching := by
-  intro v hv
-  unfold Subgraph.IsMatching at hM
-  dsimp at hv
-  obtain ⟨ v' , ⟨ hv' , hv'' ⟩ ⟩ := Set.mem_image_iff_bex.mp hv
-  obtain ⟨ w' , hw' ⟩ := hM hv'
-  use w'
-  dsimp at *
-  simpa only [Relation.map_id_id] using hv'' ▸ hw'
-
+-- Om #15357
 lemma isMatchingFree_mono {G G' : SimpleGraph V} (h : G ≤ G') (hmf : isMatchingFree G') : isMatchingFree G := by
   intro x
   by_contra! hc
-  apply hmf (Subgraph.map (SimpleGraph.Hom.ofLE h) x)
-  constructor
-  · exact isMatchingHom _ _ _ _ hc.1
-  · intro v
-    dsimp
-    rw [@Set.image_id]
-    exact hc.2 v
+  apply hmf (x.map (SimpleGraph.Hom.ofLE h))
+  refine ⟨hc.1.map_ofLE h, ?_⟩
+  intro v
+  simp only [Subgraph.map_verts, Hom.coe_ofLE, id_eq, Set.image_id']
+  exact hc.2 v
 
 
 structure MatchingFreeExtension (G : SimpleGraph V) where
@@ -819,32 +807,32 @@ lemma subgraphOfAdj_IsMatching [Fintype V] [Inhabited V] [DecidableEq V] [Decida
       | inr h2 =>
         exact h2.1.symm
 
---First
---Alternative proof through IsMatching
-lemma subgraphOfAdj_support
-  (h : G.Adj v w) : (G.subgraphOfAdj h).support = {v , w} := by
-  ext v'
-  rw [SimpleGraph.Subgraph.mem_support]
-  constructor
-  · rintro ⟨ w , hw ⟩
-    simp only [Set.mem_insert_iff, Set.mem_singleton_iff]
-    simp only [subgraphOfAdj_adj, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk] at hw
-    cases hw with
-    | inl h1 => exact .inl h1.1.symm
-    | inr hr => exact .inr hr.2.symm
-  · intro hv'
-    simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hv'
-    cases hv' with
-    | inl hl =>
-      use w
-      simp only [subgraphOfAdj_adj, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, and_true,
-        Prod.swap_prod_mk]
-      exact .inl hl.symm
-    | inr hr =>
-      use v
-      simp only [subgraphOfAdj_adj, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk,
-        true_and]
-      exact .inr hr.symm
+-- --First TODO
+-- --Alternative proof through IsMatching
+-- lemma subgraphOfAdj_support
+--   (h : G.Adj v w) : (G.subgraphOfAdj h).support = {v , w} := by
+--   ext v'
+--   rw [SimpleGraph.Subgraph.mem_support]
+--   constructor
+--   · rintro ⟨ w , hw ⟩
+--     simp only [Set.mem_insert_iff, Set.mem_singleton_iff]
+--     simp only [subgraphOfAdj_adj, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk] at hw
+--     cases hw with
+--     | inl h1 => exact .inl h1.1.symm
+--     | inr hr => exact .inr hr.2.symm
+--   · intro hv'
+--     simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hv'
+--     cases hv' with
+--     | inl hl =>
+--       use w
+--       simp only [subgraphOfAdj_adj, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, and_true,
+--         Prod.swap_prod_mk]
+--       exact .inl hl.symm
+--     | inr hr =>
+--       use v
+--       simp only [subgraphOfAdj_adj, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk,
+--         true_and]
+--       exact .inr hr.symm
 
 
 
@@ -2196,7 +2184,7 @@ lemma Walk.mem_toSubgraph_support_mem_support {p : G.Walk u v} (hnp : ¬ p.Nil) 
       simp only [Walk.toSubgraph, ge_iff_le, singletonSubgraph_le_iff, subgraphOfAdj_verts,
         Set.mem_insert_iff, Set.mem_singleton_iff, or_true, sup_of_le_left, support_cons,
         support_nil, List.mem_cons, List.mem_singleton]
-      rw [subgraphOfAdj_support]
+      rw [support_subgraphOfAdj]
       simp only [Set.mem_insert_iff, Set.mem_singleton_iff, List.not_mem_nil, or_false]
     | .cons h2 q1 =>
       rw [Walk.support_cons]
@@ -2228,7 +2216,7 @@ lemma Walk.mem_toSubgraph_support_mem_support {p : G.Walk u v} (hnp : ¬ p.Nil) 
         | inl hl =>
           simp only [Walk.toSubgraph, Subgraph.support_sup, Set.mem_union]
           left
-          rw [hl, @subgraphOfAdj_support]
+          rw [hl, support_subgraphOfAdj]
           exact Set.mem_insert u _
         | inr hr =>
           rw [Walk.toSubgraph, Subgraph.support_sup]
@@ -3630,7 +3618,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
               exact coe_IsMatching (oddMatches.choose_spec).2
               ) (by exact subgraphOfAdj_IsMatching _)
                 (by
-                  rw [subgraphOfAdj_support]
+                  rw [support_subgraphOfAdj]
                   rw [disjoint_pair]
                   have := (f' i).2
                   constructor
@@ -3672,7 +3660,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
                   apply hij
                   exact Subtype.eq (id hi'.symm)
                 | inr hr' =>
-                  rw [subgraphOfAdj_support] at hr'
+                  rw [support_subgraphOfAdj] at hr'
                   simp at hr'
                   cases hr' with
                   | inl h1 =>

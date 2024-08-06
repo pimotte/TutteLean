@@ -186,3 +186,4 @@ lemma evenFinsetSum {a : Finset α} (f : α → ℕ) (h : ∀ (c : a), Even (f c
       )
   rw [this]
   simp only [Finset.sum_const_zero, Nat.zero_mod]
+
