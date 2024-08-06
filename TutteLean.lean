@@ -313,41 +313,6 @@ noncomputable def maximalWithoutMatching [Fintype V] {G : SimpleGraph V} [Decida
    (h : G.isMatchingFree) : MaximalMatchingFreeExtension G := by
     exact maximalWithoutMatching' ⟨ G , by infer_instance , by rfl , h ⟩
 
-
-lemma subdivide [Fintype V] [Inhabited V] [DecidableEq V] {G G' : SimpleGraph V} [DecidableRel G.Adj] [DecidableRel G'.Adj]
-    (h : G ≤ G') (c : ConnectedComponent G') : ∃ (cs : Finset (ConnectedComponent G)), (ConnectedComponent.supp '' cs.toSet).sUnion = c.supp := by
-      use (connectedComponentMk G '' c.supp).toFinset
-      ext v
-      constructor
-      · intro hv
-        rw [Set.sUnion_image] at hv
-        rw [Set.mem_iUnion] at hv
-        obtain ⟨ i , hi ⟩ := hv
-        rw [Set.mem_iUnion] at hi
-        obtain ⟨ j , hj ⟩ := hi
-        rw [@Finset.mem_coe] at j
-        rw [@Set.mem_toFinset] at j
-        rw [Set.mem_image] at j
-        obtain ⟨ k , hk ⟩ := j
-        rw [ConnectedComponent.mem_supp_iff] at *
-        rw [← hk.1]
-        rw [← hk.2] at hj
-        rw [@ConnectedComponent.eq] at *
-        apply SimpleGraph.Reachable.mono h
-        exact hj
-      · intro hv
-        rw [Set.mem_sUnion]
-
-        use (connectedComponentMk G v).supp
-        constructor
-        · rw [Function.Injective.mem_set_image SimpleGraph.ConnectedComponent.supp_injective, Finset.mem_coe, Set.mem_toFinset, Set.mem_image]
-          use v
-        · exact rfl
-
-
-
-
-
 lemma exclUnion [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] (s : Finset (ConnectedComponent G))
   : Fintype.card ↑(⋃ x ∈ s, @ConnectedComponent.supp V G x) = Finset.sum s (fun x => Nat.card (@ConnectedComponent.supp V G x)) := by
 
@@ -394,6 +359,7 @@ lemma evenFinsetSum {a : Finset α} (f : α → ℕ) (h : ∀ (c : a), Even (f c
   rw [this]
   simp only [Finset.sum_const_zero, Nat.zero_mod]
 
+-- in #15539
 theorem ConnectedComponent.connectedComponentMk_subset {V : Type u_1} {G G' : SimpleGraph V} {v : V} (h : G ≤ G')
   (c' : G'.ConnectedComponent) (hc' : v ∈ c'.supp) : (G.connectedComponentMk v).supp ⊆ c'.supp := by
   intro v' hv'
@@ -401,6 +367,7 @@ theorem ConnectedComponent.connectedComponentMk_subset {V : Type u_1} {G G' : Si
   rw [ConnectedComponent.sound (hv'.mono h)]
   exact hc'
 
+-- in #15539
 lemma ConnectedComponent.union_supps_eq_supp {G G' : SimpleGraph V}
     (h : G ≤ G') (c' : ConnectedComponent G') : ⋃ c : {c : ConnectedComponent G | c.supp ⊆ c'.supp}, c.1.supp = c'.supp := by
   ext v
@@ -414,6 +381,7 @@ lemma ConnectedComponent.union_supps_eq_supp {G G' : SimpleGraph V}
   rfl
 
 
+-- in #15539
 lemma oddSubComponent' [Fintype V] [Inhabited V] [DecidableEq V] (G G' : SimpleGraph V) [DecidableRel G.Adj] [DecidableRel G'.Adj]
     (h : G ≤ G') (c' : ConnectedComponent G') : Odd (Nat.card c'.supp) ↔  Odd (Nat.card ({(c : {c : ConnectedComponent G | c.supp ⊆ c'.supp}) | Odd (Nat.card c.1.supp) })) := by
   rw [Nat.card_eq_fintype_card]

@@ -108,3 +108,33 @@ theorem chainInFintypeHasMax {α : Type*} [Fintype α] [PartialOrder α] [Decida
   · exact Set.mem_toFinset.mp hm.1
   · intro a ha
     exact hm.2 a (Set.mem_toFinset.mpr ha)
+
+lemma subdivide [Fintype V] [Inhabited V] [DecidableEq V] {G G' : SimpleGraph V} [DecidableRel G.Adj] [DecidableRel G'.Adj]
+    (h : G ≤ G') (c : ConnectedComponent G') : ∃ (cs : Finset (ConnectedComponent G)), (ConnectedComponent.supp '' cs.toSet).sUnion = c.supp := by
+      use (connectedComponentMk G '' c.supp).toFinset
+      ext v
+      constructor
+      · intro hv
+        rw [Set.sUnion_image] at hv
+        rw [Set.mem_iUnion] at hv
+        obtain ⟨ i , hi ⟩ := hv
+        rw [Set.mem_iUnion] at hi
+        obtain ⟨ j , hj ⟩ := hi
+        rw [@Finset.mem_coe] at j
+        rw [@Set.mem_toFinset] at j
+        rw [Set.mem_image] at j
+        obtain ⟨ k , hk ⟩ := j
+        rw [ConnectedComponent.mem_supp_iff] at *
+        rw [← hk.1]
+        rw [← hk.2] at hj
+        rw [@ConnectedComponent.eq] at *
+        apply SimpleGraph.Reachable.mono h
+        exact hj
+      · intro hv
+        rw [Set.mem_sUnion]
+
+        use (connectedComponentMk G v).supp
+        constructor
+        · rw [Function.Injective.mem_set_image SimpleGraph.ConnectedComponent.supp_injective, Finset.mem_coe, Set.mem_toFinset, Set.mem_image]
+          use v
+        · exact rfl
