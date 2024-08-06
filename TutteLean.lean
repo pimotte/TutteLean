@@ -809,39 +809,6 @@ lemma subgraphOfAdj_IsMatching [Fintype V] [Inhabited V] [DecidableEq V] [Decida
 
 lemma componentExistsRep (c : ConnectedComponent G) : ∃ v, SimpleGraph.connectedComponentMk G v = c := c.exists_rep
 
---First
-@[simp]
-lemma coe_verts [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj]
-  {G' : Subgraph G} (M : Subgraph G'.coe) : M.coeSubgraph.verts = (M.verts : Set V) := rfl
-
---First
-lemma coe_IsMatching [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj]
-  {G' : Subgraph G} {M : Subgraph G'.coe} (hM : M.IsMatching) : M.coeSubgraph.IsMatching := by
-  intro v hv
-  rw [coe_verts] at hv
-  obtain ⟨ w , hw ⟩ := hM (Set.mem_of_mem_image_val hv)
-  use w
-
-  -- dsimp at *
-  constructor
-  ·
-    conv =>
-      enter [0, w]
-      rw [Subgraph.coeSubgraph_adj]
-    dsimp at *
-    have := (Set.mem_of_mem_image_val hv)
-    simp only [Subtype.forall] at hw
-    simp only [Subtype.coe_eta, Subtype.coe_prop, exists_const] at *
-    rw [Set.mem_image] at hv
-    obtain ⟨ v' , hv' ⟩ := hv
-    use (hv'.2 ▸ v'.2)
-    exact hw.1
-  · intro y hy
-    rw [SimpleGraph.Subgraph.coeSubgraph_adj] at hy
-    obtain ⟨ hv' , ⟨ hw' , hvw ⟩ ⟩ := hy
-    rw [← hw.2 ⟨ y , hw' ⟩ hvw]
-
-
 lemma oddSubOneEven (n : Nat) (h : Odd n) : Even (n - 1) := by
   obtain ⟨ k , hk ⟩ := h
   use k
@@ -3586,7 +3553,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
             let oddMatches := oddCliqueAlmostMatches (f'mem i) (h' i) i.2
             exact sup_IsMatching (by
 
-              exact coe_IsMatching (oddMatches.choose_spec).2
+              exact (oddMatches.choose_spec).2.coeSubgraph
               ) (by exact subgraphOfAdj_IsMatching _)
                 (by
                   rw [support_subgraphOfAdj]
@@ -3599,7 +3566,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
                     exact (oddCliqueAlmostMatchesDoesNotContainNode (f'mem i) (h' i) (i.2)) this
                   · intro hfi
                     have := SimpleGraph.Subgraph.support_subset_verts _ hfi
-                    rw [coe_verts] at this
+                    rw [Subgraph.verts_coeSubgraph] at this
                     have := Set.image_val_subset this
                     rw [SimpleGraph.Subgraph.deleteVerts_verts] at this
                     apply ((Set.mem_diff _).mp this).2
@@ -3619,12 +3586,12 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
               cases hs1 hv with
               | inl hl =>
                 have hii := SimpleGraph.Subgraph.support_subset_verts _ hl
-                rw [coe_verts] at hii
+                rw [Subgraph.verts_coeSubgraph] at hii
                 have hi' := hi (Set.mem_of_mem_image_val hii)
                 cases hs2 hv with
                 | inl hl' =>
                   have := SimpleGraph.Subgraph.support_subset_verts _ hl'
-                  rw [coe_verts] at this
+                  rw [Subgraph.verts_coeSubgraph] at this
                   have hj' := hj (Set.mem_of_mem_image_val this)
                   rw [SimpleGraph.ConnectedComponent.mem_supp_iff] at *
                   rw [hj'] at hi'
@@ -3659,7 +3626,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
                 cases hs2 hv with
                 | inl hl' =>
                   have hii := SimpleGraph.Subgraph.support_subset_verts _ hl'
-                  rw [coe_verts] at hii
+                  rw [Subgraph.verts_coeSubgraph] at hii
                   have hj' := hj (Set.mem_of_mem_image_val hii)
                   cases hjj with
                   | inl h1 =>
@@ -3730,9 +3697,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
 
           exact iSup_IsMatching (by
             intro i
-            exact coe_IsMatching (by
-              exact (evenCliqueMatches i.val.supp (h' i) i.2).choose_spec.2
-              )
+            exact (evenCliqueMatches i.val.supp (h' i) i.2).choose_spec.2.coeSubgraph
             ) (by
               intro i j hij s hsi hsj
               simp only [Subgraph.induce_verts, Subgraph.verts_top, Set.coe_setOf, ne_eq,
@@ -3751,11 +3716,11 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
               intro v hv
 
               have hii := SimpleGraph.Subgraph.support_subset_verts _ (hsi hv)
-              rw [coe_verts] at hii
+              rw [Subgraph.verts_coeSubgraph] at hii
               have hi' := (subset_of_eq hi) (Set.mem_of_mem_image_val hii)
 
               have hjj := SimpleGraph.Subgraph.support_subset_verts _ (hsj hv)
-              rw [coe_verts] at hjj
+              rw [Subgraph.verts_coeSubgraph] at hjj
               have hj' := (subset_of_eq hj) (Set.mem_of_mem_image_val hjj)
               rw [SimpleGraph.ConnectedComponent.mem_supp_iff] at *
               rw [hj'] at hi'
@@ -3773,7 +3738,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
           rw [Set.mem_union] at hi
           cases hi with
           | inl hl =>
-            rw [@coe_verts] at hl
+            rw [Subgraph.verts_coeSubgraph] at hl
             rw [@Set.mem_union]
             left
             rw [@Set.mem_image] at *
@@ -3830,7 +3795,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
           rw [@Subgraph.verts_iSup] at hv
           obtain ⟨ i , hi ⟩ := Set.mem_iUnion.mp hv
           have hi' := hi
-          rw [@coe_verts] at hi
+          rw [Subgraph.verts_coeSubgraph] at hi
           rw [Set.mem_image] at *
 
           obtain ⟨ x , hx ⟩ := hi
@@ -3853,7 +3818,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
           rw [Set.mem_iUnion] at hv'
           obtain ⟨ i' , hi' ⟩ := hv'.1
           use i'
-          rw [@coe_verts]
+          rw [Subgraph.verts_coeSubgraph]
 
           have := (evenCliqueMatches (i'.1).supp (h' i'.1) i'.2).choose_spec
           rw [← (SimpleGraph.Subgraph.IsMatching.support_eq_verts (this.2))]
@@ -3881,7 +3846,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
           use i''
           rw [Subgraph.verts_sup]
           rw [Set.mem_union]
-          rw [coe_verts]
+          rw [Subgraph.verts_coeSubgraph]
           have := (oddCliqueAlmostMatches (f'mem i'') (h' i''.1) (i''.2)).choose_spec
           rw [← hv'.2]
           rw [← this.1] at hi'
