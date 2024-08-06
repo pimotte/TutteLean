@@ -138,3 +138,36 @@ lemma subdivide [Fintype V] [Inhabited V] [DecidableEq V] {G G' : SimpleGraph V}
         · rw [Function.Injective.mem_set_image SimpleGraph.ConnectedComponent.supp_injective, Finset.mem_coe, Set.mem_toFinset, Set.mem_image]
           use v
         · exact rfl
+
+
+lemma exclUnion [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] (s : Finset (ConnectedComponent G))
+  : Fintype.card ↑(⋃ x ∈ s, @ConnectedComponent.supp V G x) = Finset.sum s (fun x => Nat.card (@ConnectedComponent.supp V G x)) := by
+
+    rw [← Set.toFinset_card ]
+    have hp : ∀ x ∈ s, ∀ y ∈ s, x ≠ y →
+      Disjoint (Set.toFinset (@ConnectedComponent.supp _ G x)) (Set.toFinset (ConnectedComponent.supp y)) := by
+      intro xs _ ys _ hxy s' hx hy
+      simp only [Finset.bot_eq_empty, Finset.le_eq_subset]
+      rw [Finset.subset_empty]
+      rw [Finset.eq_empty_iff_forall_not_mem]
+      by_contra! hc
+      obtain ⟨ v , hv ⟩ := hc
+      obtain ha := hx hv
+      obtain hb := hy hv
+      simp only [ne_eq, Finset.le_eq_subset, Set.subset_toFinset, Set.mem_toFinset,
+        ConnectedComponent.mem_supp_iff] at *
+      exact hxy (ha.symm ▸ hb)
+      done
+
+    have : Set.toFinset (⋃ x ∈ s, ConnectedComponent.supp x) = Finset.biUnion s (fun x => (ConnectedComponent.supp x).toFinset) := by
+      ext v
+      simp only [Set.mem_toFinset, Set.mem_iUnion, ConnectedComponent.mem_supp_iff, exists_prop,
+        exists_eq_right', Finset.mem_biUnion]
+
+    rw [this]
+    rw [Finset.card_biUnion hp]
+    congr
+    dsimp
+    ext c
+    rw [@Set.toFinset_card]
+    rw [Nat.card_eq_fintype_card]
