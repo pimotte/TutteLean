@@ -171,3 +171,18 @@ lemma exclUnion [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] (
     ext c
     rw [@Set.toFinset_card]
     rw [Nat.card_eq_fintype_card]
+
+
+lemma evenFinsetSum {a : Finset α} (f : α → ℕ) (h : ∀ (c : a), Even (f c)) : Even (Finset.sum a f) := by
+  rw [@Nat.even_iff]
+  rw [Finset.sum_nat_mod]
+  have : (Finset.sum a fun i => f i % 2) = Finset.sum a fun i => 0 := by
+    exact Finset.sum_congr (rfl : a = a) (by
+      intro x hx
+      have h' := h ⟨ x , hx ⟩
+      dsimp at h'
+      rw [@Nat.even_iff] at h'
+      exact h'
+      )
+  rw [this]
+  simp only [Finset.sum_const_zero, Nat.zero_mod]

@@ -314,19 +314,6 @@ noncomputable def maximalWithoutMatching [Fintype V] {G : SimpleGraph V} [Decida
     exact maximalWithoutMatching' ⟨ G , by infer_instance , by rfl , h ⟩
 
 
-lemma evenFinsetSum {a : Finset α} (f : α → ℕ) (h : ∀ (c : a), Even (f c)) : Even (Finset.sum a f) := by
-  rw [@Nat.even_iff]
-  rw [Finset.sum_nat_mod]
-  have : (Finset.sum a fun i => f i % 2) = Finset.sum a fun i => 0 := by
-    exact Finset.sum_congr (rfl : a = a) (by
-      intro x hx
-      have h' := h ⟨ x , hx ⟩
-      dsimp at h'
-      rw [@Nat.even_iff] at h'
-      exact h'
-      )
-  rw [this]
-  simp only [Finset.sum_const_zero, Nat.zero_mod]
 
 -- in #15539
 theorem ConnectedComponent.connectedComponentMk_subset {V : Type u_1} {G G' : SimpleGraph V} {v : V} (h : G ≤ G')
@@ -368,53 +355,6 @@ lemma oddSubComponent' [Fintype V] [Inhabited V] [DecidableEq V] (G G' : SimpleG
   simp_rw [Set.toFinset_card, ← Nat.card_eq_fintype_card]
   rw [Nat.card_eq_fintype_card, Fintype.card_ofFinset]
   apply Finset.odd_sum_iff_odd_card_odd
-
-
--- In #14623
-lemma oddComponent [Fintype V] [DecidableEq V] (G : SimpleGraph V) [DecidableRel G.Adj]
-      (ho : Odd (Fintype.card V)) : ∃ (c : ConnectedComponent G), c.isOdd := by
-      simp_rw [ConnectedComponent.isOdd_iff, Nat.odd_iff_not_even]
-      by_contra! hc
-
-      have : (Set.univ : Set V) = ⋃ (c : G.ConnectedComponent), c.supp := by
-        ext v
-        constructor
-        · intro hv
-          use G.connectedComponentMk v
-          simp only [Set.mem_range, SetLike.mem_coe]
-          constructor
-          · use G.connectedComponentMk v
-            exact rfl
-          · exact rfl
-        · intro hv
-          exact trivial
-      rw [← (set_fintype_card_eq_univ_iff _).mpr (this.symm) ] at ho
-      rw [← Set.toFinset_card ] at ho
-      -- rw [← Nat.card_eq_card_toFinset ] at ho
-      rw [@Nat.odd_iff_not_even] at ho
-      apply ho
-      have : Set.toFinset (⋃ (x : ConnectedComponent G), ConnectedComponent.supp x) = Finset.biUnion (Finset.univ : Finset (ConnectedComponent G)) (fun x => (ConnectedComponent.supp x).toFinset) := by
-        ext v
-        simp only [Set.mem_toFinset, Set.mem_iUnion, ConnectedComponent.mem_supp_iff, exists_eq',
-          Finset.mem_biUnion, Finset.mem_univ, true_and, true_iff]
-      rw [this]
-      rw [Finset.card_biUnion (by
-        intro x hx y hy hxy
-        rw [Set.disjoint_toFinset]
-        intro s hsx hsy
-        simp only [Set.toFinset_card, Finset.mem_univ, ne_eq, Set.le_eq_subset,
-          Set.bot_eq_empty] at *
-        rw [@Set.subset_empty_iff, Set.eq_empty_iff_forall_not_mem]
-        intro v hv
-        have hsxv := hsx hv
-        have hsyv := hsy hv
-        rw [@ConnectedComponent.mem_supp_iff] at *
-        rw [hsxv] at hsyv
-        apply hxy
-        exact hsyv
-        )]
-      simp only [Set.toFinset_card]
-      exact evenFinsetSum _ fun c => hc ↑c
 
 
 
@@ -3617,11 +3557,14 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
     then
       use ∅
       simp only [Set.ncard_empty, Subgraph.induce_verts, Subgraph.verts_top]
-      have : Odd (Fintype.card ↑((⊤ : Subgraph G).deleteVerts ∅).verts) := by
-        simp only [Finset.card_univ, Nat.odd_iff_not_even, Subgraph.deleteVerts_empty,
+      have : Odd (Nat.card ↑((⊤ : Subgraph G).deleteVerts ∅).verts) := by
+        simp only [Nat.card_eq_fintype_card,Finset.card_univ, Nat.odd_iff_not_even, Subgraph.deleteVerts_empty,
           Subgraph.verts_top, Fintype.card_congr (Equiv.Set.univ V)] at *
         exact hvOdd
-      have ⟨ c , hc ⟩:= oddComponent ((⊤ : Subgraph G).deleteVerts ∅).coe this
+
+      have := Odd.pos <| (odd_card_iff_odd_components ((⊤ : Subgraph G).deleteVerts ∅).coe).mp this
+      rw [@Finite.card_pos_iff] at this
+      have ⟨ c , hc ⟩:= Classical.inhabited_of_nonempty this
       unfold cardOddComponents
       rw [Set.ncard_pos]
       use c
