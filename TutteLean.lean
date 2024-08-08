@@ -563,6 +563,60 @@ decreasing_by
   rw [Finset.card_erase_of_mem hv]
   omega
 
+@[simps]
+def Subgraph.empty (G : SimpleGraph V) : Subgraph G where
+  verts := ∅
+  Adj _ _ := False
+  adj_sub := False.elim
+  edge_vert := False.elim
+
+lemma Set.two_of_even_of_nonempty (s : Set V) (hs : Set.Finite s) (hn : Set.Nonempty s) (he : Even (Nat.card s)) :
+    ∃ a b, a ∈ s ∧ b ∈ s ∧ a ≠ b := by
+  have : 1 < s.ncard := by
+    have : s.ncard ≠ 0 := by
+      intro h
+      rw [@Set.nonempty_iff_ne_empty] at hn
+      exact hn <| (Set.ncard_eq_zero hs).mp h
+    have : s.ncard ≠ 1 := by
+      intro h
+      rw [@Set.Nat.card_coe_set_eq, h] at he
+      simp at he
+    omega
+  exact (Set.one_lt_ncard_iff hs).mp this
+
+lemma IsClique.even_iff_matches [DecidableEq V]
+    (u : Set V) (hu : Set.Finite u) (h : G.IsClique u) : Even (Nat.card u) ↔ ∃ (M : Subgraph G), M.verts = u ∧ M.IsMatching := by
+  haveI : Fintype u := hu.fintype
+
+  refine ⟨?_ , by
+    rintro ⟨M, ⟨hMl, hMr⟩⟩
+    haveI : Fintype M.verts := hMl ▸ hu.fintype
+    subst hMl
+    simpa [Nat.card_eq_card_finite_toFinset hu, Set.toFinite_toFinset,
+      Set.toFinset_card] using hMr.even_card
+    ⟩
+  intro he
+  cases' Set.eq_empty_or_nonempty u with h h
+  · subst h
+    use (Subgraph.empty G)
+    simp only [Subgraph.empty_verts, true_and]
+    intro _ h
+    contradiction
+  · obtain ⟨x, y, hxy⟩ := Set.two_of_even_of_nonempty u hu h he
+    let u' := u \ {x, y}
+    have : Even (Nat.card u') := by
+      rw [Nat.card_eq_card_finite_toFinset (hu.diff _), Set.Finite.toFinset.eq_1]
+      rw [Set.toFinset_diff]
+      rw [Finset.card_sdiff (by sorry)]
+      simp only [Set.toFinset_card, Set.toFinset_insert, Set.toFinset_singleton,
+        Finset.mem_singleton, hxy.2.2, not_false_eq_true, Finset.card_insert_of_not_mem,
+        Finset.card_singleton, Nat.reduceAdd]
+      rw [Nat.even_sub (by sorry)]
+      simp only [even_two, iff_true]
+      rw [Fintype.card_eq_nat_card]
+      exact he
+    sorry
+
 lemma evenCliqueMatches [Fintype V] [DecidableEq V]
   (u : Set V) (h : G.IsClique u) (uEven : Even (u.ncard)) : ∃ (M : Subgraph G), M.support = u ∧ M.IsMatching := by
   haveI : Fintype u := Fintype.ofFinite _
@@ -2259,6 +2313,7 @@ lemma Set.triple_ncard_two {x y z : V} (h : ({x, y, z} : Set V).ncard ≤ 2) : x
   omega
 
 
+
 noncomputable def fpath [Fintype V] {u : V} [DecidableEq V] {C : Subgraph G}
   (hc : C.IsCycle) (p : G.Walk u v) (hnp : ¬ p.Nil) (hp : p.toSubgraph ≤ C) (hpp : p.IsPath) : G.Walk v v :=
   -- let b := hp.2
@@ -3452,6 +3507,31 @@ lemma ConnectedComponent.supp_eq_of_mem_supp {c c' : ConnectedComponent G} {v} (
   subst h h'
   rfl
 
+theorem IsMatching.of_psuedo_tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] (s : Set V) (hs : Disjoint s {v : V | ∀ w, v ≠ w → G.Adj w v})
+    (h : Nat.card s ≤ Fintype.card {v : V | ∀ w, v ≠ w → G.Adj w v}) :
+    ∃ M : Subgraph G, M.IsMatching ∧ s ⊆ M.verts ∧ M.verts ⊆ s ∪ {v : V | ∀ w, v ≠ w → G.Adj w v} := by
+  sorry
+
+theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj]
+  (hvOdd : Even (Finset.univ : Finset V).card)
+  (h : Nat.card ↑{c : ((⊤ : Subgraph G).deleteVerts {v : V | ∀ w, v ≠ w → G.Adj w v}).coe.ConnectedComponent | c.isOdd} ≤ Fintype.card {v : V | ∀ w, v ≠ w → G.Adj w v})
+  (h' : ∀ (K : ((⊤ : Subgraph G).deleteVerts {v : V | ∀ w, v ≠ w → G.Adj w v}).coe.ConnectedComponent),
+  (((⊤ : Subgraph G).deleteVerts {v | ∀ w, v ≠ w → G.Adj w v}).coe.IsClique K.supp)) :
+    ∃ (M : Subgraph G), M.IsPerfectMatching := by
+  let S := {v : V | ∀ w, v ≠ w → G.Adj w v}
+  let Gsplit := ((⊤ : Subgraph G).deleteVerts {v : V | ∀ w, v ≠ w → G.Adj w v})
+  -- have oddVerts := ((⊤ : Subgraph G).deleteVerts {v : V | ∀ w, v ≠ w → G.Adj w v}).coe.ConnectedComponent.map (fun c => c.exists_rep.choose)
+  have oddVerts : Set V := (⨆ (c : {c : ConnectedComponent Gsplit.coe | Odd (Nat.card c.supp)}), {c.1.exists_rep.choose.1})
+
+  obtain ⟨M1, hM1⟩ := IsMatching.of_psuedo_tutte oddVerts (by sorry : Disjoint oddVerts S) (by sorry)
+
+
+
+
+  have M2 := have oddVerts : Set V := (⨆ (c : {c : ConnectedComponent Gsplit.coe | Odd (Nat.card c.supp)}), {c.1.exists_rep.choose.1})
+
+  sorry
+
 theorem tutte_part [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj]
   (hvOdd : Even (Finset.univ : Finset V).card)
   (h : Nat.card ↑{c : ((⊤ : Subgraph G).deleteVerts {v : V | ∀ w, v ≠ w → G.Adj w v}).coe.ConnectedComponent | c.isOdd} ≤ Fintype.card {v : V | ∀ w, v ≠ w → G.Adj w v})
@@ -3488,13 +3568,10 @@ theorem tutte_part [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj
       intro i
       dsimp
       let oddMatches := oddCliqueAlmostMatches (f'mem i) (h' i) i.2
-      exact sup_IsMatching (by
 
-        exact (oddMatches.choose_spec).2.coeSubgraph
-        ) (by exact subgraphOfAdj_IsMatching _)
+      exact sup_IsMatching (oddMatches.choose_spec).2.coeSubgraph (subgraphOfAdj_IsMatching _)
           (by
-            rw [support_subgraphOfAdj]
-            rw [disjoint_pair]
+            rw [support_subgraphOfAdj, disjoint_pair]
             have := (f' i).2
             constructor
             · intro hf'i
