@@ -2056,30 +2056,6 @@ lemma alternatingCycleSymDiffMatch' {M : Subgraph G} {C : Subgraph G} (hM : M.Is
           exact h2.1
         }
 
--- In #12960
-lemma SimpleGraph.subgraphOfAdj_IsMatching (h : G.Adj u v) : (G.subgraphOfAdj h).IsMatching := by
-  intro w hw
-  by_cases hwu : w = u
-  · use v
-    simp only [hwu.symm, subgraphOfAdj_adj, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, true_and,
-      Prod.swap_prod_mk]
-    intro y hy
-    cases hy with
-    | inl hl => exact hl.symm
-    | inr hr => rw [← hr.1, hr.2]
-  · have hwv : w = v := by
-      simp only [subgraphOfAdj_verts, Set.mem_insert_iff, Set.mem_singleton_iff] at hw
-      cases hw with
-      | inl hl => exact (hwu hl).elim
-      | inr hr => assumption
-    use u
-    simp only [hwv.symm, subgraphOfAdj_adj, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq,
-      Prod.swap_prod_mk, or_true, and_true, true_and]
-    intro y hy
-    cases hy with
-    | inl hl => rw [hl.1, hl.2]
-    | inr hr => exact hr.symm
-
 @[simp]
 lemma Subgraph.support_sup (H H' : Subgraph G) : (H ⊔ H').support = H.support ∪ H'.support := by
   ext v
