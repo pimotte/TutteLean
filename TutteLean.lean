@@ -2946,7 +2946,6 @@ lemma Walk.IsPath.start_non_mem_support_tail {p : G.Walk u v} (hp : p.IsPath) (h
   rw [@cons_isPath_iff] at hp
   exact hp.2
 
--- unused?
 lemma Walk.IsPath.edge_start_not_mem_tail_edges {p : G.Walk u v} (hp : p.IsPath) (hnp : ¬ p.Nil) : s(u, w) ∉ (p.tail hnp).edges := by
   intro hsp
   have := (p.tail hnp).fst_mem_support_of_mem_edges hsp
@@ -3278,10 +3277,6 @@ lemma Walk.IsCycle.decompose_mem_support_part'' {p : G.Walk u u} {q : G.Walk u v
 
   intro hr
   obtain ⟨i, hi⟩ := support_exists_getVert' _ hr
-  -- have hrl1 : q.getVert (q.length - 1) = x := by
-  --   rw [← this, getVert_length_sub_one (not_nil_of_ne huv)]
-  --   unfold lastButOneOfNotNil
-  --   rfl
 
   have hine0 : i ≠ 0 := by
     intro hi'
@@ -3417,10 +3412,8 @@ theorem tutte_part [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj
     simp only [Set.mem_setOf_eq, ConnectedComponent.mem_supp_iff]
     rw [← (componentExistsRep c.val).choose_spec]
   haveI hFin (s : Set V) : Fintype s := Fintype.ofFinite _
-  -- rw [@Nat.card_eq_card_toFinset, @Set.toFinset_card] at uOdd
   let M1 : Subgraph G := (⨆ (c : {c : ConnectedComponent Gsplit.coe | ConnectedComponent.isOdd c}),
     let v := f' c
-    -- have uOdd :=
     let M := (oddCliqueAlmostMatches (f'mem c) (h' c) c.2).choose
 
     SimpleGraph.Subgraph.coeSubgraph M ⊔ G.subgraphOfAdj ((by
@@ -3497,7 +3490,6 @@ theorem tutte_part [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj
               rw [hf'memj] at hi'
               exact hi'.symm
             | inr h2 =>
-              -- have := (ConnectedComponentSubsetVerts _ _) hi'
               have := Set.image_val_subset hii
               rw [SimpleGraph.Subgraph.deleteVerts_verts] at this
               rw [h2] at this
@@ -3792,7 +3784,6 @@ theorem tutte_part [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj
     have := SimpleGraph.Subgraph.IsMatching.even_card hM12
     rw [Set.ncard_eq_toFinset_card' ]
     exact this
-  -- rw [@Nat.odd_iff_not_even] at hvOdd
 
   have hnM12Even : Even (Nat.card ((Set.univ : Set V) \ (M1 ⊔ M2).verts : Set V)) := by
     rw [@Set.Nat.card_coe_set_eq]
@@ -3889,12 +3880,9 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
     (∃ (M : Subgraph G) , M.IsPerfectMatching) ↔
       (∀ (u : Set V),
         cardOddComponents ((⊤ : G.Subgraph).deleteVerts u).coe ≤ u.ncard) := by
-  -- stop
   constructor
   {
     rintro ⟨M, hM⟩ u
-    -- unfold cardOddComponents
-    -- #check (c : G.ConnectedComponent) →  ∃ w ∈ u, ∃ v, M.Adj (↑v) w ∧ v ∈ c.supp
     let f : {c : ConnectedComponent ((⊤ : Subgraph G).deleteVerts u).coe | ConnectedComponent.isOdd c} → u :=
       fun c => ⟨(c.1.odd_matches_node_outside hM c.2).choose,(c.1.odd_matches_node_outside hM c.2).choose_spec.1⟩
     have := Finite.card_le_of_injective f (by
