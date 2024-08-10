@@ -2550,29 +2550,6 @@ lemma matching_union_left (M : (G ⊔ G').Subgraph) (hM : M.IsPerfectMatching) (
   obtain ⟨w, hw⟩ := Subgraph.isPerfectMatching_iff.mp hM v
   use w
 
--- noncomputable def altWalk {v a b x : V} [Fintype V] [DecidableEq V] {G1 G2 : SimpleGraph V} {M1 : Subgraph G1} {M2 : Subgraph G2}[DecidableRel M1.Adj]
---   [DecidableRel M2.Adj] (hM1 : M1.IsPerfectMatching) (hM2 : M2.IsPerfectMatching) (p : G2.Walk v c) (hp : p.length ≥ 1) : G2.Walk c c :=
---   let w := p.sndOfNotNil (by
---     rw [@Walk.nil_iff_length_eq]
---     omega
---     )
---   if hv : v = a then
---     .cons (by
---       sorr
---         : G2.Adj c v) p
---   else
---     if hv' : v = x ∨ v = b then
---       .cons (by sorr : G2.Adj c a) (.cons (by sorr : G2.Adj a v) p)
---     else
---       have : Fintype.card V - (p.length + 1 + 1) < (Fintype.card V - (p.length + 1)) := by
---         sorr
---       if M1.Adj v w then
-
---         altWalk (-.cons (by sorr: G2.Adj (hM2.1 (hM2.2 v)).choose v) p) (by sorr)
---       else
---         altWalk (.cons (by sorr : G2.Adj (hM1.1 (hM1.2 v)).choose v) p) (by )
--- termination_by Fintype.card V - p.support.length
-
 lemma Walk.IsCycle.of_append_left {p : G.Walk u v} {q : G.Walk v u} (h : u ≠ v) (hcyc : (p.append q).IsCycle) : p.IsPath := by
   have := hcyc.2
   rw [SimpleGraph.Walk.tail_support_append, List.nodup_append] at this
@@ -2582,14 +2559,11 @@ lemma Walk.IsCycle.of_append_left {p : G.Walk u v} {q : G.Walk v u} (h : u ≠ v
   apply this.2.2 h'
   exact q.end_mem_tail_support_of_ne h.symm
 
-
-
 lemma Walk.IsCycle.of_append_right {p : G.Walk u v} {q : G.Walk v u} (h : u ≠ v) (hcyc : (p.append q).IsCycle) : q.IsPath := by
   have := hcyc.2
   rw [SimpleGraph.Walk.tail_support_append, List.nodup_append] at this
   rw [@isPath_def, @support_eq_cons, @List.nodup_cons]
   exact ⟨this.2.2 (p.end_mem_tail_support_of_ne h), this.2.1⟩
-
 
 lemma Walk.IsCycle.mem_endpoint {p : G.Walk u u} (h : p.IsCycle) : u ∈ p.toSubgraph.support := by
   rw [@Subgraph.mem_support]
