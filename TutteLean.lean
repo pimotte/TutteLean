@@ -570,24 +570,48 @@ def Subgraph.empty (G : SimpleGraph V) : Subgraph G where
   adj_sub := False.elim
   edge_vert := False.elim
 
-lemma Set.two_of_even_of_nonempty (s : Set V) (hs : Set.Finite s) (hn : Set.Nonempty s) (he : Even (Nat.card s)) :
+lemma Set.Finite.one_lt_ncard_of_nonempty_of_even {s : Set V} (hs : Set.Finite s) (hn : Set.Nonempty s) (he : Even (Nat.card s)) :
+    1 < s.ncard := by
+  have : s.ncard ≠ 0 := by
+    intro h
+    rw [@Set.nonempty_iff_ne_empty] at hn
+    exact hn <| (Set.ncard_eq_zero hs).mp h
+  have : s.ncard ≠ 1 := by
+    intro h
+    rw [@Set.Nat.card_coe_set_eq, h] at he
+    simp at he
+  omega
+
+lemma Set.Finite.two_of_even_of_nonempty {s : Set V} (hs : Set.Finite s) (hn : Set.Nonempty s) (he : Even (Nat.card s)) :
     ∃ a b, a ∈ s ∧ b ∈ s ∧ a ≠ b := by
-  have : 1 < s.ncard := by
-    have : s.ncard ≠ 0 := by
-      intro h
-      rw [@Set.nonempty_iff_ne_empty] at hn
-      exact hn <| (Set.ncard_eq_zero hs).mp h
-    have : s.ncard ≠ 1 := by
-      intro h
-      rw [@Set.Nat.card_coe_set_eq, h] at he
-      simp at he
-    omega
-  exact (Set.one_lt_ncard_iff hs).mp this
+  exact (Set.one_lt_ncard_iff hs).mp (one_lt_ncard_of_nonempty_of_even hs hn he)
 
-lemma IsClique.even_iff_matches [DecidableEq V]
-    (u : Set V) (hu : Set.Finite u) (h : G.IsClique u) : Even (Nat.card u) ↔ ∃ (M : Subgraph G), M.verts = u ∧ M.IsMatching := by
+lemma Set.Finite.even_card_diff_pair [DecidableEq V] {x y : V} {u : Set V} (hu : Set.Finite u) (he : Even (Nat.card u)) (hx : x ∈ u) (hy : y ∈ u) (hxy : x ≠ y) :
+    Even (Nat.card (u \ {x, y} : Set V)) := by
   haveI : Fintype u := hu.fintype
+  rw [Nat.card_eq_card_finite_toFinset (hu.diff _), Set.Finite.toFinset.eq_1]
+  rw [Set.toFinset_diff]
+  rw [Finset.card_sdiff (by
+    simp only [Set.toFinset_insert, Set.toFinset_singleton, Set.subset_toFinset,
+      Finset.coe_insert, Finset.coe_singleton]
+    exact Set.pair_subset hx hy
+    )]
+  simp only [Set.toFinset_card, Set.toFinset_insert, Set.toFinset_singleton,
+    Finset.mem_singleton, hxy, not_false_eq_true, Finset.card_insert_of_not_mem,
+    Finset.card_singleton, Nat.reduceAdd]
+  rw [Nat.even_sub (by
+    have := Set.Finite.one_lt_ncard_of_nonempty_of_even hu (Set.nonempty_of_mem hx) he
+    rw [← Set.Nat.card_coe_set_eq,] at this
+    rwa [Fintype.card_eq_nat_card]
+    )]
+  simp only [even_two, iff_true]
+  rw [Fintype.card_eq_nat_card]
+  exact he
 
+
+lemma isClique_even_iff_matches [DecidableEq V]
+    (u : Set V) (hu : Set.Finite u) (hc : G.IsClique u) : Even (Nat.card u) ↔ ∃ (M : Subgraph G), M.verts = u ∧ M.IsMatching := by
+  haveI : Fintype u := hu.fintype
   refine ⟨?_ , by
     rintro ⟨M, ⟨hMl, hMr⟩⟩
     haveI : Fintype M.verts := hMl ▸ hu.fintype
@@ -602,146 +626,42 @@ lemma IsClique.even_iff_matches [DecidableEq V]
     simp only [Subgraph.empty_verts, true_and]
     intro _ h
     contradiction
-  · obtain ⟨x, y, hxy⟩ := Set.two_of_even_of_nonempty u hu h he
+  · obtain ⟨x, y, hxy⟩ := Set.Finite.two_of_even_of_nonempty hu h he
     let u' := u \ {x, y}
-    have : Even (Nat.card u') := by
-      rw [Nat.card_eq_card_finite_toFinset (hu.diff _), Set.Finite.toFinset.eq_1]
-      rw [Set.toFinset_diff]
-      rw [Finset.card_sdiff (by sorry)]
-      simp only [Set.toFinset_card, Set.toFinset_insert, Set.toFinset_singleton,
-        Finset.mem_singleton, hxy.2.2, not_false_eq_true, Finset.card_insert_of_not_mem,
-        Finset.card_singleton, Nat.reduceAdd]
-      rw [Nat.even_sub (by sorry)]
-      simp only [even_two, iff_true]
-      rw [Fintype.card_eq_nat_card]
-      exact he
-    sorry
+    have hu'e := Set.Finite.even_card_diff_pair hu he hxy.1 hxy.2.1 hxy.2.2
+    have hu'c := hc.subset (Set.diff_subset : u' ⊆ u)
+    have hu'f := Set.Finite.diff hu {x, y}
+    obtain ⟨M, hM⟩ := (isClique_even_iff_matches u' hu'f hu'c).mp hu'e
+    use M ⊔ subgraphOfAdj _ (hc hxy.1 hxy.2.1 hxy.2.2)
+    simp only [Subgraph.verts_sup, hM.1, subgraphOfAdj_verts]
+    refine ⟨by
+      rw [Set.diff_union_self]
+      exact Set.union_eq_self_of_subset_right (Set.pair_subset hxy.1 hxy.2.1), ?_⟩
+    refine Subgraph.IsMatching.sup hM.2 (Subgraph.IsMatching.subgraphOfAdj (hc hxy.left hxy.right.left hxy.right.right)) ?h.hd
+    simp only [support_subgraphOfAdj, hM.2.support_eq_verts, hM.1]
+    exact Set.disjoint_sdiff_left
+termination_by u.ncard
+decreasing_by
+· simp_wf
+  refine Set.ncard_lt_ncard ?_ hu
+  exact ⟨Set.diff_subset, by
+    rw [@Set.not_subset_iff_exists_mem_not_mem]
+    use x
+    exact ⟨hxy.1, by simp only [Set.mem_diff, Set.mem_insert_iff, Set.mem_singleton_iff, true_or,
+      not_true_eq_false, and_false, not_false_eq_true]⟩⟩
 
-lemma evenCliqueMatches [Fintype V] [DecidableEq V]
-  (u : Set V) (h : G.IsClique u) (uEven : Even (u.ncard)) : ∃ (M : Subgraph G), M.support = u ∧ M.IsMatching := by
-  haveI : Fintype u := Fintype.ofFinite _
-  obtain ⟨ u' , hu'⟩ := evenSplit u.toFinset (Set.ncard_eq_toFinset_card' u ▸ uEven)
-  have f := Finset.equivOfCardEq hu'.2
-  let M : Subgraph G := (⨆ (v : u'), G.subgraphOfAdj ((by
-    apply h
-    · rw [← Set.mem_toFinset]
-      exact hu'.1 v.2
-    · rw [← Set.mem_toFinset]
-      exact (Finset.mem_sdiff.mp (f v).2).1
-    intro heq
-    have := (Finset.mem_sdiff.mp (f v).2).2
-    apply this
-    rw [← heq]
-    exact v.2
-    ) : G.Adj v (f v)))
-  use M
-  constructor
-  · ext v
-    constructor
-    · intro hv
-      obtain ⟨ w , hw ⟩ := M.mem_support.mp hv
-      rw [SimpleGraph.Subgraph.iSup_adj] at hw
-      obtain ⟨ i , hi ⟩ := hw
-      rw [SimpleGraph.subgraphOfAdj_adj] at hi
-      cases Sym2.eq_iff.mp hi with
-      | inl h1 =>
-        rw [← Set.mem_toFinset]
-        exact hu'.1 (h1.1 ▸ i.2)
-      | inr h2 =>
-        rw [← Set.mem_toFinset]
-        rw [← h2.2]
-        exact (Finset.mem_sdiff.mp (f i).2).1
-    · intro hv
-      rw [SimpleGraph.Subgraph.mem_support]
-      if hvu' : v ∈ u'
-      then
-        use f ⟨ v , hvu' ⟩
-        rw [SimpleGraph.Subgraph.iSup_adj]
-        use ⟨ v , hvu' ⟩
-        simp only [subgraphOfAdj_adj]
-      else
-        have : v ∈ Set.toFinset u \ u' := (by
+lemma completeGraph_isClique (u : Set V) : (completeGraph V).IsClique u := by
+  intro x _ y _ a_2 a_3
+  simp_all only [Set.mem_univ, ne_eq, not_true_eq_false]
 
-          rw [@Finset.mem_sdiff]
-          exact ⟨ Set.mem_toFinset.mpr hv , hvu' ⟩
-          )
-        use f.invFun ⟨ v , this ⟩
-        rw [SimpleGraph.Subgraph.iSup_adj]
-        use f.invFun ⟨ v , this ⟩
-        simp only [Equiv.invFun_as_coe, Equiv.apply_symm_apply, subgraphOfAdj_adj, Sym2.eq,
-          Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk, or_true]
-  · intro v hv
-    rw [SimpleGraph.Subgraph.verts_iSup] at hv
-    rw [Set.mem_iUnion ] at hv
-    obtain ⟨ i , hi ⟩ := hv
-    simp only [subgraphOfAdj_verts, Set.mem_insert_iff, Set.mem_singleton_iff] at hi
-    cases hi with
-    | inl h1 =>
-      use f i
-      exact ⟨ by
-        dsimp
-        rw [SimpleGraph.Subgraph.iSup_adj]
-        use i
-        simp only [subgraphOfAdj_adj, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, and_true,
-          Prod.swap_prod_mk]
-        left
-        exact h1.symm
-        , (by
-        intro y hy
-        rw [SimpleGraph.Subgraph.iSup_adj] at hy
-        obtain ⟨ i' , hi' ⟩ := hy
-        simp at hi'
-        cases hi' with
-        | inl hl =>
-          rw [← hl.2]
-          rw [@SetCoe.ext_iff]
-          rw [← hl.1] at h1
-          rw [Subtype.val_injective h1]
-        | inr hr =>
-          have : (f i').val ∈ Set.toFinset u \ u' := by
-            exact (f i').2
-          rw [hr.2] at this
-          exfalso
-          rw [@Finset.mem_sdiff] at this
-          apply this.2
-          rw [h1]
-          exact i.2
-        ) ⟩
-    | inr h2 =>
-      use i
-      dsimp
-      constructor
-      · rw [SimpleGraph.Subgraph.iSup_adj]
-        use i
-        rw [h2]
-        simp only [subgraphOfAdj_adj, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk,
-          or_true]
-      · intro y hy
-        rw [SimpleGraph.Subgraph.iSup_adj] at hy
-        obtain ⟨ i' , hi' ⟩ := hy
-        simp only [subgraphOfAdj_adj, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk]
-          at hi'
-        cases hi' with
-        | inl hl =>
-          have : (f i).val ∈ Set.toFinset u \ u' := by
-            exact (f i).2
-          rw [← h2] at this
-          exfalso
-          rw [@Finset.mem_sdiff] at this
-          apply this.2
-          rw [← hl.1]
-          exact i'.2
-        | inr hr =>
-          rw [← hr.1]
-          rw [h2] at hr
-          rw [@SetCoe.ext_iff]
-          apply Equiv.injective f
-          apply Subtype.val_injective
-          exact hr.2
+lemma completeGraph_even_iff_matches [Fintype V] [DecidableEq V] :
+    Even (Nat.card V) ↔ ∃ (M : Subgraph (completeGraph V)), M.verts = Set.univ ∧ M.IsMatching := by
+  simpa [Nat.card_eq_fintype_card, (set_fintype_card_eq_univ_iff _).mpr rfl] using
+    isClique_even_iff_matches (Set.univ : Set V) Set.finite_univ (completeGraph_isClique _)
 
 lemma existsIsMatching [Fintype V] [DecidableEq V]
-  (u : Set V) (h : G.IsClique u) (uEven : Even (u.ncard)) : (evenCliqueMatches u h uEven).choose.IsMatching := by
-  exact (Exists.choose_spec (evenCliqueMatches u h uEven)).2
+  (u : Set V) (hu : Set.Finite u) (h : G.IsClique u) (uEven : Even (Nat.card u)) : ((isClique_even_iff_matches u hu h).mp uEven).choose.IsMatching := by
+  exact (Exists.choose_spec ((isClique_even_iff_matches u hu h).mp uEven)).2
 
 
 --First (done)
@@ -875,8 +795,8 @@ lemma oddCliqueAlmostMatches [Fintype V] [DecidableEq V]
   {u : Set V} {v : V} (hv : v ∈ u) (h : G.IsClique u) (uOdd : Odd (Nat.card u)) : ∃ (M : Subgraph G), insert v M.verts = u ∧ M.IsMatching := by
   haveI : Fintype u := Fintype.ofFinite _
   rw [@Nat.card_eq_card_toFinset, @Set.toFinset_card] at uOdd
-  have u'Even : Even ((u \ {v}).ncard) := by
-
+  have u'Even : Even (Nat.card (u \ {v} : Set V)) := by
+    rw [Set.Nat.card_coe_set_eq]
     rw [Set.ncard_eq_toFinset_card']
     rw [Set.toFinset_diff]
     simp only [Set.mem_setOf_eq, Set.toFinset_singleton]
@@ -884,12 +804,11 @@ lemma oddCliqueAlmostMatches [Fintype V] [DecidableEq V]
     rw [Finset.card_erase_of_mem (Set.mem_toFinset.mpr hv)]
     rw [Set.toFinset_card]
     exact oddSubOneEven _ uOdd
-  have u'Clique : G.IsClique (u \ {v}) := SimpleGraph.IsClique.subset (@Set.diff_subset _ u {v}) h
-  obtain ⟨ M , hM ⟩ := (evenCliqueMatches (u \ {v}) u'Clique u'Even)
+  have u'Clique : G.IsClique (u \ {v}) := SimpleGraph.IsClique.subset (@Set.diff_subset V u {v}) h
+  obtain ⟨ M , hM ⟩ := ((isClique_even_iff_matches (u \ {v}) (Set.toFinite (u \ {v})) u'Clique).mp u'Even)
   use M
   constructor
-  · rw [← SimpleGraph.Subgraph.IsMatching.support_eq_verts hM.2]
-    rw [hM.1]
+  · rw [hM.1]
     rw [Set.insert_diff_singleton]
     exact (Set.insert_eq_of_mem hv)
   · exact hM.2
