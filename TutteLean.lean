@@ -914,15 +914,6 @@ lemma cycle_neq_not_nil (p : G.Walk u u) (hpc : p.IsCycle) : ¬p.Nil := by
   exact Walk.nil_iff_length_eq.mp hp
 
 -- In getVert PR
-lemma support_exists_getVert' (p : G.Walk v w) (h : u ∈ p.support) : ∃ n, p.getVert n = u ∧ n ≤ p.length := by
-  obtain ⟨q, r, hqr⟩ := SimpleGraph.Walk.mem_support_iff_exists_append.mp h
-  use q.length
-  rw [hqr]
-  rw [@Walk.getVert_append]
-  simp only [lt_self_iff_false, ↓reduceIte, ge_iff_le, le_refl, tsub_eq_zero_of_le,
-    Walk.getVert_zero, Walk.length_append, le_add_iff_nonneg_right, zero_le, and_self]
-
--- In getVert PR
 @[simp]
 lemma cons_getVert_succ (p : G.Walk v w) (h : G.Adj u v) : (Walk.cons h p).getVert n.succ = p.getVert n := by
   rfl
@@ -2339,8 +2330,8 @@ lemma Walk.IsCycle.decompose_mem_support_part {p : G.Walk u u} {q : G.Walk u v} 
   intro har
   have := hp.2
   rw [@List.nodup_iff_get?_ne_get?] at this
-  obtain ⟨n, hn⟩ := support_exists_getVert' _ har
-  obtain ⟨n', hn'⟩ := support_exists_getVert' _ hx
+  obtain ⟨n, hn⟩ := Walk.mem_support_iff_exists_getVert.mp har
+  obtain ⟨n', hn'⟩ := Walk.mem_support_iff_exists_getVert.mp hx
   have hn'q : n' < q.length := by
     have := hn'.2
     rw [@Nat.le_iff_lt_or_eq] at this
@@ -2910,7 +2901,7 @@ lemma Walk.IsCycle.decompose_mem_support_part' {p : G.Walk u u} {q : G.Walk u v}
     exact SimpleGraph.toSubgraph_adj_sndOfNotNil r.reverse (
       (isPath_reverse_iff r).mpr hrpath) (by simpa [SimpleGraph.Walk.toSubgraph_reverse] )
   intro hq
-  obtain ⟨i, hi⟩ := support_exists_getVert' _ hq
+  obtain ⟨i, hi⟩ := Walk.mem_support_iff_exists_getVert.mp hq
   have hrl1 : r.getVert (r.length - 1) = x := by
     rw [← this, getVert_length_sub_one (not_nil_of_ne huv.symm)]
     unfold lastButOneOfNotNil
@@ -2989,7 +2980,7 @@ lemma Walk.IsCycle.decompose_mem_support_part'' {p : G.Walk u u} {q : G.Walk u v
     exact SimpleGraph.toSubgraph_adj_sndOfNotNil q (hqpath) this
 
   intro hr
-  obtain ⟨i, hi⟩ := support_exists_getVert' _ hr
+  obtain ⟨i, hi⟩ := Walk.mem_support_iff_exists_getVert.mp hr
 
   have hine0 : i ≠ 0 := by
     intro hi'
