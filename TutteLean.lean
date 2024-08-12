@@ -887,14 +887,6 @@ lemma reverse_Nil (p : G.Walk u v) : p.reverse.Nil ↔ p.Nil := by
 def Walk.lastButOneOfNotNil (p : G.Walk u v) := p.getVert (p.length - 1)
 
 
-
--- In getVert PR
-@[simp]
-lemma notNilRec_cons {motive : {u w : V} → (p : G.Walk u w) → (h : ¬ p.Nil) → Sort*}
-    (cons : {u v w : V} → (h : G.Adj u v) → (q : G.Walk v w) → motive (Walk.cons h q) Walk.not_nil_cons)
-    (h' : G.Adj u v) (q' : G.Walk v w) : @Walk.notNilRec _ _ _ _ _ cons _ _ = cons h' q' := by
-    rfl
-
 lemma mem_reverse_support (p : G.Walk u v) (w : V) : w ∈ p.support ↔ w ∈ p.reverse.support := by
   rw [SimpleGraph.Walk.mem_support_iff_exists_append]
   rw [SimpleGraph.Walk.mem_support_iff_exists_append]
