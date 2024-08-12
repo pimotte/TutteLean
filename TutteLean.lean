@@ -913,15 +913,6 @@ lemma cycle_neq_not_nil (p : G.Walk u u) (hpc : p.IsCycle) : ¬p.Nil := by
   rw [← @Walk.length_eq_zero_iff]
   exact Walk.nil_iff_length_eq.mp hp
 
--- unnecisarry
-lemma support_exists_getVert (p : G.Walk v w) (h : u ∈ p.support) : ∃ n, p.getVert n = u := by
-  obtain ⟨q, r, hqr⟩ := SimpleGraph.Walk.mem_support_iff_exists_append.mp h
-  use q.length
-  rw [hqr]
-  rw [@Walk.getVert_append]
-  simp only [lt_self_iff_false, ↓reduceIte, ge_iff_le, le_refl, tsub_eq_zero_of_le,
-    Walk.getVert_zero]
-
 -- In getVert PR
 lemma support_exists_getVert' (p : G.Walk v w) (h : u ∈ p.support) : ∃ n, p.getVert n = u ∧ n ≤ p.length := by
   obtain ⟨q, r, hqr⟩ := SimpleGraph.Walk.mem_support_iff_exists_append.mp h
@@ -1099,7 +1090,7 @@ theorem toSubgraph_adj_exists {u v} (w : G.Walk u v)
 
 lemma cycle_two_neighbors (p : G.Walk u u) (hpc : p.IsCycle) (h : v ∈ p.support): (p.toSubgraph.neighborSet v).ncard = 2 := by
   unfold Subgraph.neighborSet
-  obtain ⟨n, hn⟩ := support_exists_getVert p h
+  obtain ⟨n, ⟨hn, _⟩⟩ := Walk.mem_support_iff_exists_getVert.mp h
   rw [@Set.ncard_eq_two]
   by_cases hbounds : 0 < n ∧ n < p.length
   · use p.getVert (n - 1)
@@ -1970,7 +1961,7 @@ noncomputable def fpath [Fintype V] {u : V} [DecidableEq V] {C : Subgraph G}
       refine ⟨hpp, ?_⟩
       intro hx
 
-      obtain ⟨n, hn⟩ := support_exists_getVert p (hx)
+      obtain ⟨n, ⟨hn, _⟩⟩ := Walk.mem_support_iff_exists_getVert.mp hx
       have hnpl : n < p.length := by
         by_contra! hc
         rw [Walk.getVert_of_length_le p hc] at hn
