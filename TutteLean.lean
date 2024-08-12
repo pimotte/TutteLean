@@ -874,21 +874,6 @@ def Subgraph.coeBig (H : Subgraph G) : SimpleGraph V := {
   loopless := Subgraph.loopless H
 }
 
--- structure Walk.isAlternating (p : G.Walk u v) (M : Subgraph G) where
---   firstEdge (hnp : ¬ p.Nil) : (p.firstDart hnp).edge ∉ M.edgeSet
---   secondEdge (hnp : ¬ p.Nil) (hnt : ¬ (p.tail hnp).Nil) : ((p.tail hnp).firstDart hnt).edge ∈ M.edgeSet
---   tailAlternating (hnp : ¬ p.Nil) (hnt : ¬ (p.tail hnp).Nil) :
-
--- inductive Walk.IsAlternating (M : Subgraph G) : {v w : V} → (p : G.Walk v w) → Prop where
---   | nil {u : V} : Walk.IsAlternating M (nil : G.Walk u u)
---   | single (hadj : G.Adj v w) : Walk.IsAlternating M (.cons hadj .nil)
---   | alt (q : G.Walk v w) : (hnq : ¬ q.Nil) → (hnt : ¬ (q.tail hnq).Nil) →
---       (halt: (q.firstDart hnq).edge ∈ M.edgeSet ↔ ¬ ((q.tail hnq).firstDart hnt).edge ∈ M.edgeSet) →
---       (htail: Walk.IsAlternating M (q.tail hnq)) → Walk.IsAlternating M q
-
--- structure Walk.IsAlternating (p : G.Walk u v) (M : Subgraph G) where
---   halt : ∀ (n : ℕ), 0 < n → n < p.length → (M.Adj (p.getVert (n-1)) (p.getVert n) ↔ ¬ M.Adj (p.getVert n) (p.getVert (n+1)))
-
 structure Walk.IsAlternating (p : G.Walk u v) (M : Subgraph G) where
   halt : ∀ (v w w': V), w ≠ w' → p.toSubgraph.Adj v w → p.toSubgraph.Adj v w' → (M.Adj v w ↔ ¬ M.Adj v w')
 
