@@ -465,104 +465,6 @@ lemma oddComponentsIncrease [Fintype V] [Inhabited V] [DecidableEq V] (G G' : Si
           exact commonComponent hb h1.2 h2.2
         exact Fintype.card_le_of_injective f fInj
 
-def evenSplit [DecidableEq V] (u : Finset V) (uEven : Even (u.card)) : ∃ u', u' ⊆ u ∧ u'.card = (u \ u').card := by
-  by_cases h : u.card = 0
-  · use ∅
-    simp only [Finset.empty_subset, Finset.card_empty, Finset.sdiff_empty, true_and]
-    exact h.symm
-  · push_neg at h
-    obtain ⟨ v , hv ⟩ := Finset.card_pos.mp (Nat.zero_lt_of_ne_zero h)
-    have hno : u.card ≠ 1 := by
-      intro h
-      exact Nat.not_even_one (h ▸ uEven)
-    have : 0 < (u.erase v).card := by
-      rw [Finset.card_erase_of_mem hv]
-      simp only [tsub_pos_iff_lt]
-      exact (Nat.one_lt_iff_ne_zero_and_ne_one.mpr ⟨ h , hno ⟩)
-    obtain ⟨ w , hw ⟩ := Finset.card_pos.mp this
-    obtain ⟨ u' , hu' ⟩ := evenSplit ((u.erase v).erase w) (by
-      obtain ⟨ k, hk ⟩ := uEven
-      have : 0 < k := by
-        rw [hk] at h
-        ring_nf at h
-        rw [Nat.mul_ne_zero_iff] at h
-        exact Nat.zero_lt_of_ne_zero h.1
-      use (k - 1)
-      rw [Finset.card_erase_of_mem hw]
-      rw [Finset.card_erase_of_mem hv]
-      rw [Nat.sub_sub]
-      rw [← Nat.sub_add_comm (by linarith)]
-      rw [← Nat.add_sub_assoc (by linarith)]
-      rw [← hk]
-      rw [Nat.sub_sub]
-      )
-    use (insert w u')
-    constructor
-    · intro x hx
-      rw [Finset.mem_insert] at hx
-      cases hx with
-      | inl h1 => exact h1 ▸ (Finset.mem_erase.mp hw).2
-      | inr h2 =>
-        apply Finset.erase_subset v u
-        apply Finset.erase_subset w (Finset.erase u v)
-        exact hu'.1 h2
-    · rw [Finset.card_insert_of_not_mem (by
-        intro h
-        exact (Finset.not_mem_erase _ _) (hu'.1 h))]
-      -- rw [hu'.2]
-      rw [Finset.sdiff_insert]
-      have := hu'.2
-      rw [Finset.erase_sdiff_comm] at this
-      rw [Finset.erase_sdiff_comm] at this
-      rw [Finset.card_erase_of_mem (by
-        rw [@Finset.mem_sdiff]
-        exact ⟨ (Finset.mem_erase.mp hw).2 , (by
-          intro hnw
-          exact (Finset.not_mem_erase _ _) (hu'.1 hnw)
-          ) ⟩
-        )]
-
-      rw [this]
-      rw [Finset.card_erase_of_mem (by
-        rw [Finset.mem_erase]
-        exact ⟨ (Finset.mem_erase.mp hw).1 , (by
-          rw [Finset.mem_sdiff]
-          exact ⟨ (Finset.mem_erase.mp hw).2 , (by
-            intro hwu'
-            exact (Finset.not_mem_erase _ _) (hu'.1 hwu')
-            ) ⟩
-          ) ⟩
-        )]
-
-      rw [Finset.card_erase_of_mem (by
-
-        rw [Finset.mem_sdiff]
-        exact ⟨ hv , (by
-          intro hvu'
-          have := hu'.1 hvu'
-          exact (Finset.not_mem_erase _ _) (Finset.mem_erase.mp (hu'.1 hvu')).2) ⟩
-        )]
-      have : u'.card ≤ u.card - 2 := by
-        have h' := Finset.card_le_card hu'.1
-        rw [Finset.card_erase_of_mem hw] at h'
-        rw [Finset.card_erase_of_mem hv] at h'
-        rw [Nat.sub_sub] at h'
-        exact h'
-
-      have : (u \ u').card > 1 := by
-        calc (u \ u').card
-          _ ≥ u.card - u'.card := by exact Finset.le_card_sdiff u' u
-          _ > 1 := by omega
-      rw [@tsub_add_cancel_iff_le]
-      omega
-
-termination_by u.card
-decreasing_by
-  simp_wf
-  rw [Finset.card_erase_of_mem hw]
-  rw [Finset.card_erase_of_mem hv]
-  omega
-
 @[simps]
 def Subgraph.empty (G : SimpleGraph V) : Subgraph G where
   verts := ∅
@@ -663,86 +565,6 @@ lemma existsIsMatching [Fintype V] [DecidableEq V]
   (u : Set V) (hu : Set.Finite u) (h : G.IsClique u) (uEven : Even (Nat.card u)) : ((isClique_even_iff_matches u hu h).mp uEven).choose.IsMatching := by
   exact (Exists.choose_spec ((isClique_even_iff_matches u hu h).mp uEven)).2
 
-
---First (done)
-lemma sup_IsMatching [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj]
-  {M M' : Subgraph G} (hM : M.IsMatching) (hM' : M'.IsMatching) (hd : Disjoint (M.support) (M'.support)) : (M ⊔ M').IsMatching := by
-  intro v hv
-  rw [SimpleGraph.Subgraph.verts_sup] at hv
-  cases Set.mem_or_mem_of_mem_union hv with
-  | inl hmM =>
-    obtain ⟨ w , hw ⟩ := hM hmM
-    use w
-    dsimp at *
-    constructor
-    · exact SimpleGraph.Subgraph.sup_adj.mpr (.inl hw.1)
-    · intro y hy
-      rw [SimpleGraph.Subgraph.sup_adj] at hy
-      cases hy with
-      | inl h1 => exact hw.2 y h1
-      | inr h2 =>
-        have hvM's: v ∈ M'.support := by
-          rw [SimpleGraph.Subgraph.mem_support ]
-          use y
-        have hvMs : v ∈ M.support := by
-          rw [SimpleGraph.Subgraph.mem_support ]
-          use w
-          exact hw.1
-        exfalso
-        rw [Set.disjoint_left] at hd
-        exact hd hvMs hvM's
-  | inr hmM' =>
-    obtain ⟨ w , hw ⟩ := hM' hmM'
-    use w
-    dsimp at *
-    constructor
-    · exact SimpleGraph.Subgraph.sup_adj.mpr (.inr hw.1)
-    · intro y hy
-      rw [SimpleGraph.Subgraph.sup_adj] at hy
-      cases hy with
-      | inr h1 => exact hw.2 y h1
-      | inl h2 =>
-        have hvM's: v ∈ M'.support := by
-          rw [SimpleGraph.Subgraph.mem_support ]
-          use w
-          exact hw.1
-        have hvMs : v ∈ M.support := by
-          rw [SimpleGraph.Subgraph.mem_support ]
-          use y
-        exfalso
-        rw [Set.disjoint_left] at hd
-        exact hd hvMs hvM's
-
---First (done)
-lemma iSup_IsMatching [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj]
-  {f : ι → Subgraph G} (hM : (i : ι) → (f i).IsMatching) (hd : (i j : ι) → (i ≠ j) →  Disjoint ((f i).support) ((f j).support)) : (⨆ i , f i).IsMatching := by
-  intro v hv
-  rw [SimpleGraph.Subgraph.verts_iSup] at hv
-  obtain ⟨ i , hi ⟩ := Set.mem_iUnion.mp hv
-  obtain ⟨ w , hw ⟩ := hM i hi
-  use w
-  dsimp at *
-  constructor
-  · rw [SimpleGraph.Subgraph.iSup_adj]
-    use i
-    exact hw.1
-  · intro y hy
-    rw [SimpleGraph.Subgraph.iSup_adj] at hy
-    obtain ⟨ i' , hi' ⟩ := hy
-    if heq : i = i' then
-      exact hw.2 y (heq.symm ▸ hi')
-    else
-      have hvsi : v ∈ Subgraph.support (f i) := by
-        rw [SimpleGraph.Subgraph.mem_support ]
-        use w
-        exact hw.1
-      have hvsi' : v ∈ Subgraph.support (f i') := by
-        rw [SimpleGraph.Subgraph.mem_support ]
-        use y
-      have := hd _ _ heq
-      rw [Set.disjoint_left] at this
-      exfalso
-      exact this hvsi hvsi'
 
 --First (done)
 lemma subgraphOfAdj_IsMatching [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj]
@@ -3385,12 +3207,12 @@ theorem tutte_part [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj
     )
   have hM1 : M1.IsMatching := by
 
-    exact iSup_IsMatching (by
+    exact Subgraph.IsMatching.iSup (by
       intro i
       dsimp
       let oddMatches := oddCliqueAlmostMatches (f'mem i) (h' i) i.2
 
-      exact sup_IsMatching (oddMatches.choose_spec).2.coeSubgraph (subgraphOfAdj_IsMatching _)
+      exact Subgraph.IsMatching.sup (oddMatches.choose_spec).2.coeSubgraph (subgraphOfAdj_IsMatching _)
           (by
             rw [support_subgraphOfAdj, disjoint_pair]
             have := (f' i).2
@@ -3530,7 +3352,7 @@ theorem tutte_part [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj
 
   have hM2 : M2.IsMatching := by
 
-    exact iSup_IsMatching (by
+    exact Subgraph.IsMatching.iSup (by
       intro i
       exact ((isClique_even_iff_matches i.val.supp (Set.toFinite _) (h' i)).mp i.2).choose_spec.2.coeSubgraph
       ) (by
@@ -3695,7 +3517,7 @@ theorem tutte_part [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj
 
   have hM12 : (M1 ⊔ M2).IsMatching := by
 
-    refine sup_IsMatching hM1 hM2 ?hd
+    refine Subgraph.IsMatching.sup hM1 hM2 ?hd
     intro s h1 h2
     simp only [Subgraph.induce_verts, Subgraph.verts_top, Set.coe_setOf, ne_eq,
       Set.mem_setOf_eq, ConnectedComponent.mem_supp_iff, Subtype.forall, Set.le_eq_subset,
@@ -3812,7 +3634,7 @@ theorem tutte_part [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj
     have := Set.mem_setOf.mp this
     exact (this w hvw).symm
       : G.IsClique ((Set.univ : Set V) \ (M1 ⊔ M2).verts) )).mp hnM12Even
-  have conMatch : ((M1 ⊔ M2) ⊔ M').IsMatching := sup_IsMatching hM12 hM'.2 (by
+  have conMatch : ((M1 ⊔ M2) ⊔ M').IsMatching := Subgraph.IsMatching.sup hM12 hM'.2 (by
       rw [SimpleGraph.Subgraph.IsMatching.support_eq_verts hM'.2]
       rw [hM'.1]
       rw [SimpleGraph.Subgraph.IsMatching.support_eq_verts hM12]
