@@ -913,10 +913,6 @@ lemma cycle_neq_not_nil (p : G.Walk u u) (hpc : p.IsCycle) : ¬p.Nil := by
   rw [← @Walk.length_eq_zero_iff]
   exact Walk.nil_iff_length_eq.mp hp
 
--- In getVert PR
-@[simp]
-lemma cons_getVert_succ (p : G.Walk v w) (h : G.Adj u v) : (Walk.cons h p).getVert n.succ = p.getVert n := by
-  rfl
 
 lemma support_tail_length (p : G.Walk v w) : p.support.tail.length = p.length := by
   match p with
@@ -936,7 +932,7 @@ lemma getVert_nonZero (p : G.Walk v w) (h : G.Adj u v) (hn : 0 < n) : (Walk.cons
     exact Nat.sub_one_add_one_eq_of_pos hn
   obtain ⟨i, hi⟩ := this
   rw [← hi]
-  simp only [Nat.succ_eq_add_one, cons_getVert_succ, add_tsub_cancel_right]
+  simp only [Nat.succ_eq_add_one, Walk.getVert_cons_succ, add_tsub_cancel_right]
 
 lemma get?_nonZero (a : α) (l : List α) (h : n ≠ 0) : (a :: l).get? n = l.get? (n - 1) := by
     have : ∃ (i : ℕ), i.succ = n := by
@@ -1036,9 +1032,9 @@ theorem toSubgraph_getVert_succ {u v} (w : G.Walk u v) {i : ℕ} (hi : i < w.len
   | nil => cases hi
   | cons hxy i' ih =>
     cases i
-    · simp only [Walk.toSubgraph, Walk.getVert_zero, zero_add, cons_getVert_succ, Subgraph.sup_adj,
+    · simp only [Walk.toSubgraph, Walk.getVert_zero, zero_add, Walk.getVert_cons_succ, Subgraph.sup_adj,
       subgraphOfAdj_adj, true_or]
-    · simp only [Walk.toSubgraph, cons_getVert_succ, Subgraph.sup_adj, subgraphOfAdj_adj, Sym2.eq,
+    · simp only [Walk.toSubgraph, Walk.getVert_cons_succ, Subgraph.sup_adj, subgraphOfAdj_adj, Sym2.eq,
       Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk]
       right
       exact ih (Nat.succ_lt_succ_iff.mp hi)
@@ -1057,14 +1053,14 @@ theorem toSubgraph_adj_exists {u v} (w : G.Walk u v)
       cases hl with
       | inl h1 =>
         use 0
-        simp only [Walk.getVert_zero, zero_add, cons_getVert_succ]
+        simp only [Walk.getVert_zero, zero_add, Walk.getVert_cons_succ]
         constructor
         · left
           exact ⟨h1.1.symm, h1.2.symm⟩
         · simp only [Walk.length_cons, lt_add_iff_pos_left, add_pos_iff, zero_lt_one, or_true]
       | inr h2 =>
         use 0
-        simp only [Walk.getVert_zero, zero_add, cons_getVert_succ]
+        simp only [Walk.getVert_zero, zero_add, Walk.getVert_cons_succ]
         constructor
         · right
           exact ⟨h2.1.symm, h2.2.symm⟩
@@ -1072,7 +1068,7 @@ theorem toSubgraph_adj_exists {u v} (w : G.Walk u v)
     | inr hr =>
       obtain ⟨i, hi⟩ := toSubgraph_adj_exists _ hr
       use (i + 1)
-      simp only [cons_getVert_succ]
+      simp only [Walk.getVert_cons_succ]
       constructor
       · exact hi.1
       · simp only [Walk.length_cons, add_lt_add_iff_right, hi.2]
