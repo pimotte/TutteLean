@@ -566,43 +566,6 @@ lemma existsIsMatching [Fintype V] [DecidableEq V]
   exact (Exists.choose_spec ((isClique_even_iff_matches u hu h).mp uEven)).2
 
 
---First (done)
-lemma subgraphOfAdj_IsMatching [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj]
-  (h : G.Adj v w) : (G.subgraphOfAdj h).IsMatching := by
-  intro v' hv'
-  rw [@subgraphOfAdj_verts] at hv'
-  rw [@Set.mem_insert_iff] at hv'
-  rw [@Set.mem_singleton_iff] at hv'
-  cases hv' with
-  | inl hl =>
-    use w
-    simp only [subgraphOfAdj_adj, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, and_true,
-      Prod.swap_prod_mk]
-    constructor
-    · exact .inl hl.symm
-    · intro y hy
-      cases hy with
-      | inl h1 =>
-        exact h1.2.symm
-      | inr h2 =>
-        rw [h2.1] at hl
-        rw [← h2.2] at hl
-        exact hl.symm
-  | inr hr =>
-    use v
-    simp only [subgraphOfAdj_adj, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk,
-      true_and]
-    constructor
-    · exact .inr hr.symm
-    · intro y hy
-      cases hy with
-      | inl h1 =>
-        rw [← h1.1] at hr
-        rw [h1.2] at hr
-        exact hr.symm
-      | inr h2 =>
-        exact h2.1.symm
-
 lemma componentExistsRep (c : ConnectedComponent G) : ∃ v, SimpleGraph.connectedComponentMk G v = c := c.exists_rep
 
 lemma oddSubOneEven (n : Nat) (h : Odd n) : Even (n - 1) := by
@@ -3212,7 +3175,7 @@ theorem tutte_part [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj
       dsimp
       let oddMatches := oddCliqueAlmostMatches (f'mem i) (h' i) i.2
 
-      exact Subgraph.IsMatching.sup (oddMatches.choose_spec).2.coeSubgraph (subgraphOfAdj_IsMatching _)
+      exact Subgraph.IsMatching.sup (oddMatches.choose_spec).2.coeSubgraph (Subgraph.IsMatching.subgraphOfAdj _)
           (by
             rw [support_subgraphOfAdj, disjoint_pair]
             have := (f' i).2
