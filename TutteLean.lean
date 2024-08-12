@@ -925,15 +925,6 @@ lemma support_length (p : G.Walk v w) : p.support.length = p.length + 1 := by
   | .cons _ _ => simp only [Walk.support_cons, List.length_cons, Walk.length_support,
     Nat.succ_eq_add_one, Walk.length_cons]
 
--- in getVert PR
-lemma getVert_nonZero (p : G.Walk v w) (h : G.Adj u v) (hn : 0 < n) : (Walk.cons h p).getVert n = p.getVert (n - 1) := by
-  have : ∃ (i : ℕ), i.succ = n := by
-    use (n - 1)
-    exact Nat.sub_one_add_one_eq_of_pos hn
-  obtain ⟨i, hi⟩ := this
-  rw [← hi]
-  simp only [Nat.succ_eq_add_one, Walk.getVert_cons_succ, add_tsub_cancel_right]
-
 lemma get?_nonZero (a : α) (l : List α) (h : n ≠ 0) : (a :: l).get? n = l.get? (n - 1) := by
     have : ∃ (i : ℕ), i.succ = n := by
       use (n - 1)
@@ -961,7 +952,7 @@ lemma getVert_support_get (p : G.Walk u v) (h2 : n ≤ p.length) : p.getVert n =
     by_cases hn : n = 0
     · simp only [hn, Walk.getVert_zero, List.get?_cons_zero]
     · push_neg at hn
-      rw [getVert_nonZero _ _  (Nat.zero_lt_of_ne_zero hn)]
+      rw [Walk.getVert_cons q h hn]
       rw [get?_nonZero _ _ hn]
       exact getVert_support_get q (by
         rw [@Walk.length_cons] at h2
