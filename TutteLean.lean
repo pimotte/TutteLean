@@ -1017,20 +1017,6 @@ lemma path_getVert_sub_neq_getVert_add (p : G.Walk u v) (hpp : p.IsPath) (h1 : 0
   exact fun a => this (congrArg some a)
 
 -- In getVert PR
-theorem toSubgraph_getVert_succ {u v} (w : G.Walk u v) {i : ℕ} (hi : i < w.length) :
-    (w.toSubgraph).Adj (w.getVert i) (w.getVert (i + 1)) := by
-  induction w generalizing i with
-  | nil => cases hi
-  | cons hxy i' ih =>
-    cases i
-    · simp only [Walk.toSubgraph, Walk.getVert_zero, zero_add, Walk.getVert_cons_succ, Subgraph.sup_adj,
-      subgraphOfAdj_adj, true_or]
-    · simp only [Walk.toSubgraph, Walk.getVert_cons_succ, Subgraph.sup_adj, subgraphOfAdj_adj, Sym2.eq,
-      Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk]
-      right
-      exact ih (Nat.succ_lt_succ_iff.mp hi)
-
--- In getVert PR
 theorem toSubgraph_adj_exists {u v} (w : G.Walk u v)
     (hadj : (w.toSubgraph).Adj u' v') : ∃ i, (u' = w.getVert i ∧ v' = w.getVert (i + 1) ∨ v' = w.getVert i ∧ u' = w.getVert (i + 1)) ∧ i < w.length := by
   unfold Walk.toSubgraph at hadj
@@ -1204,13 +1190,13 @@ lemma cycle_two_neighbors (p : G.Walk u u) (hpc : p.IsCycle) (h : v ∈ p.suppor
           have := SimpleGraph.Walk.adj_getVert_succ p (by omega : n - 1 < p.length)
           have h' : n - 1 + 1 = n := by omega
           rw [h'] at this
-          have := toSubgraph_getVert_succ p (by omega : n - 1 < p.length)
+          have := Walk.toSubgraph_adj_getVert p (by omega : n - 1 < p.length)
           rw [h'] at this
           exact this.symm
         | inr hr =>
           simp only [Set.mem_setOf_eq]
           rw [hr, ← hn]
-          exact toSubgraph_getVert_succ _ hbounds.2
+          exact Walk.toSubgraph_adj_getVert _ hbounds.2
 
   · use p.getVert 1
     use p.getVert (p.length - 1)
@@ -1296,11 +1282,11 @@ lemma cycle_two_neighbors (p : G.Walk u u) (hpc : p.IsCycle) (h : v ∈ p.suppor
         cases h with
         | inl hl =>
           rw [hl]
-          have := toSubgraph_getVert_succ p (by omega : 0 < p.length)
+          have := Walk.toSubgraph_adj_getVert p (by omega : 0 < p.length)
           simpa using this
         | inr hr =>
           rw [hr]
-          have hadj := toSubgraph_getVert_succ p (by omega : p.length - 1 < p.length)
+          have hadj := Walk.toSubgraph_adj_getVert p (by omega : p.length - 1 < p.length)
           have : (p.length - 1 + 1) = p.length := by omega
           rw [this] at hadj
           simp at hadj
@@ -1856,7 +1842,7 @@ theorem toSubgraph_adj_sndOfNotNil {u v} (p : G.Walk u v) (hpp : p.IsPath)
 
 
 lemma Walk.toSubgraph_Adj_sndOfNotNil {p : G.Walk u v} (hnp : ¬ p.Nil) : p.toSubgraph.Adj u (p.getVert 1) := by
-  have := toSubgraph_getVert_succ p (by
+  have := Walk.toSubgraph_adj_getVert p (by
     rw [SimpleGraph.Walk.nil_iff_length_eq] at hnp
     exact Nat.zero_lt_of_ne_zero hnp
     : 0 < p.length)
@@ -1966,7 +1952,7 @@ noncomputable def fpath [Fintype V] {u : V} [DecidableEq V] {C : Subgraph G}
         | inl hl =>
           unfold Subgraph.neighborSet
           rw [@Set.mem_setOf]
-          have hadj := toSubgraph_getVert_succ p (by omega : n - 1 < p.length)
+          have hadj := Walk.toSubgraph_adj_getVert p (by omega : n - 1 < p.length)
           rw [← hl] at hadj
           have : n - 1 + 1 = n := by omega
           rw [this] at hadj
@@ -1977,7 +1963,7 @@ noncomputable def fpath [Fintype V] {u : V} [DecidableEq V] {C : Subgraph G}
           | inl h1 =>
             unfold Subgraph.neighborSet
             rw [@Set.mem_setOf]
-            have hadj := toSubgraph_getVert_succ p (by omega : n < p.length)
+            have hadj := Walk.toSubgraph_adj_getVert p (by omega : n < p.length)
             rw [← h1] at hadj
             rw [hn] at hadj
             exact hp.2 hadj
