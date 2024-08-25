@@ -613,11 +613,11 @@ lemma oddSubOneEven (n : Nat) (h : Odd n) : Even (n - 1) := by
 
 
 lemma oddCliqueAlmostMatches [Fintype V] [DecidableEq V]
-  {u : Set V} {v : V} (hv : v ∈ u) (h : G.IsClique u) (uOdd : Odd (Nat.card u)) : ∃ (M : Subgraph G), insert v M.verts = u ∧ M.IsMatching := by
+  {u : Set V} {v : V} (hv : v ∈ u) (h : G.IsClique u) (uOdd : Odd (u.ncard)) : ∃ (M : Subgraph G), insert v M.verts = u ∧ M.IsMatching := by
   haveI : Fintype u := Fintype.ofFinite _
-  rw [@Nat.card_eq_card_toFinset, @Set.toFinset_card] at uOdd
-  have u'Even : Even (Nat.card (u \ {v} : Set V)) := by
-    rw [Set.Nat.card_coe_set_eq]
+  rw [@Set.ncard_eq_toFinset_card'] at uOdd
+  rw [@Set.toFinset_card] at uOdd
+  have u'Even : Even ((u \ {v} : Set V).ncard) := by
     rw [Set.ncard_eq_toFinset_card']
     rw [Set.toFinset_diff]
     simp only [Set.mem_setOf_eq, Set.toFinset_singleton]
@@ -635,7 +635,7 @@ lemma oddCliqueAlmostMatches [Fintype V] [DecidableEq V]
   · exact hM.2
 
 lemma oddCliqueAlmostMatchesDoesNotContainNode [Fintype V] [DecidableEq V]
-  {u : Set V} {v : V} (hv : v ∈ u) (h : G.IsClique u) (uOdd : Odd (Nat.card u)) : v ∉ (oddCliqueAlmostMatches hv h uOdd).choose.verts := by
+  {u : Set V} {v : V} (hv : v ∈ u) (h : G.IsClique u) (uOdd : Odd (u.ncard)) : v ∉ (oddCliqueAlmostMatches hv h uOdd).choose.verts := by
   haveI (s : Set V) : Fintype s := Fintype.ofFinite _
   have hM := (oddCliqueAlmostMatches hv h uOdd).choose_spec
 
@@ -647,12 +647,15 @@ lemma oddCliqueAlmostMatchesDoesNotContainNode [Fintype V] [DecidableEq V]
 
   rw [← hM.1] at uOdd
   rw [@Nat.even_iff_not_odd] at this
-  rw [@Nat.card_eq_card_toFinset, @Set.toFinset_card] at uOdd
+  -- rw? at this
+  -- rw [← @Set.toFinset_card] at uOdd
+  rw [Set.ncard_eq_toFinset_card] at uOdd
+  rw [@Set.Finite.card_toFinset] at uOdd
   exact this uOdd
 
 
 lemma oddCliqueAlmostMatchesSubset [Fintype V] [DecidableEq V]
-  {u : Set V} {v : V} (hv : v ∈ u) (h : G.IsClique u) (uOdd : Odd (Nat.card u)) : (oddCliqueAlmostMatches hv h uOdd).choose.verts ⊆ u := by
+  {u : Set V} {v : V} (hv : v ∈ u) (h : G.IsClique u) (uOdd : Odd (u.ncard)) : (oddCliqueAlmostMatches hv h uOdd).choose.verts ⊆ u := by
   intro x hx
   rw [← (oddCliqueAlmostMatches hv h uOdd).choose_spec.1]
   exact Set.subset_insert _ _ hx
@@ -3110,21 +3113,24 @@ lemma ConnectedComponent.supp_eq_of_mem_supp {c c' : ConnectedComponent G} {v} (
 
 theorem tutte_part [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj]
   (hvOdd : Even (Finset.univ : Finset V).card)
-  (h : Nat.card ↑{c : ((⊤ : Subgraph G).deleteVerts {v : V | ∀ w, v ≠ w → G.Adj w v}).coe.ConnectedComponent | c.isOdd} ≤ Fintype.card {v : V | ∀ w, v ≠ w → G.Adj w v})
+  (h : Nat.card ↑{c : ((⊤ : Subgraph G).deleteVerts {v : V | ∀ w, v ≠ w → G.Adj w v}).coe.ConnectedComponent | Odd (c.supp.ncard)} ≤ {v : V | ∀ w, v ≠ w → G.Adj w v}.ncard)
   (h' : ∀ (K : ((⊤ : Subgraph G).deleteVerts {v : V | ∀ w, v ≠ w → G.Adj w v}).coe.ConnectedComponent),
   (((⊤ : Subgraph G).deleteVerts {v | ∀ w, v ≠ w → G.Adj w v}).coe.IsClique K.supp)) :
     ∃ (M : Subgraph G), M.IsPerfectMatching := by
   let S := {v : V | ∀ w, v ≠ w → G.Adj w v}
   haveI : Fintype ↑{ (c : ConnectedComponent ((⊤ : Subgraph G).deleteVerts {v : V | ∀ w, v ≠ w → G.Adj w v}).coe) | ConnectedComponent.isOdd c} := Fintype.ofFinite _
+  rw [← Set.Nat.card_coe_set_eq] at h
   rw [Nat.card_eq_fintype_card] at h
+  rw [Nat.card_eq_fintype_card] at h
+
   have ⟨ f , hf ⟩ := Classical.inhabited_of_nonempty (Function.Embedding.nonempty_of_card_le h)
   let Gsplit := ((⊤ : Subgraph G).deleteVerts {v | ∀ w, v ≠ w → G.Adj w v})
-  let f' := fun (c : {(c : ConnectedComponent Gsplit.coe) | Odd (Nat.card c.supp)}) => (componentExistsRep c.val).choose
-  have f'mem  (c : {(c : ConnectedComponent Gsplit.coe) | Odd (Nat.card c.supp)}) : f' c ∈ c.val.supp := by
+  let f' := fun (c : {(c : ConnectedComponent Gsplit.coe) | Odd (c.supp.ncard)}) => (componentExistsRep c.val).choose
+  have f'mem  (c : {(c : ConnectedComponent Gsplit.coe) | Odd (c.supp.ncard)}) : f' c ∈ c.val.supp := by
     simp only [Set.mem_setOf_eq, ConnectedComponent.mem_supp_iff]
     rw [← (componentExistsRep c.val).choose_spec]
   haveI hFin (s : Set V) : Fintype s := Fintype.ofFinite _
-  let M1 : Subgraph G := (⨆ (c : {c : ConnectedComponent Gsplit.coe | ConnectedComponent.isOdd c}),
+  let M1 : Subgraph G := (⨆ (c : {c : ConnectedComponent Gsplit.coe | Odd (c.supp.ncard)}),
     let v := f' c
     let M := (oddCliqueAlmostMatches (f'mem c) (h' c) c.2).choose
 
@@ -3278,7 +3284,7 @@ theorem tutte_part [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj
                 exact SetCoe.ext (id h2.symm)
         )
 
-  let M2 : Subgraph G := (⨆ (c : {c : ConnectedComponent Gsplit.coe | (Even (Nat.card (c.supp)))}),
+  let M2 : Subgraph G := (⨆ (c : {c : ConnectedComponent Gsplit.coe | (Even (c.supp.ncard))}),
     Subgraph.coeSubgraph ((isClique_even_iff_matches c.val.supp (Set.toFinite _) (h' c)).mp c.2).choose )
 
   have hM2 : M2.IsMatching := by
@@ -3338,9 +3344,6 @@ theorem tutte_part [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj
         have := i.2
         rw [@Set.mem_setOf] at *
         simp only [Set.mem_setOf_eq] at this
-        rw [@ConnectedComponent.isOdd_iff] at this
-        rw [Set.ncard_eq_toFinset_card']
-        rw [@Set.toFinset_card]
         exact this
         ) ⟩
       simp only [Set.mem_setOf_eq, ConnectedComponent.mem_supp_iff]
@@ -3364,9 +3367,6 @@ theorem tutte_part [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj
           have := i.2
           rw [@Set.mem_setOf] at *
           simp only [Set.mem_setOf_eq] at this
-          rw [@ConnectedComponent.isOdd_iff] at this
-          rw [Set.ncard_eq_toFinset_card']
-          rw [@Set.toFinset_card]
           exact this
           ) ⟩
       | inr h2 =>
@@ -3374,7 +3374,7 @@ theorem tutte_part [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj
         rw [h2]
         exact Subtype.coe_prop (f i)
 
-  let evenComVerts := (⋃ (c : {c : ConnectedComponent Gsplit.coe | (Even (Nat.card (c.supp)))}),
+  let evenComVerts := (⋃ (c : {c : ConnectedComponent Gsplit.coe | (Even (c.supp.ncard))}),
       c.val.supp )
   have hM2sub : M2.verts ⊆ evenComVerts := by
     intro v hv
@@ -3418,14 +3418,12 @@ theorem tutte_part [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj
     obtain ⟨ v' , hv' ⟩ := hv
     rw [Set.mem_iUnion] at hv'
     obtain ⟨ i' , hi' ⟩ := hv'.1
-    let i'' : Set.Elem {c : ConnectedComponent Gsplit.coe | ConnectedComponent.isOdd c} := ⟨ i', by
+    let i'' : Set.Elem {c : ConnectedComponent Gsplit.coe | Odd (c.supp.ncard)} := ⟨ i', by
       simp only [Set.mem_setOf_eq]
-      rw [ConnectedComponent.isOdd_iff]
+      -- rw [ConnectedComponent.isOdd_iff]
       have := i'.2
       rw [@Set.mem_setOf] at this
-      rw [← Set.toFinset_card]
-      rw [← Nat.card_eq_card_toFinset]
-      rwa [@Set.Nat.card_coe_set_eq]
+      exact this
       ⟩
     use i''
     rw [Subgraph.verts_sup]
@@ -3482,7 +3480,6 @@ theorem tutte_part [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj
       have hi' := i.2
       rw [hi] at hj'
       simp only [Set.mem_setOf_eq, Nat.odd_iff_not_even] at *
-      rw [@Set.Nat.card_coe_set_eq] at hi'
       exact hj' hi'
     | inr hr =>
       have memhi := Set.mem_image_of_mem Subtype.val hi
@@ -3497,8 +3494,7 @@ theorem tutte_part [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj
     rw [Set.ncard_eq_toFinset_card' ]
     exact this
 
-  have hnM12Even : Even (Nat.card ((Set.univ : Set V) \ (M1 ⊔ M2).verts : Set V)) := by
-    rw [@Set.Nat.card_coe_set_eq]
+  have hnM12Even : Even (((Set.univ : Set V) \ (M1 ⊔ M2).verts : Set V).ncard) := by
     rw [Set.ncard_diff (by exact fun ⦃a⦄ a => trivial)]
     exact (Nat.even_sub (by
       apply Set.ncard_le_ncard
@@ -3524,7 +3520,7 @@ theorem tutte_part [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj
         rw [Set.mem_diff]
         exact ⟨ by trivial , hc ⟩
         ) ⟩
-      if heven : Even (Nat.card (Gsplit.coe.connectedComponentMk v').supp)
+      if heven : Even ((Gsplit.coe.connectedComponentMk v').supp.ncard)
       then
 
         have : (v' : V) ∈ M2.verts := by
@@ -3551,7 +3547,6 @@ theorem tutte_part [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj
           use ⟨ v' , Subtype.mem v' ⟩
           constructor
           · rw [Set.mem_iUnion]
-            rw [@Set.Nat.card_coe_set_eq] at heven
             use ⟨ Gsplit.coe.connectedComponentMk v', heven ⟩
             simp only [Subtype.coe_eta, ConnectedComponent.mem_supp_iff]
           · simp only
@@ -3602,7 +3597,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
   constructor
   {
     rintro ⟨M, hM⟩ u
-    let f : {c : ConnectedComponent ((⊤ : Subgraph G).deleteVerts u).coe | ConnectedComponent.isOdd c} → u :=
+    let f : {c : ConnectedComponent ((⊤ : Subgraph G).deleteVerts u).coe | Odd (Nat.card c.supp)} → u :=
       fun c => ⟨(c.1.odd_matches_node_outside hM c.2).choose,(c.1.odd_matches_node_outside hM c.2).choose_spec.1⟩
     have := Finite.card_le_of_injective f (by
       intro x y hxy
@@ -3615,6 +3610,9 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
       exact ConnectedComponent.supp_eq_of_mem_supp hv.2 hw.2
       )
     simp only [Set.Nat.card_coe_set_eq] at this
+    unfold cardOddComponents
+    simp_rw [ConnectedComponent.isOdd_iff, Fintype.card_eq_nat_card, Set.Nat.card_coe_set_eq]
+
     exact this
   }
   {
@@ -3668,6 +3666,9 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
       then
         rw [← @Nat.even_iff_not_odd] at hvOdd
         rw [Fintype.card_eq_nat_card] at h''
+
+        simp_rw [ConnectedComponent.isOdd_iff, Fintype.card_eq_nat_card, Set.Nat.card_coe_set_eq] at h''
+        rw [← Set.Nat.card_coe_set_eq] at h''
         obtain ⟨M, hM⟩ := tutte_part hvOdd h'' h'
         exact Gmax.hMatchFree M hM
     else
