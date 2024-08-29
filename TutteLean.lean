@@ -3094,6 +3094,9 @@ lemma Subgraph.isMatching_ofFunction {u : Set V} (f : V → V) (h : ∀ v ∈ u,
 
 lemma ConnectedComponent.exists_vert (c : ConnectedComponent G) : ∃ v, G.connectedComponentMk v = c := c.exists_rep
 
+lemma ConnectedComponent.exists_vert_mem_supp (c : ConnectedComponent G) : c.exists_vert.choose ∈ c.supp := c.exists_vert.choose_spec
+
+-- lemma ConnectedComponent.exists_vert_unique (c c' : ConnectedComponent G) (h : c.exists_vert.choose ∈ c'.supp) :  :
 
 theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj]
   (hveven : Even (Fintype.card V))
@@ -3217,6 +3220,34 @@ theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Ad
     rw [hv'.2] at this
     exact this.2 hv
 
+
+  have memSuppOddIsRep {v : V} (K : ((⊤ : Subgraph G).deleteVerts {v : V | ∀ w, v ≠ w → G.Adj w v}).coe.ConnectedComponent)
+    (h : v ∈ Subtype.val '' K.supp) (h' : v ∈ oddVerts) : K.exists_vert.choose.val = v := by
+    unfold_let oddVerts at h'
+    rw [Set.mem_image] at h'
+    simp_rw [Set.mem_image] at h'
+    obtain ⟨x, ⟨⟨c, hc⟩, hx⟩⟩ := h'
+    rw [← hx] at h ⊢
+    rw [← hc.2] at h ⊢
+    unfold_let rep
+    rw [Subtype.val_injective.mem_set_image] at h
+
+    rw [SimpleGraph.ConnectedComponent.mem_supp_iff] at h
+    have := c.exists_vert_mem_supp
+    rw [SimpleGraph.ConnectedComponent.mem_supp_iff] at this
+    rw [this] at h
+    rw [h]
+
+  have repMemOdd {K : ((⊤ : Subgraph G).deleteVerts {v : V | ∀ w, v ≠ w → G.Adj w v}).coe.ConnectedComponent}
+    (h : Odd K.supp.ncard) : K.exists_vert.choose.val ∈ oddVerts := by
+    unfold_let oddVerts
+    rw [Set.mem_image]
+    simp_rw [Set.mem_image]
+    use K.exists_vert.choose
+    refine ⟨?_, rfl⟩
+    use K
+    exact ⟨h, rfl⟩
+
   have evenKsubM1 (K : ((⊤ : Subgraph G).deleteVerts {v : V | ∀ w, v ≠ w → G.Adj w v}).coe.ConnectedComponent)
     : Even ((Subtype.val '' K.supp) \ M1.verts).ncard := by
     by_cases h : Even (Subtype.val '' K.supp).ncard
@@ -3251,22 +3282,58 @@ theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Ad
 
         · obtain ⟨a, ha⟩ := hr
           rw [← ha.2] at hv
-          have : a.exists_vert.choose.val ∈ oddVerts := by
-            unfold_let oddVerts
-            rw [Set.mem_image]
-            simp_rw [Set.mem_image]
-            unfold_let rep
-            use a.exists_vert.choose
-            refine ⟨?_, rfl⟩
-            use a
-            exact ⟨ha.1, rfl⟩
-          have := gMemS this
+          have := gMemS (repMemOdd ha.1)
           apply memImKNotS _ hv
           exact this
       rw [this]
       exact h
-    · 
-      sorry
+    · rw [← @Nat.odd_iff_not_even] at h
+      have kMem : K.exists_vert.choose.val ∉ (Subtype.val '' K.supp \ M1.verts) := by
+        rw [@Set.mem_diff]
+        push_neg
+        intro h'
+        unfold_let M1
+        simp only [ne_eq, Subgraph.induce_verts, Subgraph.verts_top, Subgraph.ofFunction_verts,
+          Set.mem_union, Set.mem_image]
+        left
+        exact repMemOdd (Set.ncard_image_of_injective _ Subtype.val_injective ▸ h)
+      have : insert K.exists_vert.choose.val (Subtype.val '' K.supp \ M1.verts) = Subtype.val '' K.supp := by
+        ext v
+        simp only [Subgraph.induce_verts, Subgraph.verts_top, Set.mem_insert_iff,
+          Set.mem_diff]
+        constructor
+        · intro h
+          cases' h with hl hr
+          · rw [hl]
+            rw [Subtype.val_injective.mem_set_image]
+            exact ConnectedComponent.exists_vert_mem_supp _
+          · exact hr.1
+        · intro h
+          by_cases hc : v = K.exists_vert.choose.val
+          · left; exact hc
+          · right
+            refine ⟨h, ?_⟩
+            unfold_let M1
+            simp only [Subgraph.ofFunction_verts, Set.mem_union]
+            push_neg
+            constructor
+            · intro h'
+              apply hc
+              exact (memSuppOddIsRep _ h h').symm
+            · intro hv
+              rw [Set.mem_image] at hv
+              obtain ⟨v', hv'⟩ := hv
+              have : v ∈ S := by
+                rw [← hv'.2]
+                exact gMemS hv'.1
+              exact memImKNotS _ h this
+
+      rw [← this] at h
+
+      rw [← Set.Finite.odd_card_insert_iff (Set.toFinite _) kMem]
+      exact h
+
+  
 
   sorry
 
