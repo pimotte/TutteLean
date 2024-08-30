@@ -143,8 +143,6 @@ lemma alternatingCycleSymDiffMatch {M : Subgraph G} {p : G.Walk u u} (hM : M.IsP
           exact h2.1
         }
 
-def Subgraph.IsAlternating (B : Subgraph G) (M : Subgraph G) :=
-  ∀ (v w w': V), w ≠ w' → B.Adj v w → B.Adj v w' → (M.Adj v w ↔ ¬ M.Adj v w')
 
 lemma Subgraph.symDiffPerfectMatchingsAlternating {M1 : Subgraph G} {M2 : Subgraph G}
     (hM1 : M1.IsPerfectMatching) (hM2 : M2.IsPerfectMatching) : (M1.symDiff M2).IsAlternating M2 := by

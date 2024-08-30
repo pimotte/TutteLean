@@ -78,3 +78,6 @@ def singleEdge {v w : V} (h : v ≠ w) : SimpleGraph V where
   Adj v' w' := (v = v' ∧ w = w') ∨ (v = w' ∧ w = v')
 
 def Subgraph.IsCycle (M : Subgraph G) := (∀ v ∈ M.support, (M.neighborSet v).ncard = 2) ∧ M.Connected
+
+def Subgraph.IsAlternating (B : Subgraph G) (M : Subgraph G) :=
+  ∀ (v w w': V), w ≠ w' → B.Adj v w → B.Adj v w' → (M.Adj v w ↔ ¬ M.Adj v w')
