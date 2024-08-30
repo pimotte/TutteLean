@@ -22,6 +22,7 @@ theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Ad
   let rep := fun (c : ConnectedComponent Gsplit.coe) => c.exists_vert.choose
   let oddVerts := Subtype.val '' (rep '' {(c : ConnectedComponent Gsplit.coe) | Odd (c.supp.ncard)})
   have oddVertMemSplit {v : V} (h : v ∈ oddVerts) : v ∈ Gsplit.verts := by
+    extract_goal
     rw [Set.mem_image] at h
     obtain ⟨v, heq⟩ := h
     rw [← heq.2]
@@ -243,9 +244,12 @@ theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Ad
       exact h
   have compMatching (K : ((⊤ : Subgraph G).deleteVerts {v : V | ∀ w, v ≠ w → G.Adj w v}).coe.ConnectedComponent) :
       ∃ M : Subgraph G, M.verts = Subtype.val '' K.supp \ M1.verts ∧ M.IsMatching := by
-    rw [← isClique_even_iff_matches _ (Set.toFinite _ ) (by sorry)]
-    
-    sorry
+    have : G.IsClique (Subtype.val '' K.supp \ M1.verts) := by
+
+      sorry
+    rw [← isClique_even_iff_matches _ (Set.toFinite _ ) this]
+    exact evenKsubM1 K
+
 
 
   sorry
