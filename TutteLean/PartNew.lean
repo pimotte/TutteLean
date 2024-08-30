@@ -241,7 +241,11 @@ theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Ad
 
       rw [← Set.Finite.odd_card_insert_iff (Set.toFinite _) kMem]
       exact h
-
+  have compMatching (K : ((⊤ : Subgraph G).deleteVerts {v : V | ∀ w, v ≠ w → G.Adj w v}).coe.ConnectedComponent) :
+      ∃ M : Subgraph G, M.verts = Subtype.val '' K.supp \ M1.verts ∧ M.IsMatching := by
+    rw [← isClique_even_iff_matches _ (Set.toFinite _ ) (by sorry)]
+    
+    sorry
 
 
   sorry
