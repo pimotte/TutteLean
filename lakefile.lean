@@ -6,7 +6,7 @@ package «TutteLean» {
 }
 
 require mathlib from git
-  "https://github.com/leanprover-community/mathlib4.git"@"0b653510d11af5633ea9db4a07b865c88e24256d"
+  "https://github.com/leanprover-community/mathlib4.git"@"145e6ba702be03cbd05635f29bca8f2c95622da7"
 
 @[default_target]
 lean_lib «TutteLean» {
