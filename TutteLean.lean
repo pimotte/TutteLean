@@ -16,7 +16,7 @@ import TutteLean.Clique
 import TutteLean.Set
 import TutteLean.Walk
 import TutteLean.SymDiff
-import TutteLean.Part
+import TutteLean.PartNew
 -- import Mathlib.Algebra.BigOperators.Basic
 
 
@@ -127,8 +127,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
         rw [Fintype.card_eq_nat_card] at h''
 
         simp_rw [ConnectedComponent.isOdd_iff, Fintype.card_eq_nat_card, Set.Nat.card_coe_set_eq] at h''
-        rw [← Set.Nat.card_coe_set_eq] at h''
-        obtain ⟨M, hM⟩ := tutte_part hvOdd h'' h'
+        obtain ⟨M, hM⟩ := tutte_part' hvOdd h'' h'
         exact Gmax.hMatchFree M hM
     else
       push_neg at h'
