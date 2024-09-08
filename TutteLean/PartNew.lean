@@ -222,8 +222,7 @@ theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Ad
         constructor
         · intro h
           cases' h with hl hr
-          · rw [hl]
-            rw [Subtype.val_injective.mem_set_image]
+          · rw [hl, Subtype.val_injective.mem_set_image]
             exact ConnectedComponent.exists_vert_mem_supp _
           · exact hr.1
         · intro h
@@ -261,17 +260,14 @@ theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Ad
   have hM2 : M2.IsMatching := by
     apply Subgraph.IsMatching.iSup (fun c => (compMatching c).choose_spec.2)
     intro i j hij
-    rw [(compMatching i).choose_spec.2.support_eq_verts, (compMatching j).choose_spec.2.support_eq_verts]
-    rw [(compMatching i).choose_spec.1, (compMatching j).choose_spec.1]
-    apply Set.disjoint_of_subset (Set.diff_subset) (Set.diff_subset)
-    apply Set.disjoint_image_of_injective (Subtype.val_injective)
-    exact SimpleGraph.pairwise_disjoint_supp_connectedComponent _ hij
+    rw [(compMatching i).choose_spec.2.support_eq_verts, (compMatching j).choose_spec.2.support_eq_verts,
+      (compMatching i).choose_spec.1, (compMatching j).choose_spec.1]
+    exact Set.disjoint_of_subset (Set.diff_subset) (Set.diff_subset) <| Set.disjoint_image_of_injective Subtype.val_injective (SimpleGraph.pairwise_disjoint_supp_connectedComponent _ hij)
 
   have disjointM12 : Disjoint M1.verts M2.verts := by
     rw [@Set.disjoint_right]
     intro v hv
-    rw [@Subgraph.verts_iSup] at hv
-    rw [@Set.mem_iUnion] at hv
+    rw [Subgraph.verts_iSup, Set.mem_iUnion] at hv
     obtain ⟨K, hK⟩ := hv
     rw [(compMatching K).choose_spec.1] at hK
     exact hK.2
@@ -282,13 +278,10 @@ theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Ad
     exact disjointM12
 
   have evensubM1M2 : Even ((Set.univ : Set V) \ (M1.verts ∪ M2.verts)).ncard := by
-    rw [Set.ncard_diff (by intro v hv; trivial)]
-    rw [Nat.even_sub (Set.ncard_le_ncard (by intro v _; trivial))]
+    rw [Set.ncard_diff (by intro v _; trivial), Nat.even_sub (Set.ncard_le_ncard (by intro v _; trivial))]
     rw [Fintype.card_eq_nat_card, ← Set.ncard_univ] at hveven
     simp only [hveven, true_iff]
-    rw [Set.ncard_union_eq disjointM12]
-    rw [@Nat.even_add]
-    rw [Set.ncard_eq_toFinset_card', Set.ncard_eq_toFinset_card']
+    rw [Set.ncard_union_eq disjointM12, Nat.even_add, Set.ncard_eq_toFinset_card', Set.ncard_eq_toFinset_card']
     simp only [iff_true_left hM1.even_card, hM2.even_card]
 
   have sub : ((Set.univ : Set V) \ (M1.verts ∪ M2.verts)) ⊆ G.universalVerts := by
