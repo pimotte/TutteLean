@@ -156,12 +156,10 @@ theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Ad
   have gInjOn : Set.InjOn g oddVerts := by
     unfold_let g
     dsimp
-    rw [@Set.injOn_iff_injective]
-    rw [@Set.restrict_dite]
+    rw [Set.injOn_iff_injective, Set.restrict_dite]
     intro x y hxy
     simp only at hxy
     have := hf <| Subtype.val_injective hxy
-
     rw [Subtype.mk.injEq] at this
     exact compInj this
 
@@ -171,8 +169,7 @@ theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Ad
     rw [universalVerts, @Set.mem_setOf] at this
     apply this v
     intro h
-    apply Set.disjoint_left.mp oddVerts_core_disjoint hv
-    exact (h ▸ gMemS hv)
+    exact Set.disjoint_left.mp oddVerts_core_disjoint hv (h ▸ gMemS hv)
 
   let M1 : Subgraph G := Subgraph.ofFunction g hadj
 
@@ -180,8 +177,7 @@ theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Ad
     unfold_let M1
     exact Subgraph.isMatching_ofFunction g hadj gInjOn hdg
 
-  have evenKsubM1 (K : G.deleteUniversalVerts.coe.ConnectedComponent)
-    : Even ((Subtype.val '' K.supp) \ M1.verts).ncard := by
+  have evenKsubM1 (K : G.deleteUniversalVerts.coe.ConnectedComponent) : Even ((Subtype.val '' K.supp) \ M1.verts).ncard := by
     by_cases h : Even (Subtype.val '' K.supp).ncard
     · have : Subtype.val '' K.supp \ M1.verts = Subtype.val '' K.supp := by
         unfold_let M1
@@ -197,26 +193,16 @@ theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Ad
         cases' hv' with hl hr
         · obtain ⟨a, ha⟩ := hl
           have hc1 := a.exists_vert.choose_spec
-          rw [← ha.2] at hv
-          rw [← hc1] at hv
-          rw [Subtype.val_injective.mem_set_image] at hv
-          rw [SimpleGraph.ConnectedComponent.mem_supp_iff] at hv
+          rw [← ha.2, ← hc1, Subtype.val_injective.mem_set_image, SimpleGraph.ConnectedComponent.mem_supp_iff] at hv
           rw [Nat.odd_iff_not_even] at ha
           apply ha.1
           have hc2 := (G.deleteUniversalVerts.coe.connectedComponentMk (a.exists_vert).choose).exists_vert.choose_spec
-          rw [← hc1]
-          rw [← hc2]
-
-          -- unfold_let Gsplit
-          rw [← hv] at h
-          rw [Set.ncard_image_of_injective _ Subtype.val_injective] at h
+          rw [← hc1, ← hc2]
+          rw [← hv, Set.ncard_image_of_injective _ Subtype.val_injective] at h
           exact h
-
         · obtain ⟨a, ha⟩ := hr
           rw [← ha.2] at hv
-          have := gMemS (repMemOdd ha.1)
-          apply memImKNotS _ hv
-          exact this
+          exact memImKNotS _ hv (gMemS (repMemOdd ha.1))
       rw [this]
       exact h
     · rw [← @Nat.odd_iff_not_even] at h
