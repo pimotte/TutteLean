@@ -8,11 +8,16 @@ variable {V : Type*} {G : SimpleGraph V}
 
 def universalVerts (G : SimpleGraph V) : Set V := {v : V | ∀ w, v ≠ w → G.Adj w v}
 
--- lemma deleteVerts_universalVerts : ((⊤ : Subgraph G).deleteVerts G.universalVerts).verts = Set.univ \ G.universalVerts := by
-  -- simp only [Subgraph.induce_verts, Subgraph.verts_top]
-
+lemma isClique_universalVerts (G : SimpleGraph V) : G.IsClique G.universalVerts := by
+  intro x _ y hy hxy
+  exact hy x hxy.symm
 
 def deleteUniversalVerts (G : SimpleGraph V) : Subgraph G := ((⊤ : Subgraph G).deleteVerts (universalVerts G))
+
+@[simp]
+lemma deleteUniversalVerts_verts : G.deleteUniversalVerts.verts = Set.univ \ G.universalVerts := by
+  unfold deleteUniversalVerts
+  simp only [Subgraph.induce_verts, Subgraph.verts_top]
 
 def oddVerts (G : SimpleGraph V) : Set V := Subtype.val '' ((fun c ↦ c.exists_vert.choose) '' {(c : ConnectedComponent G.deleteUniversalVerts.coe) | Odd (c.supp.ncard)})
 
@@ -276,15 +281,74 @@ theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Ad
     apply Set.disjoint_image_of_injective (Subtype.val_injective)
     exact SimpleGraph.pairwise_disjoint_supp_connectedComponent _ hij
 
+  have disjointM12 : Disjoint M1.verts M2.verts := by
+    rw [@Set.disjoint_right]
+    intro v hv
+    rw [@Subgraph.verts_iSup] at hv
+    rw [@Set.mem_iUnion] at hv
+    obtain ⟨K, hK⟩ := hv
+    rw [(compMatching K).choose_spec.1] at hK
+    exact hK.2
 
-  have evensubM1M2
-    : Even ((Set.univ : Set V) \ (M1.verts ∪ M2.verts)).ncard := by
+  have hM12 : (M1 ⊔ M2).IsMatching := by
+    apply hM1.sup hM2
+    rw [hM1.support_eq_verts, hM2.support_eq_verts]
+    exact disjointM12
+
+  have evensubM1M2 : Even ((Set.univ : Set V) \ (M1.verts ∪ M2.verts)).ncard := by
     rw [Set.ncard_diff (by intro v hv; trivial)]
-    rw [Nat.even_sub (by sorry)]
+    rw [Nat.even_sub (Set.ncard_le_ncard (by intro v _; trivial))]
     rw [Fintype.card_eq_nat_card, ← Set.ncard_univ] at hveven
     simp only [hveven, true_iff]
-    
+    rw [Set.ncard_union_eq disjointM12]
+    rw [@Nat.even_add]
+    rw [Set.ncard_eq_toFinset_card', Set.ncard_eq_toFinset_card']
+    simp only [iff_true_left hM1.even_card, hM2.even_card]
 
-    sorry
+  have sub : ((Set.univ : Set V) \ (M1.verts ∪ M2.verts)) ⊆ G.universalVerts := by
+    rw [@Set.diff_subset_iff]
+    intro v _
+    by_cases h : v ∈ M1.verts ∪ G.universalVerts
+    · cases' h with hl hr
+      · left; left; exact hl
+      · right; exact hr
+    · rw [@Set.mem_union] at h
+      push_neg at h
+      left; right
+      rw [@Subgraph.verts_iSup]
+      rw [@Set.mem_iUnion]
+      let K := G.deleteUniversalVerts.coe.connectedComponentMk ⟨v, by
+        rw [deleteUniversalVerts_verts]
+        simp only [Set.mem_diff, Set.mem_univ, true_and]
+        exact h.2
+        ⟩
+      use K
+      have := (compMatching K).choose_spec
+      rw [this.1]
+      simp only [Set.mem_diff, Set.mem_image, ConnectedComponent.mem_supp_iff, Subtype.exists,
+        deleteUniversalVerts_verts, Set.mem_univ, true_and, exists_and_right, exists_eq_right,
+        exists_prop, and_true]
+      exact h.symm
+  have subM1M2Clique : G.IsClique ((Set.univ : Set V) \ (M1.verts ∪ M2.verts)) := by
+    exact G.isClique_universalVerts.subset sub
 
-  sorry
+  obtain ⟨M3, hM3⟩ := (isClique_even_iff_matches _ (Set.toFinite _ ) subM1M2Clique).mp evensubM1M2
+
+  let Mcon := M1 ⊔ M2 ⊔ M3
+  use Mcon
+
+  have MconSpan : Mcon.IsSpanning := by
+    rw [@Subgraph.isSpanning_iff]
+    rw [Subgraph.verts_sup, Subgraph.verts_sup]
+    rw [hM3.1]
+    exact Set.union_diff_cancel (by
+      intro v _
+      trivial)
+  refine ⟨?_, MconSpan⟩
+  unfold_let Mcon
+  exact hM12.sup hM3.2 (by
+    rw [hM12.support_eq_verts, hM3.2.support_eq_verts]
+    rw [hM3.1]
+    simp only [Subgraph.verts_sup]
+    exact Disjoint.symm Set.disjoint_sdiff_left
+    )
