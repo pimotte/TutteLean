@@ -10,7 +10,6 @@ import Mathlib.Data.Fintype.Card
 import TutteLean.Defs
 import TutteLean.Supp
 import TutteLean.SingleEdge
-import TutteLean.MaxWithoutMatching
 import TutteLean.ConnectedComponent
 import TutteLean.Clique
 import TutteLean.Set
