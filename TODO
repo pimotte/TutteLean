@@ -1,5 +1,4 @@
 - Remove singleEdge in favour of edge from mathlib (made easier by:)
-- Remove MaxWithoutMatching in favour of Order.minimal (dependent on reintroducing sndOfNotNil remove)
 - Refactor case of "decomposes into cliques"
 - Refactor other case 
 - Figure out what of `Walk.lean` is actually needed
