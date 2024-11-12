@@ -95,28 +95,28 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
       exact hc
     else
 
-      let Gmax := maximalWithoutMatching h
+      -- let Gmax := maximalWithoutMatching h
+      obtain ⟨Gmax, hSubgraph, hMatchingFree, hMaximal⟩ := exists_maximal_isMatchingFree h
 
-
-      suffices ∃ u, Set.ncard u < cardOddComponents ((⊤ : Subgraph Gmax.G').deleteVerts u).coe by
+      suffices ∃ u, Set.ncard u < cardOddComponents ((⊤ : Subgraph Gmax).deleteVerts u).coe by
         · obtain ⟨u, hu ⟩ := this
           use u
           exact lt_of_lt_of_le hu (by
-            haveI : DecidableRel Gmax.G'.Adj := Classical.decRel _
-            exact oddComponentsIncrease G Gmax.G' Gmax.hSubgraph u
+            haveI : DecidableRel Gmax.Adj := Classical.decRel _
+            exact oddComponentsIncrease G Gmax hSubgraph u
             )
 
-      let S : Set V := {v | ∀ w, v ≠ w → Gmax.G'.Adj w v}
+      let S : Set V := {v | ∀ w, v ≠ w → Gmax.Adj w v}
 
-      let Gsplit := ((⊤ : Subgraph Gmax.G').deleteVerts S)
+      let Gsplit := ((⊤ : Subgraph Gmax).deleteVerts S)
 
 
       by_contra! hc
 
       have h' := hc S
       unfold cardOddComponents at h'
-      haveI := Gmax.hDec
-      haveI : Fintype ↑{ (c : ConnectedComponent ((⊤ : Subgraph Gmax.G').deleteVerts S).coe) | ConnectedComponent.isOdd c} := Fintype.ofFinite _
+      haveI : DecidableRel Gmax.Adj := Classical.decRel _
+      haveI : Fintype ↑{ (c : ConnectedComponent ((⊤ : Subgraph Gmax).deleteVerts S).coe) | ConnectedComponent.isOdd c} := Fintype.ofFinite _
       rw [@Set.ncard_eq_toFinset_card', Set.ncard_eq_toFinset_card'] at h'
       rw [Set.toFinset_card, Set.toFinset_card] at h'
       let h'' := h'
@@ -128,7 +128,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
 
         simp_rw [ConnectedComponent.isOdd_iff, Fintype.card_eq_nat_card, Set.Nat.card_coe_set_eq] at h''
         obtain ⟨M, hM⟩ := tutte_part' hvOdd h'' h'
-        exact Gmax.hMatchFree M hM
+        exact hMatchingFree M hM
     else
       push_neg at h'
       obtain ⟨K, hK⟩ := h'
@@ -142,15 +142,15 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
       obtain ⟨x, ⟨a, ⟨b, hxab⟩⟩⟩ := verts_of_walk p hp.2 (dist_gt_one_of_ne_and_nadj (Walk.reachable p) hxy.1 hxy.2)
 
       have ha : (a : V) ∉ S := by exact deleteVerts_verts_notmem_deleted _
-      have hc : ∃ (c : V), ¬ Gmax.G'.Adj a c ∧ (a : V) ≠ c := by
+      have hc : ∃ (c : V), ¬ Gmax.Adj a c ∧ (a : V) ≠ c := by
 
-        have : ¬ ∀ (w : V), (a : V) ≠ w → Gmax.G'.Adj (w : V) a := by exact ha
+        have : ¬ ∀ (w : V), (a : V) ≠ w → Gmax.Adj (w : V) a := by exact ha
         push_neg at this
         obtain ⟨c, hc⟩ := this
         use c
         constructor
         · intro h
-          exact hc.2 (adj_symm Gmax.G' h)
+          exact hc.2 (adj_symm Gmax h)
         · exact hc.1
       obtain ⟨c, hc⟩ := hc
 
@@ -163,10 +163,10 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
         have := this.adj_sub
         exact Subgraph.coe_adj_sub Gsplit (↑a) (↑b) this
 
-      let G1 := Gmax.G' ⊔ (singleEdge <| Subtype.coe_ne_coe.mpr <| Subtype.coe_ne_coe.mpr hxab.2.2.2)
-      let G2 := Gmax.G' ⊔ (singleEdge hc.2)
+      let G1 := Gmax ⊔ (singleEdge <| Subtype.coe_ne_coe.mpr <| Subtype.coe_ne_coe.mpr hxab.2.2.2)
+      let G2 := Gmax ⊔ (singleEdge hc.2)
 
-      have hG1nxb : ¬ Gmax.G'.Adj x.val.val b.val.val := by
+      have hG1nxb : ¬ Gmax.Adj x.val.val b.val.val := by
 
         intro h
         apply hxab.2.2.1
@@ -177,21 +177,21 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
         simp only [Subgraph.verts_top, Set.mem_univ, deleteVerts_verts_notmem_deleted,
           not_false_eq_true, Subgraph.top_adj, h, and_self]
 
-      have hG1 : Gmax.G' < G1 := by
+      have hG1 : Gmax < G1 := by
 
         apply union_gt_iff.mpr
         rw [@singleEdge_le_iff]
         exact hG1nxb
 
-      have hG2 : Gmax.G' < G2 := by
+      have hG2 : Gmax < G2 := by
 
         apply union_gt_iff.mpr
         rw [@singleEdge_le_iff]
         intro h
         exact hc.1 h
 
-      obtain ⟨M1, hM1⟩ := not_forall_not.mp (Gmax.hMaximal _ hG1)
-      obtain ⟨M2, hM2⟩ := not_forall_not.mp (Gmax.hMaximal _ hG2)
+      obtain ⟨M1, hM1⟩ := hMaximal _ hG1
+      obtain ⟨M2, hM2⟩ := hMaximal _ hG2
 
       have hM1' : M1.Adj x b := by
 
@@ -210,7 +210,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
           next h2 =>
             exact h2.1.symm ▸ h2.2.symm ▸ h.symm
           )
-        exact Gmax.hMatchFree Mcon hMcon
+        exact hMatchingFree Mcon hMcon
 
       -- TODO: Dedup with above
       have hM2' : M2.Adj a c := by
@@ -230,15 +230,15 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
           next h2 =>
             exact h2.1.symm ▸ h2.2.symm ▸ h.symm
           )
-        exact Gmax.hMatchFree Mcon hMcon
+        exact hMatchingFree Mcon hMcon
 
-      let G12 := Gmax.G' ⊔ (singleEdge <| Subtype.coe_ne_coe.mpr <| Subtype.coe_ne_coe.mpr hxab.2.2.2) ⊔ (singleEdge hc.2)
+      let G12 := Gmax ⊔ (singleEdge <| Subtype.coe_ne_coe.mpr <| Subtype.coe_ne_coe.mpr hxab.2.2.2) ⊔ (singleEdge hc.2)
 
       have hG1leG12 : G1 ≤ G12 := SemilatticeSup.le_sup_left G1 (singleEdge hc.right)
       have hG2leG12 : G2 ≤ G12 := by
-        have : G12 = Gmax.G' ⊔ (singleEdge hc.2) ⊔ (singleEdge <| Subtype.coe_ne_coe.mpr <| Subtype.coe_ne_coe.mpr hxab.2.2.2) := by
+        have : G12 = Gmax ⊔ (singleEdge hc.2) ⊔ (singleEdge <| Subtype.coe_ne_coe.mpr <| Subtype.coe_ne_coe.mpr hxab.2.2.2) := by
           exact
-            sup_right_comm Gmax.G'
+            sup_right_comm Gmax
               (singleEdge (Subtype.coe_ne_coe.mpr (Subtype.coe_ne_coe.mpr hxab.right.right.right)))
               (singleEdge hc.right)
         rw [this]
@@ -516,7 +516,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
             left
             exact hM2''.2 v
           let Mrealcon := Mcon.comap (Hom.ofLE (le_of_lt <| lt_of_lt_of_le hG1 hG1leG12))
-          apply Gmax.hMatchFree Mrealcon
+          apply hMatchingFree Mrealcon
           refine ⟨?_, by
             intro v
             rw [SimpleGraph.Subgraph.comap_verts]
@@ -592,7 +592,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
             ConnectedComponent.mem_supp_iff, Subgraph.top_adj] at this
           exact this.2.2.adj_sub.symm
 
-        have hGsplitadjax : Gmax.G'.Adj ↑↑a ↑↑x := by
+        have hGsplitadjax : Gmax.Adj ↑↑a ↑↑x := by
 
           have := hxab.1
           rw [@induce_eq_coe_induce_top] at this
@@ -1216,7 +1216,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
           left
           exact hM2''.2 v
         let Mrealcon := Mcon.comap (Hom.ofLE (le_of_lt <| lt_of_lt_of_le hG1 hG1leG12))
-        apply Gmax.hMatchFree Mrealcon
+        apply hMatchingFree Mrealcon
         refine ⟨?_, by
           intro v
           rw [SimpleGraph.Subgraph.comap_verts]
