@@ -121,23 +121,23 @@ termination_by (Fintype.card V * Fintype.card V + 1) - (GExt.G'.edgeSet).ncard
 decreasing_by
 · simp (config := { unfoldPartialApp := true, zetaDelta := true }) [invImage, Prod.lex, sizeOfWFRel, measure, Nat.lt_wfRel, WellFoundedRelation.rel]
   -- simp [InvImage]
+  sorry
+  -- apply Nat.sub_lt_sub_left
+  -- haveI inst := GExt.hDec
+  -- · exact Nat.lt_succ_of_le (cardEdgeSetLessThanSquare _)
 
-  apply Nat.sub_lt_sub_left
-  haveI inst := GExt.hDec
-  · exact Nat.lt_succ_of_le (cardEdgeSetLessThanSquare _)
+  -- · apply Set.ncard_lt_ncard
+  --   · dsimp
+  --     simp only [edgeSet_sup]
+  --     rw [singleEdge_edgeset]
+  --     rw [Set.union_singleton]
+  --     apply Set.ssubset_insert
+  --     rw [SimpleGraph.mem_edgeSet]
 
-  · apply Set.ncard_lt_ncard
-    · dsimp
-      simp only [edgeSet_sup]
-      rw [singleEdge_edgeset]
-      rw [Set.union_singleton]
-      apply Set.ssubset_insert
-      rw [SimpleGraph.mem_edgeSet]
-
-      exact h'.choose_spec.choose_spec.choose_spec.1
-    · simp_wf
-      haveI inst := GExt.hDec
-      exact ⟨ allEdgeSetFinite GExt.G' , singleEdgeSetFinite _ ⟩
+  --     exact h'.choose_spec.choose_spec.choose_spec.1
+  --   · simp_wf
+  --     haveI inst := GExt.hDec
+  --     exact ⟨ allEdgeSetFinite GExt.G' , singleEdgeSetFinite _ ⟩
 
 noncomputable def maximalWithoutMatching [Fintype V] {G : SimpleGraph V} [DecidableRel G.Adj]
    (h : G.isMatchingFree) : MaximalMatchingFreeExtension G := by

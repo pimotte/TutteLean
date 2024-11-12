@@ -139,7 +139,7 @@ theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Ad
   let g : V → V := fun v ↦ if h : v ∈ oddVerts then f ⟨(G.deleteUniversalVerts.coe.connectedComponentMk ⟨v, oddVerts_subset_deleteUniversalVerts h⟩), mem h⟩ else Classical.arbitrary V
 
   have gMemS {v : V} (h : v ∈ oddVerts) : (g v) ∈ G.universalVerts := by
-    unfold_let g
+    unfold g
     dsimp
     split_ifs
     apply Subtype.coe_prop
@@ -154,7 +154,7 @@ theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Ad
     exact gMemS hv'.1
 
   have gInjOn : Set.InjOn g oddVerts := by
-    unfold_let g
+    unfold g
     dsimp
     rw [Set.injOn_iff_injective, Set.restrict_dite]
     intro x y hxy
@@ -174,15 +174,15 @@ theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Ad
   let M1 : Subgraph G := Subgraph.ofFunction g hadj
 
   have hM1 : M1.IsMatching := by
-    unfold_let M1
+    unfold M1
     exact Subgraph.isMatching_ofFunction g hadj gInjOn hdg
 
   have evenKsubM1 (K : G.deleteUniversalVerts.coe.ConnectedComponent) : Even ((Subtype.val '' K.supp) \ M1.verts).ncard := by
     by_cases h : Even (Subtype.val '' K.supp).ncard
     · have : Subtype.val '' K.supp \ M1.verts = Subtype.val '' K.supp := by
-        unfold_let M1
-        unfold_let oddVerts
-        unfold_let rep
+        unfold M1
+        unfold oddVerts
+        unfold rep
         ext v
         refine ⟨fun hv ↦ hv.1, ?_⟩
         intro hv
@@ -210,7 +210,7 @@ theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Ad
         rw [@Set.mem_diff]
         push_neg
         intro h'
-        unfold_let M1
+        unfold M1
         simp only [ne_eq, Subgraph.induce_verts, Subgraph.verts_top, Subgraph.ofFunction_verts,
           Set.mem_union, Set.mem_image]
         left
@@ -230,7 +230,7 @@ theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Ad
           · left; exact hc
           · right
             refine ⟨h, ?_⟩
-            unfold_let M1
+            unfold M1
             simp only [Subgraph.ofFunction_verts, Set.mem_union]
             push_neg
             constructor
@@ -324,7 +324,7 @@ theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Ad
       intro v _
       trivial)
   refine ⟨?_, MconSpan⟩
-  unfold_let Mcon
+  unfold Mcon
   exact hM12.sup hM3.2 (by
     rw [hM12.support_eq_verts, hM3.2.support_eq_verts]
     rw [hM3.1]

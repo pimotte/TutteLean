@@ -107,7 +107,8 @@ noncomputable def lift_walk' {H : Subgraph G} {c : ConnectedComponent H.coe} (v 
       have := v.2
       simp only [Subgraph.induce_verts, Set.mem_image, ConnectedComponent.mem_supp_iff,
         Subtype.exists, exists_and_right, exists_eq_right] at this
-      refine ⟨this, ?_, ?_⟩
+      simp only [true_and]
+      refine ⟨?_, ?_⟩
       · rw [← (c.mem_supp_iff ⟨u, hH u⟩).mp (by
           exact Set.mem_of_mem_image_val hu
           )]
@@ -1789,18 +1790,23 @@ lemma Walk.tail_nodup_reverse {p : G.Walk u u} [DecidableEq V] (hp : p.IsCycle):
   intro i j hij hj
   simp only [List.length_tail, List.length_reverse, length_support, add_tsub_cancel_right] at hj
   simp [List.length_tail, List.length_reverse, tail_get?]
-  rw [List.getElem?_reverse (by rw [support_length]; omega),
-    List.getElem?_reverse (by rw [support_length]; omega)]
-  rw [← getVert_support_getElem? _ (by rw [support_length]; omega)]
-  rw [← getVert_support_getElem? _ (by rw [support_length]; omega)]
+
+  rw [List.getElem?_reverse (by
+    rw [List.length_dropLast,support_length]; omega),
+    List.getElem?_reverse (by rw [List.length_dropLast, support_length]; omega)]
+  simp only [@List.getElem?_dropLast]
+  rw [← getVert_support_getElem? _ (by rw [List.length_dropLast, support_length]; omega)]
+  rw [← getVert_support_getElem? _ (by rw [List.length_dropLast, support_length]; omega)]
   simp only [length_support, add_tsub_cancel_right, Option.some.injEq]
   by_cases hj' : j = p.length
   · simp only [hj', le_add_iff_nonneg_right, zero_le, tsub_eq_zero_of_le, getVert_zero]
-    exact hp.getVert_internal_neq_endpoint (by omega) (by omega)
+    omega
   · by_cases hj'' : j = p.length - 1
-    · simp only [hj'', (by omega : p.length - (p.length - 1 + 1) = 0), getVert_zero]
+    · simp [List.length_dropLast, length_support, add_tsub_cancel_right, hj'', Nat.sub_self,
+      getVert_zero, show p.length - 1 - i < p.length from by omega, show 0 < p.length from by omega]
       exact hp.getVert_internal_neq_endpoint (by omega) (by omega)
-    · exact (hp.getVert_nodup' (by omega) (by omega) (by omega)).symm
+    · simp [show p.length - 1 - i < p.length from by omega, show p.length - 1 - j < p.length from by omega, show 0 < p.length from by omega]
+      exact (hp.getVert_nodup' (by omega) (by omega) (by omega)).symm
 
 
 lemma Walk.IsCycle.reverse {p : G.Walk u u} [DecidableEq V] (hp : p.IsCycle) : p.reverse.IsCycle := by
