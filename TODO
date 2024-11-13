@@ -1,4 +1,3 @@
-- Remove singleEdge in favour of edge from mathlib (made easier by:)
 - Refactor case of "decomposes into cliques"
 - Refactor other case 
 - Figure out what of `Walk.lean` is actually needed

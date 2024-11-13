@@ -2,6 +2,7 @@ import Mathlib.Combinatorics.SimpleGraph.Clique
 import Mathlib.Combinatorics.SimpleGraph.Matching
 import Mathlib.Combinatorics.SimpleGraph.Connectivity.Subgraph
 import Mathlib.Combinatorics.SimpleGraph.Metric
+import Mathlib.Combinatorics.SimpleGraph.Operations
 import Mathlib.Data.Set.Card
 import Mathlib.Data.Set.Finite
 import Mathlib.Data.Fintype.Basic
@@ -162,8 +163,8 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
         have := this.adj_sub
         exact Subgraph.coe_adj_sub Gsplit (↑a) (↑b) this
 
-      let G1 := Gmax ⊔ (singleEdge <| Subtype.coe_ne_coe.mpr <| Subtype.coe_ne_coe.mpr hxab.2.2.2)
-      let G2 := Gmax ⊔ (singleEdge hc.2)
+      let G1 := Gmax ⊔ (edge x.val.val b.val.val)
+      let G2 := Gmax ⊔ (edge a.val.val c)
 
       have hG1nxb : ¬ Gmax.Adj x.val.val b.val.val := by
 
@@ -179,13 +180,13 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
       have hG1 : Gmax < G1 := by
 
         apply union_gt_iff.mpr
-        rw [@singleEdge_le_iff]
+        rw [singleEdge_le_iff (Subtype.coe_ne_coe.mpr <| Subtype.coe_ne_coe.mpr hxab.2.2.2)]
         exact hG1nxb
 
       have hG2 : Gmax < G2 := by
 
         apply union_gt_iff.mpr
-        rw [@singleEdge_le_iff]
+        rw [singleEdge_le_iff hc.2]
         intro h
         exact hc.1 h
 
@@ -199,11 +200,12 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
           ext v hv
           simp only [ne_eq, inf_adj, bot_adj, iff_false, not_and]
           intro h hc'
-          unfold singleEdge at hc'
+          -- unfold singleEdge at hc'
           unfold Subgraph.coeBig at h
           apply hc
           simp only at h hc' ⊢
-          cases hc'
+          simp [edge_adj] at hc'
+          cases hc'.1
           next h1 =>
             exact h1.1.symm ▸ h1.2.symm ▸ h
           next h2 =>
@@ -219,11 +221,12 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
           ext v hv
           simp only [ne_eq, inf_adj, bot_adj, iff_false, not_and]
           intro h hc'
-          unfold singleEdge at hc'
+          -- unfold singleEdge at hc'
           unfold Subgraph.coeBig at h
           apply hc
           simp only at h hc' ⊢
-          cases hc'
+          simp [edge_adj] at hc'
+          cases hc'.1
           next h1 =>
             exact h1.1.symm ▸ h1.2.symm ▸ h
           next h2 =>
@@ -231,19 +234,14 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
           )
         exact hMatchingFree Mcon hMcon
 
-      let G12 := Gmax ⊔ (singleEdge <| Subtype.coe_ne_coe.mpr <| Subtype.coe_ne_coe.mpr hxab.2.2.2) ⊔ (singleEdge hc.2)
+      let G12 := Gmax ⊔ (edge x.val.val b.val.val) ⊔ (edge a.val.val c)
 
-      have hG1leG12 : G1 ≤ G12 := SemilatticeSup.le_sup_left G1 (singleEdge hc.right)
+      have hG1leG12 : G1 ≤ G12 := SemilatticeSup.le_sup_left G1 _
       have hG2leG12 : G2 ≤ G12 := by
-        have : G12 = Gmax ⊔ (singleEdge hc.2) ⊔ (singleEdge <| Subtype.coe_ne_coe.mpr <| Subtype.coe_ne_coe.mpr hxab.2.2.2) := by
-          exact
-            sup_right_comm Gmax
-              (singleEdge (Subtype.coe_ne_coe.mpr (Subtype.coe_ne_coe.mpr hxab.right.right.right)))
-              (singleEdge hc.right)
+        have : G12 = Gmax ⊔ (edge a.val.val c) ⊔ (edge x.val.val b.val.val) := by
+          exact sup_right_comm Gmax _ _
         rw [this]
-        exact
-          SemilatticeSup.le_sup_left G2
-            (singleEdge (Subtype.coe_ne_coe.mpr (Subtype.coe_ne_coe.mpr hxab.right.right.right)))
+        exact SemilatticeSup.le_sup_left G2 _
 
 
       let M1' := M1.map (Hom.ofLE hG1leG12)
@@ -262,13 +260,13 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
         | inl hl =>
           exact hG1nxb hl
         | inr hr =>
-          simp only [singleEdge_Adj] at hr
-          cases hr with
+          simp only [edge_adj] at hr
+          cases hr.1 with
           | inl h1 =>
-            exact hbnec h1.2.symm
+            exact hbnec h1.2
           | inr h2 =>
             apply hxab.2.1.ne
-            exact Subtype.val_injective (Subtype.val_injective h2.1)
+            exact Subtype.val_injective (Subtype.val_injective h2.2.symm)
 
       have hM2'nab : ¬M2'.Adj ↑↑a ↑↑b := by
         intro h
@@ -343,14 +341,14 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
         cases this with
         | inl hl => exact hc.1 hl.symm
         | inr hr =>
-          rw [@singleEdge_Adj] at hr
-          cases hr with
+          rw [edge_adj] at hr
+          cases hr.1 with
           | inl h1 =>
             apply hxab.2.1.ne
-            exact Subtype.val_injective (Subtype.val_injective h1.2.symm)
+            exact Subtype.val_injective (Subtype.val_injective h1.2)
           | inr h2 =>
             apply hxab.1.ne
-            exact Subtype.val_injective (Subtype.val_injective h2.1)
+            exact Subtype.val_injective (Subtype.val_injective h2.2.symm)
 
       have hCyclesca : cycles.Adj c ↑↑a := by
         rw [@Subgraph.symDiff_adj]
@@ -392,17 +390,17 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
               | inl h1 =>
                 exact h1.symm
               | inr h2 =>
-                unfold singleEdge at h2
-                simp only at h2
-                cases h2 with
+                -- unfold singleEdge at h2
+                simp only [edge_adj] at h2
+                cases h2.1 with
                 | inl h3 =>
                   exfalso
                   apply SimpleGraph.Adj.ne' hxab.2.1
-                  exact Subtype.val_injective (Subtype.val_injective h3.2)
+                  exact Subtype.val_injective (Subtype.val_injective h3.2.symm)
                 | inr h4 =>
                   exfalso
                   apply SimpleGraph.Adj.ne' hxab.1
-                  exact Subtype.val_injective (Subtype.val_injective h4.1.symm)
+                  exact Subtype.val_injective (Subtype.val_injective h4.2)
             ·
               obtain ⟨p, _⟩ := SimpleGraph.Reachable.exists_path_of_dist this
               push_neg at hvc
@@ -546,16 +544,16 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
                 | inl h1 => exact h1
                 | inr h2 =>
                   exfalso
-                  rw [@singleEdge_Adj] at h2
+                  rw [edge_adj] at h2
                   apply hncadjbx
-                  cases h2 with
+                  cases h2.1 with
                   | inl h1' => exact (h1'.1 ▸ h1'.2 ▸ hl.2.symm)
                   | inr h2' => exact (h2'.1 ▸ h2'.2 ▸ hl.2)
               | inr hr' =>
                 exfalso
-                rw [@singleEdge_Adj] at hr'
+                rw [edge_adj] at hr'
                 apply hl.1
-                cases hr' with
+                cases hr'.1 with
                 | inl h1 => exact (h1.1 ▸ h1.2 ▸ hM2')
                 | inr h2 => exact (h2.1 ▸ h2.2 ▸ hM2'.symm)
             | inr hr =>
@@ -564,10 +562,10 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
               cases this with
               | inl hl' => exact hl'
               | inr hr' =>
-                rw [@singleEdge_Adj] at hr'
+                rw [edge_adj] at hr'
                 exfalso
                 apply hr.2
-                cases hr' with
+                cases hr'.1 with
                 | inl h1 => exact (h1.1 ▸ h1.2 ▸ hcadjac)
                 | inr h2 => exact (h2.1 ▸ h2.2 ▸ hcadjac.symm)
           · intro y hy
@@ -579,7 +577,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
 
           rw [sup_adj, sup_adj]
           right
-          simp only [singleEdge_Adj, and_self, or_true]
+          simp only [edge_adj, hc.2.symm, false_and, and_self, or_true, ne_eq, not_false_eq_true]
 
         have hG12adjba : G12.Adj b.val.val a := by
 
@@ -820,7 +818,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
 
               rw [hnqxbImprxb' hqxb]
               rw [sup_adj]
-              simp only [sup_adj, singleEdge_Adj, and_true, true_and]
+              simp only [sup_adj, and_true, true_and]
               left ; left
               have := hxab.2.1
               simp only [comap_adj, Function.Embedding.coe_subtype, Subgraph.coe_adj] at this
@@ -1245,27 +1243,27 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
               cases hl' with
               | inl h1 => exact h1
               | inr h2 =>
-                simp only [singleEdge_Adj] at h2
-                cases h2 with
+                simp only [edge_adj] at h2
+                cases h2.1 with
                 | inl h1' =>
-                  rw [← h1'.1] at hl
+                  rw [h1'.1] at hl
                   exfalso
                   apply hxcycle
                   exact (Subgraph.mem_support _).mpr (⟨w, hl.2⟩)
                 | inr h2' =>
-                  rw [← h2'.1] at hl
+                  rw [h2'.2] at hl
                   exfalso
                   apply hxcycle
                   exact (Subgraph.mem_support _).mpr (⟨v, hl.2.symm⟩)
             | inr hr' =>
-              simp only [singleEdge_Adj] at hr'
-              cases hr' with
+              simp only [edge_adj] at hr'
+              cases hr'.1 with
               | inl h1 =>
-                rw [← h1.1, ← h1.2] at hl
+                rw [h1.1, h1.2] at hl
                 exfalso
                 exact hl.1 hM2'
               | inr h2 =>
-                rw [← h2.1, ← h2.2] at hl
+                rw [h2.1, h2.2] at hl
                 exfalso
                 exact hl.1 hM2'.symm
           | inr hr =>
@@ -1274,10 +1272,10 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
             cases this with
             | inl hl => exact hl
             | inr hr' =>
-              simp only [singleEdge_Adj] at hr'
+              simp only [edge_adj] at hr'
               exfalso
               have hac : M2.Adj a.val.val c ∧ ¬cycle.Adj a.val.val c := by
-                cases hr' with
+                cases hr'.1 with
                 | inl h1 => exact h1.1 ▸ h1.2 ▸ hr
 
                 | inr h2 =>
@@ -1285,7 +1283,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
                   h2.2 ▸ hr.1.symm, by
                     intro h
                     apply hr.2
-                    rw [← h2.1, ← h2.2]
+                    rw [h2.1, h2.2]
                     exact h.symm
                     ⟩
               apply hac.2
