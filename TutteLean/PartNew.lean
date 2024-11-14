@@ -29,25 +29,6 @@ lemma rep_choose_inj : Function.Injective (fun (c : G.ConnectedComponent) ↦ c.
   rw [← (SimpleGraph.ConnectedComponent.mem_supp_iff _ _).mp (ConnectedComponent.exists_vert_mem_supp d)]
   exact congrArg G.connectedComponentMk hcd
 
-lemma oddVerts_subset_deleteUniversalVerts : oddVerts G ⊆ G.deleteUniversalVerts.verts := by
-  intro _ hv
-  rw [oddVerts, Set.mem_image] at hv
-  obtain ⟨v, heq⟩ := hv
-  rw [← heq.2]
-  exact v.2
-
-lemma odd_connectedComponent_of_oddVert {v : V} (h : v ∈ oddVerts G) :
-  Odd ((G.deleteUniversalVerts.coe.connectedComponentMk ⟨v, oddVerts_subset_deleteUniversalVerts h⟩).supp.ncard) := by
-    simp_rw [oddVerts, Set.mem_image] at h
-    obtain ⟨w, hw⟩ := h
-    obtain ⟨c, hc⟩ := hw.1
-    rw [@Set.mem_setOf] at hc
-    have : G.deleteUniversalVerts.coe.connectedComponentMk w = c := by
-      rw [← hc.2]
-      exact c.exists_vert.choose_spec
-    rw [(SetCoe.ext hw.2.symm : ⟨v, oddVerts_subset_deleteUniversalVerts h⟩ = w), this]
-    exact hc.1
-
 lemma oddVerts_core_disjoint : Disjoint G.oddVerts G.universalVerts := by
   rw [@Set.disjoint_left]
   intro v hv
@@ -57,63 +38,6 @@ lemma oddVerts_core_disjoint : Disjoint G.oddVerts G.universalVerts := by
   obtain ⟨c, hc⟩ := hw.1
   rw [← hw.2, ← hc.2]
   exact deleteVerts_verts_notmem_deleted _
-
-lemma aux {x : V} {cx : G.deleteUniversalVerts.coe.ConnectedComponent} (h : cx.exists_vert.choose.val = x) (hx : x ∈ G.deleteUniversalVerts.verts): G.deleteUniversalVerts.coe.connectedComponentMk ⟨x, hx⟩ = cx := by
-    rw [← @ConnectedComponent.mem_supp_iff]
-    have := cx.exists_vert.choose_spec
-    rw [← this]
-    subst h
-    simp only [Subtype.coe_eta, ConnectedComponent.mem_supp_iff]
-
-lemma compInj : Function.Injective (fun (v : G.oddVerts) => (G.deleteUniversalVerts.coe.connectedComponentMk ⟨v.1, oddVerts_subset_deleteUniversalVerts v.2⟩)) := by
-    intro ⟨x, hx⟩ ⟨y, hy⟩ hxy
-    dsimp at *
-    have hx' := oddVerts_subset_deleteUniversalVerts hx
-    have hy' := oddVerts_subset_deleteUniversalVerts hy
-    unfold oddVerts at hx hy
-    rw [← Set.image_comp, Set.mem_image] at hx hy
-    obtain ⟨cx, hcx⟩ := hx
-    obtain ⟨cy, hcy⟩ := hy
-    rw [@Subtype.mk_eq_mk]
-    rw [aux hcx.2 hx'] at hxy
-    rw [aux hcy.2 hy'] at hxy
-    rw [← hcx.2, ← hcy.2]
-    rw [hxy]
-
-lemma memImKNotS {v : V} (K : G.deleteUniversalVerts.coe.ConnectedComponent)
-    (h : v ∈ Subtype.val '' K.supp) : v ∉ G.universalVerts := by
-    intro hv
-    rw [Set.mem_image] at h
-    obtain ⟨v', hv'⟩ := h
-    have := v'.2
-    simp only [Subgraph.induce_verts, Subgraph.verts_top, Set.mem_diff] at this
-    rw [hv'.2] at this
-    exact this.2 hv
-
-lemma memSuppOddIsRep {v : V} (K : G.deleteUniversalVerts.coe.ConnectedComponent)
-  (h : v ∈ Subtype.val '' K.supp) (h' : v ∈ G.oddVerts) : K.exists_vert.choose.val = v := by
-  unfold oddVerts at h'
-  rw [Set.mem_image] at h'
-  simp_rw [Set.mem_image] at h'
-  obtain ⟨x, ⟨⟨c, hc⟩, hx⟩⟩ := h'
-  rw [← hx] at h ⊢
-  rw [← hc.2] at h ⊢
-  rw [Subtype.val_injective.mem_set_image] at h
-  rw [SimpleGraph.ConnectedComponent.mem_supp_iff] at h
-  have := c.exists_vert_mem_supp
-  rw [SimpleGraph.ConnectedComponent.mem_supp_iff] at this
-  rw [this] at h
-  rw [h]
-
-lemma repMemOdd {K : G.deleteUniversalVerts.coe.ConnectedComponent}
-    (h : Odd K.supp.ncard) : K.exists_vert.choose.val ∈ G.oddVerts := by
-    unfold oddVerts
-    rw [Set.mem_image]
-    simp_rw [Set.mem_image]
-    use K.exists_vert.choose
-    refine ⟨?_, rfl⟩
-    use K
-    exact ⟨h, rfl⟩
 
 lemma subgraph_coe (H : Subgraph G) {x y : H.verts} (h : H.coe.Adj x y) : G.Adj x.val y.val := h.adj_sub
 
@@ -153,7 +77,7 @@ lemma disjoint_even_supp_oddVerts {K : G.deleteUniversalVerts.coe.ConnectedCompo
     rw [← Subtype.val_injective hw']
     rw [← hc'.2]
     exact component_rep c
-  rw [← @Nat.not_even_iff_odd] at hc'
+  rw [← Nat.not_even_iff_odd] at hc'
   rw [this] at h
   exact hc'.1 h
 
@@ -165,7 +89,7 @@ lemma supp_intersection_oddVerts_card {K : G.deleteUniversalVerts.coe.ConnectedC
   constructor
   · intro hv
     simp only [Set.mem_singleton_iff]
-    rw [@Set.mem_inter_iff] at hv
+    rw [Set.mem_inter_iff] at hv
     obtain ⟨⟨w, ⟨hw, rfl⟩⟩, ⟨w', ⟨⟨c, ⟨hc, rfl⟩⟩, hw''⟩⟩⟩ := hv
     apply Subtype.val_injective at hw''
     rw [← hw''] at hw ⊢
@@ -283,11 +207,10 @@ theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Ad
     rw [Set.ncard_diff (by intro v _; trivial), Nat.even_sub (Set.ncard_le_ncard (by intro v _; trivial))]
     rw [Fintype.card_eq_nat_card, ← Set.ncard_univ] at hveven
     simp only [hveven, true_iff]
-    rw [Set.ncard_union_eq disjointM12, Nat.even_add, Set.ncard_eq_toFinset_card', Set.ncard_eq_toFinset_card']
-    simp only [iff_true_left hM1.2.even_card, hM2.even_card]
+    simp only [Set.ncard_union_eq disjointM12, Nat.even_add,
+      Set.ncard_eq_toFinset_card', Set.ncard_eq_toFinset_card', iff_true_left hM1.2.even_card, hM2.even_card]
 
   have sub : ((Set.univ : Set V) \ (M1.verts ∪ M2.verts)) ⊆ G.universalVerts := by
-
     rw [@Set.diff_subset_iff]
     intro v _
     by_cases h : v ∈ M1.verts ∪ G.universalVerts
@@ -305,9 +228,7 @@ theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Ad
         exact h.2
         ⟩
       use K
-      have := (compMatching K).choose_spec
-      rw [this.1]
-      simp only [Set.mem_diff, Set.mem_image, ConnectedComponent.mem_supp_iff, Subtype.exists,
+      simp only [(compMatching K).choose_spec.1, Set.mem_diff, Set.mem_image, ConnectedComponent.mem_supp_iff, Subtype.exists,
         deleteUniversalVerts_verts, Set.mem_univ, true_and, exists_and_right, exists_eq_right,
         exists_prop, and_true]
       exact h.symm
@@ -320,17 +241,13 @@ theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Ad
   use Mcon
 
   have MconSpan : Mcon.IsSpanning := by
-    rw [@Subgraph.isSpanning_iff]
-    rw [Subgraph.verts_sup, Subgraph.verts_sup]
-    rw [hM3.1]
+    rw [Subgraph.isSpanning_iff, Subgraph.verts_sup, Subgraph.verts_sup, hM3.1]
     exact Set.union_diff_cancel (by
       intro v _
       trivial)
   refine ⟨?_, MconSpan⟩
   unfold Mcon
   exact hM12.sup hM3.2 (by
-    rw [hM12.support_eq_verts, hM3.2.support_eq_verts]
-    rw [hM3.1]
-    simp only [Subgraph.verts_sup]
+    simp only [hM12.support_eq_verts, hM3.2.support_eq_verts, hM3.1, Subgraph.verts_sup]
     exact Disjoint.symm Set.disjoint_sdiff_left
     )
