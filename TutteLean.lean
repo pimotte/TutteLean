@@ -17,6 +17,7 @@ import TutteLean.Set
 import TutteLean.Walk
 import TutteLean.SymDiff
 import TutteLean.PartNew
+import TutteLean.Part2
 -- import Mathlib.Algebra.BigOperators.Basic
 
 
