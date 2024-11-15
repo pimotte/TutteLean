@@ -41,7 +41,6 @@ variable {V : Type*} {G : SimpleGraph V}
 
 
 
-
 lemma sndOfNotNil_mem_support (p : G.Walk u v) (hnp : ¬ p.Nil) : p.getVert 1 ∈ p.support := by
   rw [SimpleGraph.Walk.mem_support_iff]
   right
@@ -77,18 +76,17 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
   {
     contrapose!
     intro h
-    if hvOdd : Odd (Finset.univ : Finset V).card
+    if hvOdd : Odd (Fintype.card V)
     then
       use ∅
       simp only [Set.ncard_empty, Subgraph.induce_verts, Subgraph.verts_top]
       have : Odd (Nat.card ↑((⊤ : Subgraph G).deleteVerts ∅).verts) := by
-        simp only [Nat.card_eq_fintype_card,Finset.card_univ, Nat.odd_iff_not_even, Subgraph.deleteVerts_empty,
-          Subgraph.verts_top, Fintype.card_congr (Equiv.Set.univ V)] at *
-        exact hvOdd
+        simp only [Nat.card_eq_fintype_card,Finset.card_univ, Subgraph.deleteVerts_empty,
+          Subgraph.verts_top, Fintype.card_congr (Equiv.Set.univ V), hvOdd]
 
-      have := Odd.pos <| (odd_card_iff_odd_components ((⊤ : Subgraph G).deleteVerts ∅).coe).mp this
-      rw [@Finite.card_pos_iff] at this
-      have ⟨ c , hc ⟩:= Classical.inhabited_of_nonempty this
+      have ⟨c , hc⟩ := Classical.inhabited_of_nonempty
+        (Finite.card_pos_iff.mp <| Odd.pos <|
+        (odd_card_iff_odd_components ((⊤ : Subgraph G).deleteVerts ∅).coe).mp this)
       unfold cardOddComponents
       rw [Set.ncard_pos]
       use c

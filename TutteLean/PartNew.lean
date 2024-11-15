@@ -1,7 +1,6 @@
 import TutteLean.Defs
 import TutteLean.Clique
 import TutteLean.ConnectedComponent
-import TutteLean.Subgraph
 
 namespace SimpleGraph
 variable {V : Type*} {G : SimpleGraph V}
@@ -24,7 +23,6 @@ def oddVerts (G : SimpleGraph V) : Set V := Subtype.val '' ((fun c ↦ c.exists_
 lemma rep_choose_inj : Function.Injective (fun (c : G.ConnectedComponent) ↦ c.exists_rep.choose) := by
   intro c d hcd
   dsimp at hcd
-  -- refine ConnectedComponent.supp_inj.mp ?_
   rw [← (SimpleGraph.ConnectedComponent.mem_supp_iff _ _).mp (ConnectedComponent.exists_vert_mem_supp c)]
   rw [← (SimpleGraph.ConnectedComponent.mem_supp_iff _ _).mp (ConnectedComponent.exists_vert_mem_supp d)]
   exact congrArg G.connectedComponentMk hcd

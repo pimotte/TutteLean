@@ -7,31 +7,6 @@ import TutteLean.Set
 namespace SimpleGraph
 variable {V : Type*} {G : SimpleGraph V}
 
-lemma sup_support_eq_support_union (H H': Subgraph G) : (H ⊔ H').support = H.support ∪ H'.support := by
-  ext v
-  constructor
-  · intro hv
-    rw [SimpleGraph.Subgraph.mem_support ] at hv
-    obtain ⟨ w , hw ⟩ := hv
-    cases SimpleGraph.Subgraph.sup_adj.mp hw with
-    | inl hl =>
-      left
-      rw [SimpleGraph.Subgraph.mem_support]
-      use w
-    | inr hr =>
-      right
-      rw [SimpleGraph.Subgraph.mem_support]
-      use w
-  · intro hv
-    rw [SimpleGraph.Subgraph.mem_support]
-    cases hv with
-    | inl hl =>
-      obtain ⟨ w , hw ⟩ := hl
-      exact ⟨ w , SimpleGraph.Subgraph.sup_adj.mpr (.inl hw) ⟩
-    | inr hr =>
-      obtain ⟨ w , hw ⟩ := hr
-      exact ⟨ w , SimpleGraph.Subgraph.sup_adj.mpr (.inr hw) ⟩
-
 lemma walk_length_one_adj : (∃ (p : G.Walk u v), p.length = 1) ↔ G.Adj u v := by
   constructor
   · rintro ⟨p , hp⟩
