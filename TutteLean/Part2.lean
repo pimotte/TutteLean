@@ -1,6 +1,8 @@
 import Mathlib.Combinatorics.SimpleGraph.Matching
 import Mathlib.Combinatorics.SimpleGraph.Operations
 
+
+
 namespace SimpleGraph
 -- universe u
 variable {V : Type*} {G : SimpleGraph V}
@@ -38,7 +40,7 @@ theorem Subgraph.sup_edge_spanningCoe_le {v w : V} {H : Subgraph (G ⊔ edge v w
     · rw [Sym2.eq_iff] at hs
       exact (hs hr.1).elim
 
-def IsCycles := (∀ v : V, (G.neighborSet v).ncard = 0 ∨ (G.neighborSet v).ncard = 2)
+def IsCycles (G : SimpleGraph V) := (∀ v : V, (G.neighborSet v).ncard = 0 ∨ (G.neighborSet v).ncard = 2)
 
 def IsAlternating (G : SimpleGraph V) (G' : SimpleGraph V) :=
   ∀ (v w w': V), w ≠ w' → G.Adj v w → G.Adj v w' → (G'.Adj v w ↔ ¬ G'.Adj v w')
@@ -49,7 +51,7 @@ lemma symmDiff_spanningCoe_IsPerfectMatching_IsCycles
   sorry
 
 lemma IsPerfectMatching.symmDiff_spanningCoe_of_IsAlternating {M : Subgraph G''} (hM : M.IsPerfectMatching)
-    (hG' : G'.IsAlternating M.spanningCoe) (hle : symmDiff M.spanningCoe G' ≤ G) :
+    (hG' : G'.IsAlternating M.spanningCoe) (hG'cyc : G'.IsCycles) (hle : symmDiff M.spanningCoe G' ≤ G) :
     (G.toSubgraph (symmDiff M.spanningCoe G') hle).IsPerfectMatching := by
   sorry
 
@@ -73,6 +75,8 @@ lemma induce_component_spanningCoe_Adj (c : G.ConnectedComponent) :
   (G.induce c.supp).spanningCoe.Adj v w ↔ v ∈ c.supp ∧ G.Adj v w := by
   sorry
 
+lemma mem_supp_of_adj {c : G.ConnectedComponent} (h : v ∈ c.supp) (h' : G.Adj v w) : w ∈ c.supp := by sorry
+
 theorem tutte_part2 {x a b c : V} (hxa : G.Adj x a) (hab : G.Adj a b) (hnGxb : ¬G.Adj x b) (hnGac : ¬ G.Adj a c)
     (hnxb : x ≠ b) (hnxc : x ≠ c) (hnac : a ≠ c) (hnbc : b ≠ c)
     (hm1 : ∃ (M : Subgraph (G ⊔ edge x b)), M.IsPerfectMatching)
@@ -94,16 +98,16 @@ theorem tutte_part2 {x a b c : V} (hxa : G.Adj x a) (hab : G.Adj a b) (hnGxb : �
     exact IsPerfectMatching.toSubgraph_spanningCoe hM2 (M2.sup_edge_spanningCoe_le hM2ac)
   simp only [not_not] at hM1xb hM2ac
 
-  suffices ∃ (G' : SimpleGraph V), G'.IsAlternating M2.spanningCoe ∧ symmDiff M2.spanningCoe G' ≤ G by
+  suffices ∃ (G' : SimpleGraph V), G'.IsAlternating M2.spanningCoe ∧ G'.IsCycles ∧ symmDiff M2.spanningCoe G' ≤ G by
     obtain ⟨G', hg⟩ := this
-    use (G.toSubgraph (symmDiff M2.spanningCoe G') hg.2)
-    apply IsPerfectMatching.symmDiff_spanningCoe_of_IsAlternating hM2 hg.1
+    use (G.toSubgraph (symmDiff M2.spanningCoe G') hg.2.2)
+    apply IsPerfectMatching.symmDiff_spanningCoe_of_IsAlternating hM2 hg.1 hg.2.1
 
-  suffices ∃ (G' : SimpleGraph V), G'.IsAlternating M2.spanningCoe ∧ ¬G'.Adj x b ∧ G'.Adj a c
+  suffices ∃ (G' : SimpleGraph V), G'.IsAlternating M2.spanningCoe ∧ G'.IsCycles  ∧ ¬G'.Adj x b ∧ G'.Adj a c
       ∧ G' ≤ G ⊔ edge a c by
-    obtain ⟨G', ⟨hG', hG'xb, hnG'ac, hle⟩⟩ := this
+    obtain ⟨G', ⟨hG', hG'cyc, hG'xb, hnG'ac, hle⟩⟩ := this
     use G'
-    refine ⟨hG', ?_⟩
+    refine ⟨hG', hG'cyc, ?_⟩
     intro v w hv
     by_cases hsym : s(v, w) = s(a, c)
     · simp [adj_of_sym2_eq hsym, symmDiff_def, hM2ac, hnG'ac] at hv
@@ -123,25 +127,43 @@ theorem tutte_part2 {x a b c : V} (hxa : G.Adj x a) (hab : G.Adj a b) (hnGxb : �
   have hcxb : cycles.Adj x b := by sorry
   have hcac : cycles.Adj a c := by sorry
 
+  have hM1sub : M1.spanningCoe ≤ G ⊔ edge x b := Subgraph.spanningCoe_le M1
+  have hM2sub := Subgraph.spanningCoe_le M2
 
   by_cases hxc : x ∉ (cycles.connectedComponentMk c).supp
   · use (cycles.induce (cycles.connectedComponentMk c).supp).spanningCoe
     refine ⟨hcalt.induce_supp (cycles.connectedComponentMk c), ?_⟩
 
-
     simp only [induce_component_spanningCoe_Adj, hxc, hcac]
     simp only [false_and, not_false_eq_true, ConnectedComponent.mem_supp_iff, ConnectedComponent.eq,
       and_true, true_and, hcac.reachable]
-    
-    intro v w hvw
-    rw [@induce_component_spanningCoe_Adj] at hvw
-    unfold cycles at hvw
-    rw [@symmDiff_def] at hvw
-    simp? at hvw
-
-
-    sorry
+    constructor
+    ·
+      sorry
+    · intro v w hvw
+      rw [@induce_component_spanningCoe_Adj] at hvw
+      have hs := symmDiff_le hM1sub hM2sub hvw.2
+      have : G ⊔ edge x b ⊔ (G ⊔ edge a c) = (G ⊔ edge a c) ⊔ edge x b := by sorry
+      rw [this, sup_adj] at hs
+      cases' hs with h1 h2
+      · exact h1
+      · simp only [edge_adj, ne_eq] at h2
+        cases' h2.1 with hl hr
+        · rw [hl.1] at hvw
+          exact (hxc hvw.1).elim
+        · rw [hr.2] at hvw
+          have : x ∈ (cycles.connectedComponentMk c) := by
+            exact mem_supp_of_adj hvw.1 hvw.2
+          exact (hxc this).elim
   push_neg at hxc
-  -- let cycles := symmDiff M1.spanningCoe M2.spanningCoe
+
+  -- Is this the right abstraction?
+  have : ∃ x' ∈ ({x, b} : Set V), ∃ (G' : SimpleGraph V), G' ≤ cycles ∧ G'.Connected
+      ∧ ¬G'.Adj x b ∧ G'.Adj a c ∧ (G'.neighborSet a).ncard = 1 ∧ (G'.neighborSet x').ncard = 1 := by
+    sorry
+
+  obtain ⟨x', hx', G', hG'cycles, hG'conn, hG'nxb, hG'ac, hG'cc, hG'cx'⟩ := this
+
+  use G' ⊔ edge x' a ⊔ edge a c
 
   sorry
