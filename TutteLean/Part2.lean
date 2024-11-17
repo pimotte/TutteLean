@@ -43,7 +43,7 @@ def IsCycles := (∀ v : V, (G.neighborSet v).ncard = 0 ∨ (G.neighborSet v).nc
 def IsAlternating (G : SimpleGraph V) (G' : SimpleGraph V) :=
   ∀ (v w w': V), w ≠ w' → G.Adj v w → G.Adj v w' → (G'.Adj v w ↔ ¬ G'.Adj v w')
 
-lemma symmDiff_spanningCoe_IsPerfectMatching_IsAlternating
+lemma symmDiff_spanningCoe_IsPerfectMatching_IsCycles
     {M : Subgraph G} {M' : Subgraph G'} (hM : M.IsPerfectMatching)
     (hM' : M'.IsPerfectMatching) : (symmDiff M.spanningCoe M'.spanningCoe).IsCycles := by
   sorry
@@ -51,6 +51,26 @@ lemma symmDiff_spanningCoe_IsPerfectMatching_IsAlternating
 lemma IsPerfectMatching.symmDiff_spanningCoe_of_IsAlternating {M : Subgraph G''} (hM : M.IsPerfectMatching)
     (hG' : G'.IsAlternating M.spanningCoe) (hle : symmDiff M.spanningCoe G' ≤ G) :
     (G.toSubgraph (symmDiff M.spanningCoe G') hle).IsPerfectMatching := by
+  sorry
+
+lemma IsAlternating.induce_supp (c : G.ConnectedComponent) (h : G.IsAlternating G') : (G.induce c.supp).spanningCoe.IsAlternating G' := by
+  sorry
+
+lemma symmDiff_spanningCoe_IsPerfectMatching_IsAlternating_left
+    {M : Subgraph G} {M' : Subgraph G'} (hM : M.IsPerfectMatching)
+    (hM' : M'.IsPerfectMatching) : (symmDiff M.spanningCoe M'.spanningCoe).IsAlternating M.spanningCoe := by
+  sorry
+
+lemma symmDiff_spanningCoe_IsPerfectMatching_IsAlternating_right
+    {M : Subgraph G} {M' : Subgraph G'} (hM : M.IsPerfectMatching)
+    (hM' : M'.IsPerfectMatching) : (symmDiff M.spanningCoe M'.spanningCoe).IsAlternating M'.spanningCoe := by
+  sorry
+
+lemma symmDiff_le (h : G ≤ H) (h' : G' ≤ H') : (symmDiff G G') ≤ H ⊔ H' := by
+  sorry
+
+lemma induce_component_spanningCoe_Adj (c : G.ConnectedComponent) :
+  (G.induce c.supp).spanningCoe.Adj v w ↔ v ∈ c.supp ∧ G.Adj v w := by
   sorry
 
 theorem tutte_part2 {x a b c : V} (hxa : G.Adj x a) (hab : G.Adj a b) (hnGxb : ¬G.Adj x b) (hnGac : ¬ G.Adj a c)
@@ -66,7 +86,6 @@ theorem tutte_part2 {x a b c : V} (hxa : G.Adj x a) (hab : G.Adj a b) (hnGxb : �
     simpa [hnGxb, edge_adj, hnxb, hxa.ne, hnxc] using h.adj_sub
 
 
-  -- have {v w : V} (M' : Subgraph (G ⊔ edge v w)) (hM' : M.)
   by_cases hM1xb : ¬M1.Adj x b
   · use G.toSubgraph M1.spanningCoe (M1.sup_edge_spanningCoe_le hM1xb)
     exact IsPerfectMatching.toSubgraph_spanningCoe hM1 (M1.sup_edge_spanningCoe_le hM1xb)
@@ -98,8 +117,31 @@ theorem tutte_part2 {x a b c : V} (hxa : G.Adj x a) (hab : G.Adj a b) (hnGxb : �
         · simp [edge_adj] at h2
           exact (hsym h2.1).elim
       · simpa [edge_adj, hsym] using hle hr.1
+  let cycles := symmDiff M1.spanningCoe M2.spanningCoe
+  have hcalt : cycles.IsAlternating M2.spanningCoe := symmDiff_spanningCoe_IsPerfectMatching_IsAlternating_right hM1 hM2
 
-  
+  have hcxb : cycles.Adj x b := by sorry
+  have hcac : cycles.Adj a c := by sorry
+
+
+  by_cases hxc : x ∉ (cycles.connectedComponentMk c).supp
+  · use (cycles.induce (cycles.connectedComponentMk c).supp).spanningCoe
+    refine ⟨hcalt.induce_supp (cycles.connectedComponentMk c), ?_⟩
+
+
+    simp only [induce_component_spanningCoe_Adj, hxc, hcac]
+    simp only [false_and, not_false_eq_true, ConnectedComponent.mem_supp_iff, ConnectedComponent.eq,
+      and_true, true_and, hcac.reachable]
+    
+    intro v w hvw
+    rw [@induce_component_spanningCoe_Adj] at hvw
+    unfold cycles at hvw
+    rw [@symmDiff_def] at hvw
+    simp? at hvw
+
+
+    sorry
+  push_neg at hxc
   -- let cycles := symmDiff M1.spanningCoe M2.spanningCoe
 
   sorry
