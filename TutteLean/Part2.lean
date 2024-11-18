@@ -1,6 +1,6 @@
 import Mathlib.Combinatorics.SimpleGraph.Matching
 import Mathlib.Combinatorics.SimpleGraph.Operations
-
+import Mathlib.Combinatorics.SimpleGraph.Connectivity.Subgraph
 
 
 namespace SimpleGraph
@@ -157,13 +157,12 @@ theorem tutte_part2 {x a b c : V} (hxa : G.Adj x a) (hab : G.Adj a b) (hnGxb : �
           exact (hxc this).elim
   push_neg at hxc
 
-  -- Is this the right abstraction?
-  have : ∃ x' ∈ ({x, b} : Set V), ∃ (G' : SimpleGraph V), G' ≤ cycles ∧ G'.Connected
-      ∧ ¬G'.Adj x b ∧ G'.Adj a c ∧ (G'.neighborSet a).ncard = 1 ∧ (G'.neighborSet x').ncard = 1 := by
+  have : ∃ x' ∈ ({x, b} : Set V), ∃ (p : G.Walk a x'), p.IsPath ∧
+    p.toSubgraph.Adj a c ∧ ¬ p.toSubgraph.Adj x b := by
     sorry
 
-  obtain ⟨x', hx', G', hG'cycles, hG'conn, hG'nxb, hG'ac, hG'cc, hG'cx'⟩ := this
+  obtain ⟨x', hx', p, hp, hpac, hnpxb⟩ := this
 
-  use G' ⊔ edge x' a ⊔ edge a c
+  use p.toSubgraph.spanningCoe ⊔ edge x' a
 
   sorry
