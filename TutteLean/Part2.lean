@@ -40,7 +40,7 @@ theorem Subgraph.sup_edge_spanningCoe_le {v w : V} {H : Subgraph (G ⊔ edge v w
     · rw [Sym2.eq_iff] at hs
       exact (hs hr.1).elim
 
-def IsCycles (G : SimpleGraph V) := (∀ v : V, (G.neighborSet v).ncard = 0 ∨ (G.neighborSet v).ncard = 2)
+def IsCycles (G : SimpleGraph V) := (∀ v : V, (G.neighborSet v) = ∅ ∨ (G.neighborSet v).ncard = 2)
 
 def IsAlternating (G : SimpleGraph V) (G' : SimpleGraph V) :=
   ∀ (v w w': V), w ≠ w' → G.Adj v w → G.Adj v w' → (G'.Adj v w ↔ ¬ G'.Adj v w')
@@ -48,7 +48,31 @@ def IsAlternating (G : SimpleGraph V) (G' : SimpleGraph V) :=
 lemma symmDiff_spanningCoe_IsPerfectMatching_IsCycles
     {M : Subgraph G} {M' : Subgraph G'} (hM : M.IsPerfectMatching)
     (hM' : M'.IsPerfectMatching) : (symmDiff M.spanningCoe M'.spanningCoe).IsCycles := by
-  sorry
+  intro v
+  obtain ⟨w, hw⟩ := hM.1 (hM.2 v)
+  obtain ⟨w', hw'⟩ := hM'.1 (hM'.2 v)
+  dsimp at hw hw'
+  rw [Set.eq_empty_iff_forall_not_mem, Set.ncard_eq_two]
+  simp only [mem_neighborSet, symmDiff_def, sup_adj, sdiff_adj, Subgraph.spanningCoe_adj]
+  by_cases hww' : w = w'
+  · left
+    intro v' hv'
+    cases' hv' with hl hr
+    · rw [hw.2 v' hl.1, hww'] at hl
+      exact hl.2 hw'.1
+    · rw [hw'.2 v' hr.1, ← hww'] at hr
+      exact hr.2 hw.1
+  · right
+    use w, w'
+    refine ⟨hww', ?_⟩
+    ext s
+    simp only [mem_neighborSet, Set.mem_insert_iff, Set.mem_singleton_iff, symmDiff_def,
+      sup_adj, sdiff_adj, Subgraph.spanningCoe_adj]
+    constructor <;> intro h
+    · cases' h with hl hr
+      · left; exact hw.2 _ hl.1
+      · right; exact hw'.2 _ hr.1
+    · subst
 
 lemma IsPerfectMatching.symmDiff_spanningCoe_of_IsAlternating {M : Subgraph G''} (hM : M.IsPerfectMatching)
     (hG' : G'.IsAlternating M.spanningCoe) (hG'cyc : G'.IsCycles) (hle : symmDiff M.spanningCoe G' ≤ G) :
