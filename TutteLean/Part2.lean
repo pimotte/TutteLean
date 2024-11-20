@@ -1,6 +1,7 @@
 import Mathlib.Combinatorics.SimpleGraph.Matching
 import Mathlib.Combinatorics.SimpleGraph.Operations
 import Mathlib.Combinatorics.SimpleGraph.Connectivity.Subgraph
+import Mathlib.Combinatorics.SimpleGraph.Path
 
 
 namespace SimpleGraph
@@ -40,51 +41,54 @@ theorem Subgraph.sup_edge_spanningCoe_le {v w : V} {H : Subgraph (G ⊔ edge v w
     · rw [Sym2.eq_iff] at hs
       exact (hs hr.1).elim
 
-def IsCycles (G : SimpleGraph V) := (∀ v : V, (G.neighborSet v) = ∅ ∨ (G.neighborSet v).ncard = 2)
+def IsCycles (G : SimpleGraph V) := ∀ ⦃v⦄, (G.neighborSet v).Nonempty → (G.neighborSet v).ncard = 2
+
+-- In #19250
+lemma IsCycles.exists_other (h : G.IsCycles) (hadj : G.Adj v w) : ∃ w', w ≠ w' ∧ G.Adj v w' := by
+  sorry
 
 def IsAlternating (G : SimpleGraph V) (G' : SimpleGraph V) :=
-  ∀ (v w w': V), w ≠ w' → G.Adj v w → G.Adj v w' → (G'.Adj v w ↔ ¬ G'.Adj v w')
+  ∀ {v w w': V}, w ≠ w' → G.Adj v w → G.Adj v w' → (G'.Adj v w ↔ ¬ G'.Adj v w')
 
+-- In #19250
 lemma symmDiff_spanningCoe_IsPerfectMatching_IsCycles
     {M : Subgraph G} {M' : Subgraph G'} (hM : M.IsPerfectMatching)
     (hM' : M'.IsPerfectMatching) : (symmDiff M.spanningCoe M'.spanningCoe).IsCycles := by
-  intro v
-  obtain ⟨w, hw⟩ := hM.1 (hM.2 v)
-  obtain ⟨w', hw'⟩ := hM'.1 (hM'.2 v)
-  dsimp at hw hw'
-  rw [Set.eq_empty_iff_forall_not_mem, Set.ncard_eq_two]
-  simp only [mem_neighborSet, symmDiff_def, sup_adj, sdiff_adj, Subgraph.spanningCoe_adj]
-  by_cases hww' : w = w'
-  · left
-    intro v' hv'
-    cases' hv' with hl hr
-    · rw [hw.2 v' hl.1, hww'] at hl
-      exact hl.2 hw'.1
-    · rw [hw'.2 v' hr.1, ← hww'] at hr
-      exact hr.2 hw.1
-  · right
-    use w, w'
-    refine ⟨hww', ?_⟩
-    ext s
-    simp only [mem_neighborSet, Set.mem_insert_iff, Set.mem_singleton_iff, symmDiff_def,
-      sup_adj, sdiff_adj, Subgraph.spanningCoe_adj]
-    constructor <;> intro h
-    · cases' h with hl hr
-      · left; exact hw.2 _ hl.1
-      · right; exact hw'.2 _ hr.1
-    · subst
-
-lemma IsPerfectMatching.symmDiff_spanningCoe_of_IsAlternating {M : Subgraph G''} (hM : M.IsPerfectMatching)
-    (hG' : G'.IsAlternating M.spanningCoe) (hG'cyc : G'.IsCycles) (hle : symmDiff M.spanningCoe G' ≤ G) :
-    (G.toSubgraph (symmDiff M.spanningCoe G') hle).IsPerfectMatching := by
   sorry
+
+-- In #19250
+lemma IsPerfectMatching.symmDiff_spanningCoe_of_IsAlternating {M : Subgraph G} (hM : M.IsPerfectMatching)
+    (hG' : G'.IsAlternating M.spanningCoe) (hG'cyc : G'.IsCycles)  :
+    ((symmDiff M.spanningCoe G').toSubgraph (symmDiff M.spanningCoe G') (by rfl)).IsPerfectMatching := by
+  sorry
+
+lemma spanningCoe_adj {v w : V} {s : Set V} (G : SimpleGraph s) (hv : v ∈ s) (hw : w ∈ s) : (SimpleGraph.spanningCoe G).Adj v w ↔ G.Adj ⟨v, hv⟩ ⟨w, hw⟩ := by
+  simp_all only [map_adj, Function.Embedding.coe_subtype, Subtype.exists, exists_and_right, exists_eq_right_right,
+    exists_true_left, exists_eq_right]
+
+
+lemma mem_spanningCoe_of_adj {v w : V} {s : Set V} (G : SimpleGraph s) (hadj : G.spanningCoe.Adj v w) : v ∈ s := by
+  aesop
+
+
+@[simp]
+lemma induce_adj {s : Set V} {G : SimpleGraph V} {v w : V}  (hv : v ∈ s) (hw : w ∈ s) : (G.induce s).spanningCoe.Adj v w ↔ G.Adj v w := by
+  aesop
+
 
 lemma IsAlternating.induce_supp (c : G.ConnectedComponent) (h : G.IsAlternating G') : (G.induce c.supp).spanningCoe.IsAlternating G' := by
-  sorry
+  intro v w w' hww' hvw hvw'
+  have h1 := mem_spanningCoe_of_adj (induce c.supp G) hvw
+  have h2 : w ∈ c.supp := mem_spanningCoe_of_adj (induce c.supp G) (id (adj_symm (induce c.supp G).spanningCoe hvw))
+  have h3 : w' ∈ c.supp := mem_spanningCoe_of_adj (induce c.supp G) (id (adj_symm (induce c.supp G).spanningCoe hvw'))
+  rw [induce_adj h1 h2] at hvw
+  rw [induce_adj h1 h3] at hvw'
+  exact h hww' hvw hvw'
 
 lemma symmDiff_spanningCoe_IsPerfectMatching_IsAlternating_left
     {M : Subgraph G} {M' : Subgraph G'} (hM : M.IsPerfectMatching)
     (hM' : M'.IsPerfectMatching) : (symmDiff M.spanningCoe M'.spanningCoe).IsAlternating M.spanningCoe := by
+
   sorry
 
 lemma symmDiff_spanningCoe_IsPerfectMatching_IsAlternating_right
@@ -99,7 +103,29 @@ lemma induce_component_spanningCoe_Adj (c : G.ConnectedComponent) :
   (G.induce c.supp).spanningCoe.Adj v w ↔ v ∈ c.supp ∧ G.Adj v w := by
   sorry
 
+lemma induce_component_IsCycles (c : G.ConnectedComponent) (h : G.IsCycles)
+  : (G.induce c.supp).spanningCoe.IsCycles := by
+  sorry
+
 lemma mem_supp_of_adj {c : G.ConnectedComponent} (h : v ∈ c.supp) (h' : G.Adj v w) : w ∈ c.supp := by sorry
+
+lemma Path.of_IsCycles {c : G.ConnectedComponent} (h : G.IsCycles) (hv : v ∈ c.supp)
+  (hn : (G.neighborSet v).Nonempty) :
+    ∃ (p : G.Walk v v), p.IsCycle ∧ p.toSubgraph.support = c.supp := by
+  sorry
+
+lemma IsCycle.first_two {p : G.Walk v v} (h : p.IsCycle) (hadj : p.toSubgraph.Adj v w) :
+    ∃ (p' : G.Walk v v), p'.IsCycle ∧ p'.getVert 1 = w ∧ p'.toSubgraph.support = p.toSubgraph.support := by
+  sorry
+
+lemma IsCycle_takeUntil [DecidableEq V] {p : G.Walk v v} (h : p.IsCycle) (h : w ∈ p.support) (hvw : v ≠ w) :
+    (p.takeUntil w h).IsPath := by
+
+  sorry
+
+lemma takeUntil_getVert_one [DecidableEq V] {p : G.Walk u v} (hsu : w ≠ u) (h : w ∈ p.support)
+  : (p.takeUntil w h).getVert 1 = p.getVert 1 := by
+  sorry
 
 theorem tutte_part2 {x a b c : V} (hxa : G.Adj x a) (hab : G.Adj a b) (hnGxb : ¬G.Adj x b) (hnGac : ¬ G.Adj a c)
     (hnxb : x ≠ b) (hnxc : x ≠ c) (hnac : a ≠ c) (hnbc : b ≠ c)
@@ -147,7 +173,7 @@ theorem tutte_part2 {x a b c : V} (hxa : G.Adj x a) (hab : G.Adj a b) (hnGxb : �
       · simpa [edge_adj, hsym] using hle hr.1
   let cycles := symmDiff M1.spanningCoe M2.spanningCoe
   have hcalt : cycles.IsAlternating M2.spanningCoe := symmDiff_spanningCoe_IsPerfectMatching_IsAlternating_right hM1 hM2
-
+  have hcycles := symmDiff_spanningCoe_IsPerfectMatching_IsCycles hM1 hM2
   have hcxb : cycles.Adj x b := by sorry
   have hcac : cycles.Adj a c := by sorry
 
@@ -161,29 +187,50 @@ theorem tutte_part2 {x a b c : V} (hxa : G.Adj x a) (hab : G.Adj a b) (hnGxb : �
     simp only [induce_component_spanningCoe_Adj, hxc, hcac]
     simp only [false_and, not_false_eq_true, ConnectedComponent.mem_supp_iff, ConnectedComponent.eq,
       and_true, true_and, hcac.reachable]
-    constructor
-    ·
-      sorry
-    · intro v w hvw
-      rw [@induce_component_spanningCoe_Adj] at hvw
-      have hs := symmDiff_le hM1sub hM2sub hvw.2
-      have : G ⊔ edge x b ⊔ (G ⊔ edge a c) = (G ⊔ edge a c) ⊔ edge x b := by sorry
-      rw [this, sup_adj] at hs
-      cases' hs with h1 h2
-      · exact h1
-      · simp only [edge_adj, ne_eq] at h2
-        cases' h2.1 with hl hr
-        · rw [hl.1] at hvw
-          exact (hxc hvw.1).elim
-        · rw [hr.2] at hvw
-          have : x ∈ (cycles.connectedComponentMk c) := by
-            exact mem_supp_of_adj hvw.1 hvw.2
-          exact (hxc this).elim
+    refine ⟨induce_component_IsCycles (cycles.connectedComponentMk c) hcycles, ?_⟩
+    intro v w hvw
+    rw [@induce_component_spanningCoe_Adj] at hvw
+    have hs := symmDiff_le hM1sub hM2sub hvw.2
+    have : G ⊔ edge x b ⊔ (G ⊔ edge a c) = (G ⊔ edge a c) ⊔ edge x b := by sorry
+    rw [this, sup_adj] at hs
+    cases' hs with h1 h2
+    · exact h1
+    · simp only [edge_adj, ne_eq] at h2
+      cases' h2.1 with hl hr
+      · rw [hl.1] at hvw
+        exact (hxc hvw.1).elim
+      · rw [hr.2] at hvw
+        have : x ∈ (cycles.connectedComponentMk c) := by
+          exact mem_supp_of_adj hvw.1 hvw.2
+        exact (hxc this).elim
   push_neg at hxc
 
-  have : ∃ x' ∈ ({x, b} : Set V), ∃ (p : G.Walk a x'), p.IsPath ∧
+  have hacc : a ∈ (cycles.connectedComponentMk c).supp := by
+    exact mem_supp_of_adj rfl hcac.symm
+
+
+  have : ∃ x' ∈ ({x, b} : Set V), ∃ (p : cycles.Walk a x'), p.IsPath ∧
     p.toSubgraph.Adj a c ∧ ¬ p.toSubgraph.Adj x b := by
-    sorry
+      obtain ⟨p, hp⟩ := Path.of_IsCycles hcycles hacc (Set.nonempty_of_mem hcac)
+      obtain ⟨p', hp'⟩ := IsCycle.first_two hp.1 (by sorry : p.toSubgraph.Adj a c)
+      have hxp' : x ∈ p'.support := by sorry
+      have : DecidableEq V := by exact Classical.typeDecidableEq V
+      by_cases hc : b ∈ (p'.takeUntil x hxp').support
+      · use b, (by simp), ((p'.takeUntil x hxp').takeUntil b hc)
+
+        refine ⟨(IsCycle_takeUntil hp'.1 hxp' hxa.ne').takeUntil hc, ?_⟩
+        constructor
+        · have : 0 < ((p'.takeUntil x hxp').takeUntil b hc).length := by sorry
+          have := ((p'.takeUntil x hxp').takeUntil b hc).toSubgraph_adj_getVert this
+          rw [takeUntil_getVert_one (by sorry) (by sorry)] at this
+          rw [takeUntil_getVert_one (by sorry) (by sorry)] at this
+          simp at this
+          rw [hp'.2.1] at this
+          exact this
+        ·
+          sorry
+      · use x, (by simp), (p'.takeUntil x hxp')
+        sorry
 
   obtain ⟨x', hx', p, hp, hpac, hnpxb⟩ := this
 
