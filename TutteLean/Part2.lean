@@ -136,10 +136,24 @@ lemma induce_component_IsCycles (c : G.ConnectedComponent) (h : G.IsCycles)
   simp only [mem_neighborSet, induce_component_spanningCoe_Adj, hw, true_and]
 
 
-lemma Path.of_IsCycles {c : G.ConnectedComponent} (h : G.IsCycles) (hv : v ∈ c.supp)
+lemma Path.of_IsCycles [DecidableEq V] {c : G.ConnectedComponent} (h : G.IsCycles) (hv : v ∈ c.supp)
   (hn : (G.neighborSet v).Nonempty) (hcs : c.supp.Finite):
     ∃ (p : G.Walk v v), p.IsCycle ∧ p.toSubgraph.support = c.supp := by
-  
+  obtain ⟨w, hw⟩ := hn
+  let p : G.Walk v w := Adj.toWalk hw
+  let rec f {u : V} (p : G.Walk u v) (hs : p.toSubgraph.support ⊆ c.supp) : G.Walk v v :=
+    if huv : u = v then
+      huv ▸ p
+    else
+      (f (Walk.cons (h.exists_other (by sorry : G.Adj u (p.getVert 1))).choose_spec.2.symm p) (by sorry))
+  termination_by c.supp.ncard + 1 - p.length
+  decreasing_by {
+    simp_wf
+    have : p.toSubgraph.support.ncard ≤ c.supp.ncard := by sorry
+
+    done
+  }
+
   sorry
 
 lemma IsCycle.first_two {p : G.Walk v v} (h : p.IsCycle) (hadj : p.toSubgraph.Adj v w) :
