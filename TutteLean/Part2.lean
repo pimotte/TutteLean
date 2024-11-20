@@ -85,33 +85,61 @@ lemma IsAlternating.induce_supp (c : G.ConnectedComponent) (h : G.IsAlternating 
   rw [induce_adj h1 h3] at hvw'
   exact h hww' hvw hvw'
 
+open scoped symmDiff
+
 lemma symmDiff_spanningCoe_IsPerfectMatching_IsAlternating_left
     {M : Subgraph G} {M' : Subgraph G'} (hM : M.IsPerfectMatching)
-    (hM' : M'.IsPerfectMatching) : (symmDiff M.spanningCoe M'.spanningCoe).IsAlternating M.spanningCoe := by
+    (hM' : M'.IsPerfectMatching) : (M.spanningCoe ∆ M'.spanningCoe).IsAlternating M.spanningCoe := by
+  intro v w w' hww' hvw hvw'
+  obtain ⟨v1, ⟨hm1, hv1⟩⟩ := hM.1 (hM.2 v)
+  obtain ⟨v2, ⟨hm2, hv2⟩⟩ := hM'.1 (hM'.2 v)
+  simp only [ne_eq, symmDiff_def, sup_adj, sdiff_adj, Subgraph.spanningCoe_adj] at *
+  aesop
 
-  sorry
 
 lemma symmDiff_spanningCoe_IsPerfectMatching_IsAlternating_right
     {M : Subgraph G} {M' : Subgraph G'} (hM : M.IsPerfectMatching)
     (hM' : M'.IsPerfectMatching) : (symmDiff M.spanningCoe M'.spanningCoe).IsAlternating M'.spanningCoe := by
-  sorry
+  rw [symmDiff_comm]
+  apply symmDiff_spanningCoe_IsPerfectMatching_IsAlternating_left
 
 lemma symmDiff_le (h : G ≤ H) (h' : G' ≤ H') : (symmDiff G G') ≤ H ⊔ H' := by
-  sorry
+  intro v w hvw
+  simp [symmDiff_def] at *
+  aesop
+
+lemma mem_supp_of_adj {c : G.ConnectedComponent} (h : v ∈ c.supp) (h' : G.Adj v w) : w ∈ c.supp := by
+  simp only [ConnectedComponent.mem_supp_iff] at *
+  rw [← h]
+  exact ConnectedComponent.connectedComponentMk_eq_of_adj h'.symm
+
 
 lemma induce_component_spanningCoe_Adj (c : G.ConnectedComponent) :
   (G.induce c.supp).spanningCoe.Adj v w ↔ v ∈ c.supp ∧ G.Adj v w := by
-  sorry
+  by_cases h : v ∈ c.supp
+  · simp only [h, true_and]
+    constructor
+    · aesop
+    · intro h'
+      have : w ∈ c.supp := by
+        exact mem_supp_of_adj h h'
+      aesop
+  · aesop
 
 lemma induce_component_IsCycles (c : G.ConnectedComponent) (h : G.IsCycles)
   : (G.induce c.supp).spanningCoe.IsCycles := by
-  sorry
+  intro v ⟨w, hw⟩
+  rw [mem_neighborSet, induce_component_spanningCoe_Adj] at hw
+  rw [← h ⟨w, hw.2⟩]
+  congr
+  ext w'
+  simp only [mem_neighborSet, induce_component_spanningCoe_Adj, hw, true_and]
 
-lemma mem_supp_of_adj {c : G.ConnectedComponent} (h : v ∈ c.supp) (h' : G.Adj v w) : w ∈ c.supp := by sorry
 
 lemma Path.of_IsCycles {c : G.ConnectedComponent} (h : G.IsCycles) (hv : v ∈ c.supp)
-  (hn : (G.neighborSet v).Nonempty) :
+  (hn : (G.neighborSet v).Nonempty) (hcs : c.supp.Finite):
     ∃ (p : G.Walk v v), p.IsCycle ∧ p.toSubgraph.support = c.supp := by
+  
   sorry
 
 lemma IsCycle.first_two {p : G.Walk v v} (h : p.IsCycle) (hadj : p.toSubgraph.Adj v w) :
