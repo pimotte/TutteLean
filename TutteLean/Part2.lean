@@ -139,20 +139,6 @@ lemma induce_component_IsCycles (c : G.ConnectedComponent) (h : G.IsCycles)
   ext w'
   simp only [mem_neighborSet, induce_component_spanningCoe_Adj, hw, true_and]
 
--- lemma IsPath.getVert_zero_iff {p : G.Walk v w} {n : ℕ} (hp : p.IsPath) (hn : n ≤ p.length)
---   :
---     p.getVert n = v ↔ (n = 0 ∨ v = w) := by
---   refine ⟨?_, fun h ↦ by aesop⟩
---   intro h
-
---   by_contra! hc
---   by_cases hn0 : n = 0
---   ·
---     sorry
---   · sorry
-
-
-
 
 lemma IsPath.getVert_injective {p : G.Walk v w} (hp : p.IsPath) : Set.InjOn p.getVert {i | i ≤ p.length} := by
   intro n hn m hm hnm
@@ -357,7 +343,7 @@ lemma takeUntil_getVert_one [DecidableEq V] {p : G.Walk u v} (hsu : w ≠ u) (h 
   : (p.takeUntil w h).getVert 1 = p.getVert 1 := by
   sorry
 
-theorem tutte_part2 {x a b c : V} (hxa : G.Adj x a) (hab : G.Adj a b) (hnGxb : ¬G.Adj x b) (hnGac : ¬ G.Adj a c)
+theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) (hab : G.Adj a b) (hnGxb : ¬G.Adj x b) (hnGac : ¬ G.Adj a c)
     (hnxb : x ≠ b) (hnxc : x ≠ c) (hnac : a ≠ c) (hnbc : b ≠ c)
     (hm1 : ∃ (M : Subgraph (G ⊔ edge x b)), M.IsPerfectMatching)
     (hm2 : ∃ (M : Subgraph (G ⊔ edge a c)), M.IsPerfectMatching)
@@ -441,7 +427,7 @@ theorem tutte_part2 {x a b c : V} (hxa : G.Adj x a) (hab : G.Adj a b) (hnGxb : �
 
   have : ∃ x' ∈ ({x, b} : Set V), ∃ (p : cycles.Walk a x'), p.IsPath ∧
     p.toSubgraph.Adj a c ∧ ¬ p.toSubgraph.Adj x b := by
-      obtain ⟨p, hp⟩ := Path.of_IsCycles hcycles hacc (Set.nonempty_of_mem hcac)
+      obtain ⟨p, hp⟩ := Path.of_IsCycles hcycles hacc (Set.nonempty_of_mem hcac) (Set.toFinite _)
       obtain ⟨p', hp'⟩ := IsCycle.first_two hp.1 (by sorry : p.toSubgraph.Adj a c)
       have hxp' : x ∈ p'.support := by sorry
       have : DecidableEq V := by exact Classical.typeDecidableEq V
