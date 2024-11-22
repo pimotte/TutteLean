@@ -139,11 +139,43 @@ lemma induce_component_IsCycles (c : G.ConnectedComponent) (h : G.IsCycles)
   ext w'
   simp only [mem_neighborSet, induce_component_spanningCoe_Adj, hw, true_and]
 
+-- lemma IsPath.getVert_zero_iff {p : G.Walk v w} {n : ℕ} (hp : p.IsPath) (hn : n ≤ p.length)
+--   :
+--     p.getVert n = v ↔ (n = 0 ∨ v = w) := by
+--   refine ⟨?_, fun h ↦ by aesop⟩
+--   intro h
+
+--   by_contra! hc
+--   by_cases hn0 : n = 0
+--   ·
+--     sorry
+--   · sorry
+
+
+
+
 lemma IsPath.getVert_injective {p : G.Walk v w} (hp : p.IsPath) : Set.InjOn p.getVert {i | i ≤ p.length} := by
   intro n hn m hm hnm
   simp at *
-
-  sorry
+  induction p generalizing n m with
+  | nil => aesop
+  | @cons v w u h p ihp =>
+    simp at hn hm hnm
+    by_cases hn0 : n = 0 <;> by_cases hm0 : m = 0
+    · aesop
+    · simp [hn0, Walk.getVert_cons p h hm0] at hnm
+      have hvp : v ∉ p.support := by
+        aesop
+      exact (hvp (Walk.mem_support_iff_exists_getVert.mpr ⟨(m - 1), ⟨hnm.symm, by omega⟩⟩)).elim
+    · simp [hm0, Walk.getVert_cons p h hn0] at hnm
+      have hvp : v ∉ p.support := by
+        aesop
+      exact (hvp (Walk.mem_support_iff_exists_getVert.mpr ⟨(n - 1), ⟨hnm, by omega⟩⟩)).elim
+    · simp [Walk.getVert_cons _ _ hn0, Walk.getVert_cons _ _ hm0] at hnm
+      have hnl : (n - 1) ≤ p.length := by omega
+      have hml : (m - 1) ≤ p.length := by omega
+      have := ihp (Walk.IsPath.of_cons hp) hnl hml hnm
+      omega
 
 
 
@@ -285,12 +317,31 @@ lemma IsCycles_Reachable [Fintype V] (hadj : G.Adj v w) (hcyc : G.IsCycles) :
 
 lemma Path.of_IsCycles [Fintype V] [DecidableEq V] {c : G.ConnectedComponent} (h : G.IsCycles) (hv : v ∈ c.supp)
   (hn : (G.neighborSet v).Nonempty) (hcs : c.supp.Finite):
-    ∃ (p : G.Walk v v), p.IsCycle ∧ p.toSubgraph.support = c.supp := by
+    ∃ (p : G.Walk v v), p.IsCycle ∧ p.toSubgraph.verts = c.supp := by
   obtain ⟨w, hw⟩ := hn
   simp only [mem_neighborSet] at hw
   have := IsCycles_Reachable hw h
   obtain ⟨u, p, hp⟩ := SimpleGraph.adj_and_reachable_delete_edges_iff_exists_cycle.mp ⟨hw, this⟩
-  
+
+  have : p.toSubgraph.verts = c.supp := by
+    ext v'
+    constructor <;> intro hm
+    · have hv'p := (Walk.mem_verts_toSubgraph p).mp hm
+      let p' := p.takeUntil _ hv'p
+      let p'' : G.Walk u v := p.takeUntil _ (Walk.fst_mem_support_of_mem_edges p hp.2)
+      rw [@ConnectedComponent.mem_supp_iff] at hv ⊢
+      rw [← hv, @ConnectedComponent.eq]
+      use p'.reverse.append p''
+    · rw [@ConnectedComponent.mem_supp_iff] at hm hv
+      rw [← hv] at hm
+      rw [@ConnectedComponent.eq] at hm
+      let p' := hm.some
+
+
+
+      sorry
+
+
   sorry
 
 lemma IsCycle.first_two {p : G.Walk v v} (h : p.IsCycle) (hadj : p.toSubgraph.Adj v w) :
