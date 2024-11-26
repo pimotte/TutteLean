@@ -327,7 +327,7 @@ lemma Walk.toSubgraph_Adj_mem_support_new' (p : G.Walk u v) (hp : p.toSubgraph.A
 
 
 
-lemma Walks_split (p : G.Walk u v) (p' : G.Walk u w) : v ∈ p'.support ∨ ∃ i, p.getVert i = p'.getVert i ∧ p.getVert (i + 1) ≠ p'.getVert (i + 1)  :=
+lemma Walks_split (p : G.Walk u v) (p' : G.Walk u w) : v ∈ p'.support ∨ ∃ i, ∀ j ≤ i, p.getVert j = p'.getVert j ∧ p.getVert (i + 1) ≠ p'.getVert (i + 1)  :=
   match p, p' with
   | Walk.nil, p' =>
     by left; exact Walk.start_mem_support p'
@@ -344,17 +344,21 @@ lemma Walks_split (p : G.Walk u v) (p' : G.Walk u w) : v ∈ p'.support ∨ ∃ 
         · right
           obtain ⟨i, hi⟩ := hr
           use (i + 1)
+          intro j hj
+          have := hi _ (by omega : j - 1 ≤ i)
+          by_cases hj0 : j = 0
+          · aesop
+          rw [← Walk.getVert_cons _ h hj0, ← Walk.getVert_cons (q'.copy heq.symm (rfl)) (heq ▸ h') hj0] at this
           aesop
       · right
         use 0
         aesop
 
-
-lemma IsCycle.mem_rotate_support [DecidableEq V] {p : G.Walk u u} (hp : p.IsCycle) (h : v ∈ p.support) : w ∈ (p.rotate h).support ↔ w ∈ p.support := by
-
-  rw [@Walk.mem_support_iff]
-
-  sorry
+@[simp]
+lemma mem_rotate_support [DecidableEq V] {p : G.Walk u u} (h : v ∈ p.support) : w ∈ (p.rotate h).support ↔ w ∈ p.support := by
+  simp only [Walk.rotate.eq_1, Walk.mem_support_append_iff]
+  rw [or_comm]
+  simp [← Walk.mem_support_append_iff, Walk.take_spec]
 
 lemma Path.of_IsCycles [Fintype V] [DecidableEq V] {c : G.ConnectedComponent} (h : G.IsCycles) (hv : v ∈ c.supp)
   (hn : (G.neighborSet v).Nonempty) (hcs : c.supp.Finite):
@@ -383,8 +387,9 @@ lemma Path.of_IsCycles [Fintype V] [DecidableEq V] {c : G.ConnectedComponent} (h
       rw [← SimpleGraph.Walk.toSubgraph_rotate _ hvp]
       simp only [Walk.toSubgraph_rotate, Walk.verts_toSubgraph, Set.mem_setOf_eq]
       cases' Walks_split p'.reverse (p.rotate hvp) with hl hr
-      · exact (SimpleGraph.IsCycle.mem_rotate_support hp.1 hvp).mp hl
+      · exact (mem_rotate_support hvp).mp hl
       · exfalso
+        obtain ⟨i, ⟨hi, hni⟩⟩ := hr
 
         sorry
 
