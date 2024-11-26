@@ -3,3 +3,4 @@
 - Refactor other case 
 - Figure out what of `Walk.lean` is actually needed
 - Replace symDiff by symDiff on SimpleGraphs
+- Cleanup mem_support_iff_exists_getVert (in mathlib)

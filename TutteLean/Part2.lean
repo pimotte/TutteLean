@@ -4,6 +4,7 @@ import Mathlib.Combinatorics.SimpleGraph.Connectivity.Subgraph
 import Mathlib.Combinatorics.SimpleGraph.Path
 import Mathlib.Data.Set.Operations
 
+-- import TutteLean.Walk
 
 namespace SimpleGraph
 -- universe u
@@ -298,7 +299,62 @@ lemma IsCycles_Reachable [Fintype V] (hadj : G.Adj v w) (hcyc : G.IsCycles) :
   rw [this]
   exact hr.symm
 
+lemma Walk.toSubgraph_Adj_mem_support_new (p : G.Walk u v) (hp : p.toSubgraph.Adj u' v') : u' ∈ p.support := by
+  unfold Walk.toSubgraph at hp
+  match p with
+  | nil =>
+    simp only [singletonSubgraph_adj, Pi.bot_apply] at hp
+    exact hp.elim
+  | .cons h q =>
+    simp only [Subgraph.sup_adj, subgraphOfAdj_adj, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq,
+      Prod.swap_prod_mk] at hp
+    rw [@support_cons]
+    rw [@List.mem_cons_eq]
+    cases hp with
+    | inl hl =>
+      cases hl with
+      | inl h1 => left; exact h1.1.symm
+      | inr h2 =>
+        right
+        rw [← h2.2]
+        exact start_mem_support q
+    | inr hr =>
+      right
+      exact q.toSubgraph_Adj_mem_support_new hr
 
+lemma Walk.toSubgraph_Adj_mem_support_new' (p : G.Walk u v) (hp : p.toSubgraph.Adj u' v') : v' ∈ p.support := p.toSubgraph_Adj_mem_support_new hp.symm
+
+
+
+
+lemma Walks_split (p : G.Walk u v) (p' : G.Walk u w) : v ∈ p'.support ∨ ∃ i, p.getVert i = p'.getVert i ∧ p.getVert (i + 1) ≠ p'.getVert (i + 1)  :=
+  match p, p' with
+  | Walk.nil, p' =>
+    by left; exact Walk.start_mem_support p'
+  | Walk.cons h q, .nil =>by
+      right
+      use 0
+      aesop
+  | Walk.cons h q, Walk.cons h' q' => by
+      by_cases heq : q.getVert 0 = q'.getVert 0
+      · simp only [Walk.getVert_zero] at heq
+        cases' Walks_split q (q'.copy heq.symm (rfl)) with hl hr
+        · left
+          aesop
+        · right
+          obtain ⟨i, hi⟩ := hr
+          use (i + 1)
+          aesop
+      · right
+        use 0
+        aesop
+
+
+lemma IsCycle.mem_rotate_support [DecidableEq V] {p : G.Walk u u} (hp : p.IsCycle) (h : v ∈ p.support) : w ∈ (p.rotate h).support ↔ w ∈ p.support := by
+
+  rw [@Walk.mem_support_iff]
+
+  sorry
 
 lemma Path.of_IsCycles [Fintype V] [DecidableEq V] {c : G.ConnectedComponent} (h : G.IsCycles) (hv : v ∈ c.supp)
   (hn : (G.neighborSet v).Nonempty) (hcs : c.supp.Finite):
@@ -307,6 +363,9 @@ lemma Path.of_IsCycles [Fintype V] [DecidableEq V] {c : G.ConnectedComponent} (h
   simp only [mem_neighborSet] at hw
   have := IsCycles_Reachable hw h
   obtain ⟨u, p, hp⟩ := SimpleGraph.adj_and_reachable_delete_edges_iff_exists_cycle.mp ⟨hw, this⟩
+
+  have hvp : v ∈ p.support := SimpleGraph.Walk.fst_mem_support_of_mem_edges _ hp.2
+
 
   have : p.toSubgraph.verts = c.supp := by
     ext v'
@@ -321,11 +380,19 @@ lemma Path.of_IsCycles [Fintype V] [DecidableEq V] {c : G.ConnectedComponent} (h
       rw [← hv] at hm
       rw [@ConnectedComponent.eq] at hm
       let p' := hm.some
+      rw [← SimpleGraph.Walk.toSubgraph_rotate _ hvp]
+      simp only [Walk.toSubgraph_rotate, Walk.verts_toSubgraph, Set.mem_setOf_eq]
+      cases' Walks_split p'.reverse (p.rotate hvp) with hl hr
+      · exact (SimpleGraph.IsCycle.mem_rotate_support hp.1 hvp).mp hl
+      · exfalso
+
+        sorry
 
 
 
-      sorry
-
+  use p.rotate hvp
+  rw [← this]
+  refine ⟨?_, by simp_all only [ConnectedComponent.mem_supp_iff, Walk.verts_toSubgraph, Walk.toSubgraph_rotate]⟩
 
   sorry
 
@@ -406,7 +473,100 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
     intro v w hvw
     rw [@induce_component_spanningCoe_Adj] at hvw
     have hs := symmDiff_le hM1sub hM2sub hvw.2
-    have : G ⊔ edge x b ⊔ (G ⊔ edge a c) = (G ⊔ edge a c) ⊔ edge x b := by sorry
+    have : G ⊔ edge x b ⊔ (G ⊔ edge a c) = (G ⊔ edge a c) ⊔ edge x b := by
+      -- is aesop
+      simp_all only [ne_eq, ConnectedComponent.mem_supp_iff, ConnectedComponent.eq, sup_adj, cycles]
+      obtain ⟨left, right⟩ := hvw
+      cases hs with
+      | inl h =>
+        cases h with
+        | inl h_1 =>
+          ext x_1 x_2 : 4
+          simp_all only [sup_adj]
+          apply Iff.intro
+          · intro a_1
+            cases a_1 with
+            | inl h =>
+              cases h with
+              | inl h_2 => simp_all only [true_or]
+              | inr h_3 => simp_all only [or_true]
+            | inr h_2 =>
+              cases h_2 with
+              | inl h => simp_all only [true_or]
+              | inr h_3 => simp_all only [or_true, true_or]
+          · intro a_1
+            cases a_1 with
+            | inl h =>
+              cases h with
+              | inl h_2 => simp_all only [true_or, or_self]
+              | inr h_3 => simp_all only [or_true]
+            | inr h_2 => simp_all only [or_true, true_or]
+        | inr h_2 =>
+          ext x_1 x_2 : 4
+          simp_all only [sup_adj]
+          apply Iff.intro
+          · intro a_1
+            cases a_1 with
+            | inl h =>
+              cases h with
+              | inl h_1 => simp_all only [true_or]
+              | inr h_3 => simp_all only [or_true]
+            | inr h_1 =>
+              cases h_1 with
+              | inl h => simp_all only [true_or]
+              | inr h_3 => simp_all only [or_true, true_or]
+          · intro a_1
+            cases a_1 with
+            | inl h =>
+              cases h with
+              | inl h_1 => simp_all only [true_or, or_self]
+              | inr h_3 => simp_all only [or_true]
+            | inr h_1 => simp_all only [or_true, true_or]
+      | inr h_1 =>
+        cases h_1 with
+        | inl h =>
+          ext x_1 x_2 : 4
+          simp_all only [sup_adj]
+          apply Iff.intro
+          · intro a_1
+            cases a_1 with
+            | inl h_1 =>
+              cases h_1 with
+              | inl h_2 => simp_all only [true_or]
+              | inr h_3 => simp_all only [or_true]
+            | inr h_2 =>
+              cases h_2 with
+              | inl h_1 => simp_all only [true_or]
+              | inr h_3 => simp_all only [or_true, true_or]
+          · intro a_1
+            cases a_1 with
+            | inl h_1 =>
+              cases h_1 with
+              | inl h_2 => simp_all only [true_or, or_self]
+              | inr h_3 => simp_all only [or_true]
+            | inr h_2 => simp_all only [or_true, true_or]
+        | inr h_2 =>
+          ext x_1 x_2 : 4
+          simp_all only [sup_adj]
+          apply Iff.intro
+          · intro a_1
+            cases a_1 with
+            | inl h =>
+              cases h with
+              | inl h_1 => simp_all only [true_or]
+              | inr h_3 => simp_all only [or_true]
+            | inr h_1 =>
+              cases h_1 with
+              | inl h => simp_all only [true_or]
+              | inr h_3 => simp_all only [or_true, true_or]
+          · intro a_1
+            cases a_1 with
+            | inl h =>
+              cases h with
+              | inl h_1 => simp_all only [true_or, or_self]
+              | inr h_3 => simp_all only [or_true]
+            | inr h_1 => simp_all only [or_true, true_or]
+
     rw [this, sup_adj] at hs
     cases' hs with h1 h2
     · exact h1
@@ -427,7 +587,9 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
   have : ∃ x' ∈ ({x, b} : Set V), ∃ (p : cycles.Walk a x'), p.IsPath ∧
     p.toSubgraph.Adj a c ∧ ¬ p.toSubgraph.Adj x b := by
       obtain ⟨p, hp⟩ := Path.of_IsCycles hcycles hacc (Set.nonempty_of_mem hcac) (Set.toFinite _)
-      obtain ⟨p', hp'⟩ := IsCycle.first_two hp.1 (by sorry : p.toSubgraph.Adj a c)
+      obtain ⟨p', hp'⟩ := IsCycle.first_two hp.1 (by
+
+        sorry : p.toSubgraph.Adj a c)
       have hxp' : x ∈ p'.support := by sorry
       have : DecidableEq V := by exact Classical.typeDecidableEq V
       by_cases hc : b ∈ (p'.takeUntil x hxp').support
