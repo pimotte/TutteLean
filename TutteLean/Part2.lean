@@ -389,8 +389,10 @@ lemma Path.of_IsCycles [Fintype V] [DecidableEq V] {c : G.ConnectedComponent} (h
       cases' Walks_split p'.reverse (p.rotate hvp) with hl hr
       · exact (mem_rotate_support hvp).mp hl
       · exfalso
-        obtain ⟨i, ⟨hi, hni⟩⟩ := hr
-
+        obtain ⟨i, hi⟩ := hr
+        have : G.Adj (p'.reverse.getVert i) (p'.reverse.getVert (i + 1)) := by
+          apply Subgraph.Adj.adj_sub
+          exact 
         sorry
 
 
