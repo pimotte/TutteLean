@@ -325,13 +325,91 @@ lemma Walk.toSubgraph_Adj_mem_support_new (p : G.Walk u v) (hp : p.toSubgraph.Ad
 lemma Walk.toSubgraph_Adj_mem_support_new' (p : G.Walk u v) (hp : p.toSubgraph.Adj u' v') : v' ∈ p.support := p.toSubgraph_Adj_mem_support_new hp.symm
 
 
+@[simp]
+lemma mem_rotate_support [DecidableEq V] {p : G.Walk u u} (h : v ∈ p.support) : w ∈ (p.rotate h).support ↔ w ∈ p.support := by
+  simp only [Walk.rotate.eq_1, Walk.mem_support_append_iff]
+  rw [or_comm]
+  simp [← Walk.mem_support_append_iff, Walk.take_spec]
 
+lemma cycle_cons_is_not_nil (p : G.Walk u v) (h : G.Adj v u) (hc : (Walk.cons h p).IsCycle) : ¬ p.Nil := by
+  have hl := Walk.IsCycle.three_le_length hc
+  rw [@Walk.not_nil_iff_lt_length]
+  rw [@Walk.length_cons] at hl
+  omega
 
-lemma Walks_split (p : G.Walk u v) (p' : G.Walk u w) : v ∈ p'.support ∨ ∃ i, ∀ j ≤ i, p.getVert j = p'.getVert j ∧ p.getVert (i + 1) ≠ p'.getVert (i + 1)  :=
+lemma cycle_startPoint_neighborSet (p : G.Walk u u) (hpc : p.IsCycle) : p.toSubgraph.neighborSet u = {p.getVert 1, p.getVert p.length} := by
+  have hl := hpc.three_le_length
+  have hadj1 : p.toSubgraph.Adj (p.getVert 0) (p.getVert 1) := SimpleGraph.Walk.toSubgraph_adj_getVert _ (by omega)
+  have hadj2 : p.toSubgraph.Adj (p.getVert p.length) (p.getVert (p.length - 1)) :=
+    ((show p.length - 1 + 1 = p.length from by omega) ▸ SimpleGraph.Walk.toSubgraph_adj_getVert _ (by omega)).symm
+  simp at *
+  ext v
+
+lemma cycle_getVert_injOn (p : G.Walk u u) (hpc : p.IsCycle) : Set.InjOn p.getVert {i | 1 ≤ i ∧ i ≤ p.length} := by
+  have hnp : ¬ p.Nil := hpc.not_nil
+  rw [← p.cons_tail_eq hpc.not_nil] at hpc
+  have hnpt : ¬ p.tail.Nil := cycle_cons_is_not_nil _ _ hpc
+  rw [@Walk.cons_isCycle_iff] at hpc
+  intro n hn m hm hnm
+  rw [← SimpleGraph.Walk.length_tail_add_one hnp, Set.mem_setOf] at hn hm
+  have := IsPath.getVert_injective hpc.1 (by omega : n - 1 ≤ p.tail.length) (by omega : m - 1 ≤ p.tail.length)
+      (by
+        simp [SimpleGraph.Walk.getVert_tail _ hnp, show n - 1 + 1 = n from by omega,
+          show m - 1 + 1 = m from by omega]
+        exact hnm
+        )
+  omega
+
+lemma cycle_getVert_injOn' (p : G.Walk u u) (hpc : p.IsCycle) : Set.InjOn p.getVert {i |  i ≤ p.length - 1} := by
+  intro n hn m hm hnm
+  have := cycle_getVert_injOn _ (by exact? : p.reverse.IsCycle) (by omega : 1 ≤ p.length + 1 - n ∧ p.length + 1- n ≤ p.length)
+  sorry
+
+lemma cycle_two_neighbors (p : G.Walk u u) (hpc : p.IsCycle) (h : v ∈ p.support): (p.toSubgraph.neighborSet v).ncard = 2 := by
+  rw [Set.ncard_eq_two]
+  have hpc' := hpc
+  rw [← p.cons_tail_eq hpc.not_nil] at hpc' h
+  have hpc'' := hpc'
+  rw [@Walk.cons_isCycle_iff] at hpc'
+  by_cases huv : u = v
+  · use p.getVert 1, p.getVert p.length
+    have :  p.tail.getVert 0 ≠ p.tail.getVert (p.length - 1) := by
+      intro h
+      apply IsPath.getVert_injective hpc'.1  (by aesop) (by
+        simp [← Walk.length_tail_add_one hpc.not_nil]
+        ) at h
+      have :=  Walk.IsCycle.three_le_length hpc
+      omega
+    simp [Walk.getVert_tail _ hpc.not_nil] at this
+
+    sorry
+
+  sorry
+
+lemma Cycle_trip [DecidableEq V] (p : G.Walk u v) (c : G.Walk u u) (hp: p.IsPath) (hc : c.IsCycle) : v ∈ c.support ∨
+    ∃ x, x ∈ c.support ∧ (G.neighborSet x).ncard > 2 := by
+  by_cases hnp : p.Nil
+  · left
+    rw [← hnp.eq]
+    exact Walk.start_mem_support c
+  by_cases h : p.getVert 1 ∈ c.support
+  · cases Cycle_trip p.tail (c.rotate h) (hp.tail hnp) (hc.rotate h) <;> aesop
+  · right
+    use u
+    simp_all only [Walk.start_mem_support, gt_iff_lt, true_and]
+
+    sorry
+termination_by p.length
+decreasing_by
+  simp_wf
+  rw [← SimpleGraph.Walk.length_tail_add_one hnp]
+  omega
+
+lemma Walks_split (p : G.Walk u v) (p' : G.Walk u w) : v ∈ p'.support ∨ (∃ i, i < p.length ∧ ∀ j ≤ i, p.getVert j = p'.getVert j ∧ p.getVert (i + 1) ≠ p'.getVert (i + 1))  :=
   match p, p' with
-  | Walk.nil, p' =>
-    by left; exact Walk.start_mem_support p'
-  | Walk.cons h q, .nil =>by
+  | Walk.nil, p' => by left; aesop
+
+  | Walk.cons h q, .nil => by
       right
       use 0
       aesop
@@ -344,8 +422,9 @@ lemma Walks_split (p : G.Walk u v) (p' : G.Walk u w) : v ∈ p'.support ∨ ∃ 
         · right
           obtain ⟨i, hi⟩ := hr
           use (i + 1)
+          simp only [Walk.length_cons, add_lt_add_iff_right, hi.1, true_and]
           intro j hj
-          have := hi _ (by omega : j - 1 ≤ i)
+          have := hi.2 _ (by omega : j - 1 ≤ i)
           by_cases hj0 : j = 0
           · aesop
           rw [← Walk.getVert_cons _ h hj0, ← Walk.getVert_cons (q'.copy heq.symm (rfl)) (heq ▸ h') hj0] at this
@@ -354,11 +433,6 @@ lemma Walks_split (p : G.Walk u v) (p' : G.Walk u w) : v ∈ p'.support ∨ ∃ 
         use 0
         aesop
 
-@[simp]
-lemma mem_rotate_support [DecidableEq V] {p : G.Walk u u} (h : v ∈ p.support) : w ∈ (p.rotate h).support ↔ w ∈ p.support := by
-  simp only [Walk.rotate.eq_1, Walk.mem_support_append_iff]
-  rw [or_comm]
-  simp [← Walk.mem_support_append_iff, Walk.take_spec]
 
 lemma Path.of_IsCycles [Fintype V] [DecidableEq V] {c : G.ConnectedComponent} (h : G.IsCycles) (hv : v ∈ c.supp)
   (hn : (G.neighborSet v).Nonempty) (hcs : c.supp.Finite):
@@ -387,12 +461,21 @@ lemma Path.of_IsCycles [Fintype V] [DecidableEq V] {c : G.ConnectedComponent} (h
       rw [← SimpleGraph.Walk.toSubgraph_rotate _ hvp]
       simp only [Walk.toSubgraph_rotate, Walk.verts_toSubgraph, Set.mem_setOf_eq]
       cases' Walks_split p'.reverse (p.rotate hvp) with hl hr
-      · exact (mem_rotate_support hvp).mp hl
-      · exfalso
+      · aesop
+      ·
+        exfalso
         obtain ⟨i, hi⟩ := hr
-        have : G.Adj (p'.reverse.getVert i) (p'.reverse.getVert (i + 1)) := by
-          apply Subgraph.Adj.adj_sub
-          exact 
+        have hadj1 : G.Adj (p'.reverse.getVert i) (p'.reverse.getVert (i + 1)) :=
+          (SimpleGraph.Walk.toSubgraph_adj_getVert _ hi.1).adj_sub
+        have hadj2 : G.Adj ((p.rotate hvp).getVert i) ((p.rotate hvp).reverse.getVert (i + 1)) :=
+          (SimpleGraph.Walk.toSubgraph_adj_getVert _ hi.1).adj_sub
+        by_cases hi0 : i = 0
+        · subst hi0
+          have := hi.2 _ (by rfl : 0 ≤ 0)
+
+          sorry
+
+
         sorry
 
 
