@@ -490,6 +490,32 @@ lemma cycle_startPoint_neighborSet (p : G.Walk u u) (hpc : p.IsCycle) : p.toSubg
   · aesop
 
 lemma cycle_internal_neighborSet (p : G.Walk u u) (hpc : p.IsCycle) (h : i ≠ 0) (h' : i < p.length): p.toSubgraph.neighborSet (p.getVert i) = {p.getVert (i - 1), p.getVert (i + 1)} := by
+  have hl := hpc.three_le_length
+  have hadj1 := ((show i - 1 + 1 = i from by omega) ▸ SimpleGraph.Walk.toSubgraph_adj_getVert _ (by omega : (i - 1) < p.length)).symm
+  have hadj2 := SimpleGraph.Walk.toSubgraph_adj_getVert _ (by omega : i < p.length)
+  ext v
+  simp at *
+  refine ⟨?_, by aesop⟩
+  intro hadj
+  rw [SimpleGraph.Walk.toSubgraph_adj_iff] at hadj
+  obtain ⟨i', hi'⟩ := hadj
+  by_cases hii' : i = i'
+  · --aesop
+    subst hii'
+    simp_all only [Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, true_and, Prod.swap_prod_mk]
+    obtain ⟨left, right⟩ := hi'
+    cases left with
+    | inl h_1 =>
+      subst h_1
+      simp_all only [or_true]
+    | inr h_2 => simp_all only [or_true]
+  have : p.getVert i ≠ p.getVert i' := by
+    intro h'
+    have := cycle_getVert_injOn' _ hpc (by simp; omega) (by simp; omega) h'
+    contradiction
+  have : p.getVert i = p.getVert (i' + 1) := by aesop
+  have : p.getVert i' = v := by aesop
+  have : i = i' + 1 := by sorry
   sorry
 
 lemma cycle_getVert_sub_one_neq_getVert_add_one {p : G.Walk u u} (hpc : p.IsCycle) (h : i ≤ p.length) : p.getVert (i - 1) ≠ p.getVert (i + 1) := by
