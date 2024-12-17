@@ -573,11 +573,31 @@ lemma Walks_split (p : G.Walk u v) (p' : G.Walk u w) : v ∈ p'.support ∨ (∃
         use 0
         aesop
 
-lemma card_subgraph_argument {H : Subgraph G} (h : G.neighborSet v ≃ H.neighborSet v) : H.Adj v w ↔ G.Adj v w := by
+lemma card_subgraph_argument [DecidableEq V] {H : Subgraph G} (h : G.neighborSet v ≃ H.neighborSet v) (hfin : (G.neighborSet v).Finite) : H.Adj v w ↔ G.Adj v w := by
   refine ⟨fun a => a.adj_sub, ?_⟩
-  intro hadj
-  
-  sorry
+  have : Finite (H.neighborSet v) := by
+    rw [Set.finite_coe_iff, ← (Equiv.set_finite_iff h)]
+    exact hfin
+  have : Fintype (H.neighborSet v) := by
+    exact Set.Finite.fintype this
+  let f : H.neighborSet v → G.neighborSet v := fun a => ⟨a, a.coe_prop.adj_sub⟩
+  have hfinj : f.Injective := by
+    intro w w' hww'
+    aesop
+  have hfsurj : f.Surjective := by
+    apply Function.Injective.surjective_of_fintype _ hfinj
+    exact h.symm
+  have hfbij : f.Bijective := ⟨hfinj, hfsurj⟩
+  have g := Fintype.bijInv hfbij
+  intro h
+  obtain ⟨v', hv'⟩ : ∃ v', f v' = ⟨w, h⟩ := hfsurj ⟨w, h⟩
+  have : (f v').1 = (⟨w, h⟩ : G.neighborSet v).1 := by
+    exact congrArg Subtype.val hv'
+  simp at this
+  rw [← this]
+  have := (g ⟨w, h⟩).coe_prop
+  rw [← hv'] at this
+  aesop
 
 lemma Path.of_IsCycles [Fintype V] [DecidableEq V] {c : G.ConnectedComponent} (h : G.IsCycles) (hv : v ∈ c.supp)
   (hn : (G.neighborSet v).Nonempty) (hcs : c.supp.Finite):

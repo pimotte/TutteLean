@@ -5,14 +5,18 @@ import TutteLean.ConnectedComponent
 namespace SimpleGraph
 variable {V : Type*} {G : SimpleGraph V}
 
+-- In universalVerts PR
 def universalVerts (G : SimpleGraph V) : Set V := {v : V | ∀ w, v ≠ w → G.Adj w v}
 
+-- In universalVerts PR
 lemma isClique_universalVerts (G : SimpleGraph V) : G.IsClique G.universalVerts := by
   intro x _ y hy hxy
   exact hy x hxy.symm
 
+-- In universalVerts PR
 def deleteUniversalVerts (G : SimpleGraph V) : Subgraph G := ((⊤ : Subgraph G).deleteVerts (universalVerts G))
 
+-- In universalVerts PR
 @[simp]
 lemma deleteUniversalVerts_verts : G.deleteUniversalVerts.verts = Set.univ \ G.universalVerts := by
   unfold deleteUniversalVerts
@@ -49,6 +53,7 @@ lemma isClique_lifts {K : G.deleteUniversalVerts.coe.ConnectedComponent}
   have := h hx'.1 hy'.1 (fun a => hxy (congrArg Subtype.val a))
   exact subgraph_coe G.deleteUniversalVerts this
 
+-- In universalVerts PR
 lemma disjoint_supp_universalVerts {K : G.deleteUniversalVerts.coe.ConnectedComponent} :
     Disjoint (Subtype.val '' K.supp) G.universalVerts := by
   rw [Set.disjoint_left]
@@ -109,7 +114,34 @@ lemma supp_intersection_oddVerts_card {K : G.deleteUniversalVerts.coe.ConnectedC
 lemma IsMatching.exists_of_disjoint_sets_of_equiv {s t : Set V} (h : Disjoint s t)
     (f : s ≃ t) (hadj : ∀ v : s, G.Adj v (f v)) :
     ∃ M : Subgraph G, M.verts = s ∪ t ∧ M.IsMatching := by
+
   sorry
+
+lemma IsMatching.exists_of_universalVerts [Fintype V] [DecidableEq V] {s : Set V} (h : Disjoint G.universalVerts s) (hc : s.ncard ≤ G.universalVerts.ncard) :
+    ∃ t ⊆ G.universalVerts, ∃ (M : Subgraph G), M.IsMatching ∧ M.verts = s ∪ t := by
+  obtain ⟨t, ht⟩ := Set.exists_subset_card_eq hc
+  use t
+  refine ⟨ht.1, ?_⟩
+  have f : s ≃ t := by
+    simp only [← Set.Nat.card_coe_set_eq, Nat.card.eq_1] at ht
+    have : Nonempty (s ≃ t) := by
+      rw [← Cardinal.eq]
+      exact Cardinal.toNat_injOn (Set.mem_Iio.mpr (Set.Finite.lt_aleph0 (s.toFinite)))
+        (Set.mem_Iio.mpr (Set.Finite.lt_aleph0 (Set.toFinite t))) ht.2.symm
+    exact (Classical.inhabited_of_nonempty this).default
+  have hd := (Set.disjoint_of_subset_left ht.1 h).symm
+  obtain ⟨M1, hM1⟩ := IsMatching.exists_of_disjoint_sets_of_equiv
+    hd
+    f
+    (by
+      intro v
+      have : ((f v) : V) ∈ G.universalVerts := ht.1 (f v).coe_prop
+      simp only [universalVerts, Set.mem_setOf_eq] at this
+      apply this
+      rw [ne_comm]
+      exact Disjoint.ne_of_mem hd v.coe_prop (f v).coe_prop
+      : ∀ (v : ↑s), G.Adj ↑v ↑(f v))
+  aesop
 
 theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj]
   (hveven : Even (Fintype.card V))
@@ -119,42 +151,20 @@ theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Ad
   classical
   simp only [← Set.Nat.card_coe_set_eq, Nat.card_eq_fintype_card] at h
 
-  -- let s : Set V := G.oddVerts
-  obtain ⟨t, ht⟩ := Set.exists_subset_card_eq (by
-    unfold oddVerts
-    simp only [Subtype.val_injective, Set.ncard_image_of_injective, rep_choose_inj]
-    simp only [Fintype.card_eq_nat_card, Set.Nat.card_coe_set_eq] at h
-    exact h
-     : G.oddVerts.ncard ≤ G.universalVerts.ncard)
-
-  have f : G.oddVerts ≃ t := by
-    simp only [← Set.Nat.card_coe_set_eq, Nat.card.eq_1] at ht
-    have : Nonempty (G.oddVerts ≃ t) := by
-      rw [← Cardinal.eq]
-      exact Cardinal.toNat_injOn (Set.mem_Iio.mpr (Set.Finite.lt_aleph0 (G.oddVerts.toFinite)))
-        (Set.mem_Iio.mpr (Set.Finite.lt_aleph0 (Set.toFinite t))) ht.2.symm
-
-    exact (Classical.inhabited_of_nonempty this).default
-  have hd := Set.disjoint_of_subset_right ht.1 (oddVerts_core_disjoint)
-  obtain ⟨M1, hM1⟩ := IsMatching.exists_of_disjoint_sets_of_equiv
-    hd
-    f
-    (by
-      intro v
-      have : ((f v) : V) ∈ G.universalVerts := ht.1 (f v).coe_prop
-      unfold universalVerts at this
-      simp only [Set.mem_setOf_eq] at this
-      apply this
-      rw [ne_comm]
-      exact Disjoint.ne_of_mem hd v.coe_prop (f v).coe_prop)
+  obtain ⟨t, ht, M1, hM1⟩ := IsMatching.exists_of_universalVerts oddVerts_core_disjoint.symm (by
+      unfold oddVerts
+      simp only [Subtype.val_injective, Set.ncard_image_of_injective, rep_choose_inj]
+      simp only [Fintype.card_eq_nat_card, Set.Nat.card_coe_set_eq] at h
+      exact h
+      : G.oddVerts.ncard ≤ G.universalVerts.ncard)
 
 
   have evenKsubM1 (K : G.deleteUniversalVerts.coe.ConnectedComponent) : Even ((Subtype.val '' K.supp) \ M1.verts).ncard := by
-    rw [hM1.1]
+    rw [hM1.2]
     rw [← @Set.diff_inter_diff]
     have : Subtype.val '' K.supp \ t = Subtype.val '' K.supp := by
       simp only [sdiff_eq_left]
-      apply Set.disjoint_of_subset_right ht.1
+      apply Set.disjoint_of_subset_right ht
       exact disjoint_supp_universalVerts
     simp only [this, Set.inter_diff_distrib_right, Set.inter_self, Set.diff_inter_self_eq_diff]
 
@@ -197,8 +207,8 @@ theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Ad
     exact hK.2
 
   have hM12 : (M1 ⊔ M2).IsMatching := by
-    apply hM1.2.sup hM2
-    rw [hM1.2.support_eq_verts, hM2.support_eq_verts]
+    apply hM1.1.sup hM2
+    rw [hM1.1.support_eq_verts, hM2.support_eq_verts]
     exact disjointM12
 
   have evensubM1M2 : Even ((Set.univ : Set V) \ (M1.verts ∪ M2.verts)).ncard := by
@@ -206,7 +216,7 @@ theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Ad
     rw [Fintype.card_eq_nat_card, ← Set.ncard_univ] at hveven
     simp only [hveven, true_iff]
     simp only [Set.ncard_union_eq disjointM12, Nat.even_add,
-      Set.ncard_eq_toFinset_card', Set.ncard_eq_toFinset_card', iff_true_left hM1.2.even_card, hM2.even_card]
+      Set.ncard_eq_toFinset_card', Set.ncard_eq_toFinset_card', iff_true_left hM1.1.even_card, hM2.even_card]
 
   have sub : ((Set.univ : Set V) \ (M1.verts ∪ M2.verts)) ⊆ G.universalVerts := by
     rw [@Set.diff_subset_iff]
