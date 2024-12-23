@@ -657,22 +657,20 @@ lemma Path.of_IsCycles [Fintype V] [DecidableEq V] {c : G.ConnectedComponent} (h
       have hp' : p'.IsPath := SimpleGraph.Walk.bypass_isPath _
       rw [← SimpleGraph.Walk.toSubgraph_rotate _ hvp]
       simp only [Walk.toSubgraph_rotate, Walk.verts_toSubgraph, Set.mem_setOf_eq]
-      cases' Walks_split p'.reverse (p.rotate hvp) with hl hr
-      · aesop
+      -- cases' Walks_split p'.reverse (p.rotate hvp) with hl hr
+      by_cases hvsupp : v' ∈ (p.rotate hvp).support
+      ·
+        subst hv
+        simp_all only [mem_rotate_support, p']
       · exfalso
+        have hr :=  Walks_split p'.reverse (p.rotate hvp)
+        simp only [hvsupp, false_or] at hr
         obtain ⟨i, hi⟩ := hr
-        by_cases hi0 : i = 0
-        ·
-          sorry
-        by_cases hil : i = (p.rotate hvp).length
-        · sorry
         have hadj1 : G.Adj (p'.reverse.getVert i) (p'.reverse.getVert (i + 1)) :=
           (SimpleGraph.Walk.toSubgraph_adj_getVert _ hi.1).adj_sub
         have hadj2 : G.Adj (p'.reverse.getVert ((i - 1) + 1)) (p'.reverse.getVert (i - 1)) :=
           (SimpleGraph.Walk.toSubgraph_adj_getVert _ (by omega)).adj_sub.symm
-        rw [show (i - 1) + 1 = i from by omega] at hadj2
 
-        -- have := cycle_internal_neighborSet _ (hp.1.rotate hvp) (by omega) (by omega)
         have hc1 := h (Set.nonempty_of_mem hadj1)
         have hc2 := cycle_two_neighbors'' _ (hp.1.rotate hvp) (Walk.getVert_mem_support (p.rotate hvp) : (p.rotate hvp).getVert i ∈ (p.rotate hvp).support)
         rw [← hc2] at hc1
@@ -683,8 +681,54 @@ lemma Path.of_IsCycles [Fintype V] [DecidableEq V] {c : G.ConnectedComponent} (h
           apply Cardinal.toNat_injOn (Set.mem_Iio.mpr (by apply Cardinal.lt_aleph0_of_finite))
                 (Set.mem_Iio.mpr (by apply Cardinal.lt_aleph0_of_finite))
           rw [← Set.cast_ncard (Set.toFinite _),← Set.cast_ncard (Set.toFinite _)]
-          aesop
+          subst hv
+          simp_all only [Walk.length_reverse, ne_eq, le_refl, tsub_le_iff_right, le_add_iff_nonneg_right, zero_le,
+            Walk.toSubgraph_rotate, Nat.cast_ofNat, Cardinal.toNat_ofNat, p']
+
         have arg := card_subgraph_argument f (Set.toFinite _)
+        by_cases hi0 : i = 0
+        ·
+          subst hi0
+          simp at hadj2
+          simp at hadj1
+
+          simp only [Walk.length_reverse, zero_le, nonpos_iff_eq_zero, zero_add, ne_eq, forall_eq,
+            Walk.getVert_zero, true_and] at hi
+          have := cycle_startPoint_neighborSet _ (hp.1.rotate hvp)
+          have hadj : (p.rotate hvp).toSubgraph.Adj v (p'.reverse.getVert 1) := by
+            simp only [Walk.getVert_zero] at arg
+            rw [arg _]
+            apply Subgraph.adj_sub p'.reverse.toSubgraph
+            have myhadj := (SimpleGraph.Walk.toSubgraph_adj_getVert p'.reverse (by
+              rw [Walk.length_reverse]; omega : 0 < p'.reverse.length))
+            simp only [Walk.getVert_zero] at myhadj
+            exact myhadj
+          have hmem : (p'.reverse.getVert 1) ∈ (p.rotate hvp).toSubgraph.neighborSet v := hadj
+          rw [this] at hmem
+          simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hmem
+          cases' hmem with hl hr
+          · exact hi.2 hl
+          · -- TODO: Is this really a contradiction?
+            sorry
+        by_cases hil : i = (p.rotate hvp).length
+        · have h0v : p'.reverse.getVert 0 = v := Walk.getVert_zero _
+          have hlv : p'.reverse.getVert (p.rotate hvp).length = v := by
+            -- Can this be golfed to a simpa?
+            have := (hi.2.2 _ (by rfl)).1
+            rw [hil] at this
+            simp only [Walk.getVert_length] at this
+            exact this
+          have : p'.reverse.getVert 0 = p'.reverse.getVert (p.rotate hvp).length := by aesop
+          subst hil
+          apply IsPath.getVert_injective hp'.reverse (by simp) (by
+            simp only [Set.mem_setOf_eq]
+            omega) at this
+          omega
+
+
+        -- have := cycle_internal_neighborSet _ (hp.1.rotate hvp) (by omega) (by omega)
+
+        rw [show (i - 1) + 1 = i from by omega] at hadj2
         have hnadj : ¬ (p.rotate hvp).toSubgraph.Adj (p'.reverse.getVert i) (p'.reverse.getVert (i + 1)) := by
           have h' : (p.rotate hvp).toSubgraph.neighborSet ((p.rotate hvp).getVert i) = {(p.rotate hvp).getVert (i - 1), (p.rotate hvp).getVert (i + 1)} := by
             refine cycle_internal_neighborSet (p.rotate hvp) (hp.1.rotate hvp) hi0 ?_
