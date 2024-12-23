@@ -1784,11 +1784,6 @@ lemma Walk.tail_nodup_reverse {p : G.Walk u u} [DecidableEq V] (hp : p.IsCycle):
       exact (hp.getVert_nodup' (by omega) (by omega) (by omega)).symm
 
 
-lemma Walk.IsCycle.reverse {p : G.Walk u u} [DecidableEq V] (hp : p.IsCycle) : p.reverse.IsCycle := by
-  constructor
-  · exact hp.1.reverse
-  · exact Walk.tail_nodup_reverse hp
-
 
 lemma Walk.IsCycle.decompose_mem_support_part' {p : G.Walk u u} {q : G.Walk u v} {r : G.Walk v u} (hp : p.IsCycle) (h : p = q.append r)
     (hrpath : r.IsPath)
