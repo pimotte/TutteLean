@@ -3,6 +3,7 @@ import Mathlib.Combinatorics.SimpleGraph.Operations
 import Mathlib.Combinatorics.SimpleGraph.Connectivity.Subgraph
 import Mathlib.Combinatorics.SimpleGraph.Path
 import Mathlib.Data.Set.Operations
+import Mathlib.Data.Set.Card
 
 
 import TutteLean.Walk
@@ -608,7 +609,8 @@ lemma Walks_split (p : G.Walk u v) (p' : G.Walk u w) : v ∈ p'.support ∨ (∃
         use 0
         aesop
 
-lemma card_subgraph_argument [DecidableEq V] {H : Subgraph G} (h : G.neighborSet v ≃ H.neighborSet v) (hfin : (G.neighborSet v).Finite) : H.Adj v w ↔ G.Adj v w := by
+lemma card_subgraph_argument [DecidableEq V] {H : Subgraph G} (h : G.neighborSet v ≃ H.neighborSet v) (hfin : (G.neighborSet v).Finite) : ∀ w, H.Adj v w ↔ G.Adj v w := by
+  intro w
   refine ⟨fun a => a.adj_sub, ?_⟩
   have : Finite (H.neighborSet v) := by
     rw [Set.finite_coe_iff, ← (Equiv.set_finite_iff h)]
@@ -694,13 +696,16 @@ lemma Path.of_IsCycles [Fintype V] [DecidableEq V] {c : G.ConnectedComponent} (h
         rw [← (hi.2.2 _ (by rfl)).1] at hc1
         obtain ⟨f⟩ : Nonempty ((G.neighborSet (p'.reverse.getVert i)) ≃ ((p.rotate hvp).toSubgraph.neighborSet (p'.reverse.getVert i))) := by
           -- Reduce with lemma from #20023
+
           rw [← Cardinal.eq]
           apply  Cardinal.toNat_injOn (Set.mem_Iio.mpr (by apply Cardinal.lt_aleph0_of_finite))
                 (Set.mem_Iio.mpr (by apply Cardinal.lt_aleph0_of_finite))
-          congr
-          aesop
+          have := hc1
+          -- simp [Set.cast_ncard] at hc1
+
           sorry
-        have := card_subgraph_argument
+        have := card_subgraph_argument f (Set.toFinite _)
+
 
         rw [@Set.ncard_eq_two] at this
         obtain ⟨v, w, hvw⟩ := this
