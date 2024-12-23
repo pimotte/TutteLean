@@ -653,21 +653,25 @@ lemma Path.of_IsCycles [Fintype V] [DecidableEq V] {c : G.ConnectedComponent} (h
     · rw [@ConnectedComponent.mem_supp_iff] at hm hv
       rw [← hv] at hm
       rw [@ConnectedComponent.eq] at hm
-      let p' := hm.some
+      let p' := hm.some.bypass
+      have hp' : p'.IsPath := SimpleGraph.Walk.bypass_isPath _
       rw [← SimpleGraph.Walk.toSubgraph_rotate _ hvp]
       simp only [Walk.toSubgraph_rotate, Walk.verts_toSubgraph, Set.mem_setOf_eq]
       cases' Walks_split p'.reverse (p.rotate hvp) with hl hr
       · aesop
-      ·
-        exfalso
+      · exfalso
         obtain ⟨i, hi⟩ := hr
-
+        by_cases hi0 : i = 0
+        ·
+          sorry
+        by_cases hil : i = (p.rotate hvp).length
+        · sorry
         have hadj1 : G.Adj (p'.reverse.getVert i) (p'.reverse.getVert (i + 1)) :=
           (SimpleGraph.Walk.toSubgraph_adj_getVert _ hi.1).adj_sub
-        have hnadj : ¬ (p.rotate hvp).toSubgraph.Adj (p'.reverse.getVert i) (p'.reverse.getVert (i + 1)) := by
+        have hadj2 : G.Adj (p'.reverse.getVert ((i - 1) + 1)) (p'.reverse.getVert (i - 1)) :=
+          (SimpleGraph.Walk.toSubgraph_adj_getVert _ (by omega)).adj_sub.symm
+        rw [show (i - 1) + 1 = i from by omega] at hadj2
 
-          sorry
-        rw [(hi.2.2 _ (by rfl)).1] at hadj1
         -- have := cycle_internal_neighborSet _ (hp.1.rotate hvp) (by omega) (by omega)
         have hc1 := h (Set.nonempty_of_mem hadj1)
         have hc2 := cycle_two_neighbors'' _ (hp.1.rotate hvp) (Walk.getVert_mem_support (p.rotate hvp) : (p.rotate hvp).getVert i ∈ (p.rotate hvp).support)
@@ -675,31 +679,37 @@ lemma Path.of_IsCycles [Fintype V] [DecidableEq V] {c : G.ConnectedComponent} (h
         rw [← (hi.2.2 _ (by rfl)).1] at hc1
         obtain ⟨f⟩ : Nonempty ((G.neighborSet (p'.reverse.getVert i)) ≃ ((p.rotate hvp).toSubgraph.neighborSet (p'.reverse.getVert i))) := by
           -- Reduce with lemma from #20023
-
           rw [← Cardinal.eq]
-          apply  Cardinal.toNat_injOn (Set.mem_Iio.mpr (by apply Cardinal.lt_aleph0_of_finite))
+          apply Cardinal.toNat_injOn (Set.mem_Iio.mpr (by apply Cardinal.lt_aleph0_of_finite))
                 (Set.mem_Iio.mpr (by apply Cardinal.lt_aleph0_of_finite))
-          have := hc1
-          -- simp [Set.cast_ncard] at hc1
-
-          sorry
-        have := card_subgraph_argument f (Set.toFinite _)
-
-
-        -- rw [@Set.ncard_eq_two] at this
-        -- obtain ⟨v, w, hvw⟩ := this
-        -- have : v = p'.reverse.getVert (i + 1) ∨ w = p'.reverse.getVert (i + 1) := by
-
-          -- sorry
-        -- have hadj2 : G.Adj ((p.rotate hvp).reverse.getVert (i - 1)) ((p.rotate hvp).reverse.getVert i) :=
-        --   (SimpleGraph.Walk.toSubgraph_adj_getVert _ (by
-
-        --     omega)).adj_sub
-
-
-
-        sorry
-
+          rw [← Set.cast_ncard (Set.toFinite _),← Set.cast_ncard (Set.toFinite _)]
+          aesop
+        have arg := card_subgraph_argument f (Set.toFinite _)
+        have hnadj : ¬ (p.rotate hvp).toSubgraph.Adj (p'.reverse.getVert i) (p'.reverse.getVert (i + 1)) := by
+          have h' : (p.rotate hvp).toSubgraph.neighborSet ((p.rotate hvp).getVert i) = {(p.rotate hvp).getVert (i - 1), (p.rotate hvp).getVert (i + 1)} := by
+            refine cycle_internal_neighborSet (p.rotate hvp) (hp.1.rotate hvp) hi0 ?_
+            omega
+          intro hadj
+          have hc := h (Set.nonempty_of_mem hadj1)
+          -- rw [@Set.ext_iff] at this
+          have : (p'.reverse.getVert (i + 1)) ∈ (p.rotate hvp).toSubgraph.neighborSet ((p.rotate hvp).getVert i) := by
+            rw [@Set.mem_def, Subgraph.neighborSet]
+            rw [← (hi.2.2 _ (by rfl)).1]
+            exact hadj
+          rw [h'] at this
+          simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at this
+          cases' this with hl hr
+          · rw [← (hi.2.2 _ (by omega : i - 1 ≤ i)).1] at hl
+            have := hi.1
+            rw [@Walk.length_reverse] at this
+            apply IsPath.getVert_injective hp'.reverse (by simp; omega) (by simp; omega) at hl
+            omega
+          · have := (hi.2.2 _ (by rfl)).2
+            exact this hr
+        rw [(hi.2.2 _ (by rfl)).1] at hadj1
+        rw [arg _] at hnadj
+        rw [(hi.2.2 _ (by rfl)).1] at hnadj
+        exact hnadj hadj1
   use p.rotate hvp
   rw [← this]
   refine ⟨?_, by simp_all only [ConnectedComponent.mem_supp_iff, Walk.verts_toSubgraph, Walk.toSubgraph_rotate]⟩
