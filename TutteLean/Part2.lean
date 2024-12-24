@@ -630,6 +630,40 @@ lemma Walk.getVert_mem_support (p : G.Walk u v) : p.getVert i ∈ p.support := b
   rw [← @getVert_tail _ _ _ _ (i - 1) _ hnp]
   apply p.tail.getVert_mem_support
 
+lemma Subgraph_eq_component_supp {H : Subgraph G} (hb : H ≠ ⊥) (h : ∀ v ∈ H.verts, ∀ w, H.Adj v w ↔ G.Adj v w)
+    (hc : H.Connected) :
+    ∃ c : G.ConnectedComponent, H.verts = c.supp := by
+  rw [SimpleGraph.ConnectedComponent.exists]
+  simp at hb
+  rw [← Subgraph.verts_bot_iff, Set.eq_empty_iff_forall_not_mem] at hb
+  push_neg at hb
+  obtain ⟨v, hv⟩ := hb
+  use v
+  ext w
+  simp only [ConnectedComponent.mem_supp_iff, ConnectedComponent.eq]
+  by_cases hvw : v = w
+  · aesop
+  constructor
+  · intro hw
+    obtain ⟨p⟩ := hc ⟨v, hv⟩ ⟨w, hw⟩
+    simpa using p.coeWalk.reachable.symm
+  · let rec aux {v' : V} (hv' : v' ∈ H.verts) (p : G.Walk v' w) : w ∈ H.verts := by
+      by_cases hnp : p.Nil
+      · have : v' = w := hnp.eq
+        exact this ▸ hv'
+      have : p.getVert 1 ∈ H.verts := H.edge_vert (by
+            rw [Subgraph.adj_comm, h _ hv' _]
+            exact Walk.adj_getVert_one hnp)
+      exact aux this p.tail
+    termination_by p.length
+    decreasing_by {
+      simp_wf
+      rw [← Walk.length_tail_add_one hnp]
+      omega
+    }
+    exact fun hr ↦ aux hv hr.some.reverse
+
+
 lemma Path.of_IsCycles [Fintype V] [DecidableEq V] {c : G.ConnectedComponent} (h : G.IsCycles) (hv : v ∈ c.supp)
   (hn : (G.neighborSet v).Nonempty) (hcs : c.supp.Finite):
     ∃ (p : G.Walk v v), p.IsCycle ∧ p.toSubgraph.verts = c.supp := by
@@ -639,9 +673,14 @@ lemma Path.of_IsCycles [Fintype V] [DecidableEq V] {c : G.ConnectedComponent} (h
   obtain ⟨u, p, hp⟩ := SimpleGraph.adj_and_reachable_delete_edges_iff_exists_cycle.mp ⟨hw, this⟩
 
   have hvp : v ∈ p.support := SimpleGraph.Walk.fst_mem_support_of_mem_edges _ hp.2
+  have hattempt : p.toSubgraph.verts = c.supp := by
+    exact c.ind (by
+      intro v'
 
+      sorry : ∀ (v : V), p.toSubgraph.verts = (G.connectedComponentMk v).supp)
 
   have : p.toSubgraph.verts = c.supp := by
+    -- Maybe map verts to support,
     ext v'
     constructor <;> intro hm
     · have hv'p := (Walk.mem_verts_toSubgraph p).mp hm
