@@ -703,7 +703,7 @@ lemma Path.of_IsCycles [Fintype V] [DecidableEq V] {c : G.ConnectedComponent} (h
   exact hp.1.rotate _
 
 lemma IsCycle.first_two {p : G.Walk v v} (h : p.IsCycle) (hadj : p.toSubgraph.Adj v w) :
-    ∃ (p' : G.Walk v v), p'.IsCycle ∧ p'.getVert 1 = w ∧ p'.toSubgraph.support = p.toSubgraph.support := by
+    ∃ (p' : G.Walk v v), p'.IsCycle ∧ p'.getVert 1 = w ∧ p'.toSubgraph.verts = p.toSubgraph.verts := by
   have : w ∈ p.toSubgraph.neighborSet v := hadj
   rw [cycle_startPoint_neighborSet p h] at this
   simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at this
@@ -732,6 +732,16 @@ lemma takeUntil_first [DecidableEq V] (p : G.Walk u v) (hup : u ∈ p.support) :
   cases p with
   | nil => rfl
   | cons h q => simp [Walk.takeUntil]
+
+lemma takeUntil_notNil [DecidableEq V] (p : G.Walk u v) (hwp : w ∈ p.support) (huw : u ≠ w) : ¬ (p.takeUntil w hwp).Nil := by
+  intro hnil
+  cases p with
+  | nil =>
+    simp only [Walk.support_nil, List.mem_singleton] at hwp
+    exact huw hwp.symm
+  | @cons _ v' _ h q =>
+    simp only [Walk.support_cons, List.mem_cons, huw.symm, false_or] at hwp
+    simp [cons_takeUntil hwp huw] at hnil
 
 -- In #19373
 lemma IsPath.getVert_injOn {p : G.Walk u v} (hp : p.IsPath) :
@@ -814,6 +824,16 @@ lemma takeUntil_getVert_one [DecidableEq V] {p : G.Walk u v} (hsu : w ≠ u) (h 
     rw [cons_takeUntil hr hsu.symm _]
     simp
 
+
+
+lemma takeUntil_takeUntil_adj [DecidableEq V] (p : G.Walk u v) (hp : p.IsPath) (hw : w ∈ p.support) (hx : x ∈ (p.takeUntil w hw).support) :
+    ¬((p.takeUntil w hw).takeUntil x hx).toSubgraph.Adj x w := by
+  intro h
+  have := SimpleGraph.Walk.count_support_takeUntil_eq_one _ hx
+  have := SimpleGraph.Walk.count_support_takeUntil_eq_one _ hw
+  
+  sorry
+
 lemma cycles_arg [Finite V] [DecidableEq V] {p : G.Walk u u} (hp : p.IsCycle) (hcyc : G.IsCycles) (hv : v ∈ p.toSubgraph.verts) :
     ∀ w, p.toSubgraph.Adj v w ↔ G.Adj v w := by
   intro w
@@ -828,6 +848,7 @@ lemma cycles_arg [Finite V] [DecidableEq V] {p : G.Walk u u} (hp : p.IsCycle) (h
           rw [this]
           omega), cycle_two_neighbors'' p hp (by aesop)])
     : G.neighborSet v ≃ (p.toSubgraph.neighborSet v)) (Set.toFinite _) w
+
 
 theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) (hab : G.Adj a b) (hnGxb : ¬G.Adj x b) (hnGac : ¬ G.Adj a c)
     (hnxb : x ≠ b) (hnxc : x ≠ c) (hnac : a ≠ c) (hnbc : b ≠ c)
@@ -1020,21 +1041,27 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
         rwa [cycles_arg hp.1 hcycles (hp.2 ▸ hacc)])
 
       have hxp' : x ∈ p'.support := by
-        sorry
+        rwa [← SimpleGraph.Walk.mem_verts_toSubgraph, hp'.2.2, hp.2]
+
       have : DecidableEq V := by exact Classical.typeDecidableEq V
       by_cases hc : b ∈ (p'.takeUntil x hxp').support
       · use b, (by simp), ((p'.takeUntil x hxp').takeUntil b hc)
 
         refine ⟨(IsCycle_takeUntil hp'.1 hxp').takeUntil hc, ?_⟩
         constructor
-        · have : 0 < ((p'.takeUntil x hxp').takeUntil b hc).length := by sorry
+        · have : 0 < ((p'.takeUntil x hxp').takeUntil b hc).length := by
+            rw [Nat.pos_iff_ne_zero]
+            intro h
+            rw [← @Walk.nil_iff_length_eq] at h
+            exact (takeUntil_notNil (p'.takeUntil x hxp') hc hab.ne) h
           have := ((p'.takeUntil x hxp').takeUntil b hc).toSubgraph_adj_getVert this
-          rw [takeUntil_getVert_one (by sorry) (by sorry)] at this
-          rw [takeUntil_getVert_one (by sorry) (by sorry)] at this
+          rw [takeUntil_getVert_one hab.ne.symm hc] at this
+          rw [takeUntil_getVert_one hxa.ne hxp'] at this
           simp at this
           rw [hp'.2.1] at this
           exact this
-        · sorry
+        ·
+          sorry
 
       · use x, (by simp), (p'.takeUntil x hxp')
         sorry
