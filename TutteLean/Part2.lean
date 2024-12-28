@@ -552,7 +552,7 @@ lemma cycle_two_neighbors'' (p : G.Walk u u) (hpc : p.IsCycle) (h : v ∈ p.supp
 --     use u
 --     simp_all only [Walk.start_mem_support, gt_iff_lt, true_and]
 
---     sorry
+--
 -- termination_by p.length
 -- decreasing_by
 --   simp_wf
@@ -724,8 +724,9 @@ lemma Walk.cons_tail_eq' (p : G.Walk x x) (hp : ¬ p.Nil) :
 lemma cons_takeUntil [DecidableEq V] {p : G.Walk v' v} (hwp : w ∈ p.support) (h : u ≠ w) (hadj : G.Adj u v')
   (hwp' : w ∈ (Walk.cons hadj p).support := List.mem_of_mem_tail hwp):
   (Walk.cons hadj p).takeUntil w hwp' = Walk.cons hadj (p.takeUntil w hwp) := by
+  nth_rewrite 1 [Walk.takeUntil]
+  simp [h]
 
-  sorry
 
 lemma takeUntil_first [DecidableEq V] (p : G.Walk u v) (hup : u ∈ p.support) : p.takeUntil u hup = Walk.nil := by
   cases p with
@@ -813,6 +814,21 @@ lemma takeUntil_getVert_one [DecidableEq V] {p : G.Walk u v} (hsu : w ≠ u) (h 
     rw [cons_takeUntil hr hsu.symm _]
     simp
 
+lemma cycles_arg [Finite V] [DecidableEq V] {p : G.Walk u u} (hp : p.IsCycle) (hcyc : G.IsCycles) (hv : v ∈ p.toSubgraph.verts) :
+    ∀ w, p.toSubgraph.Adj v w ↔ G.Adj v w := by
+  intro w
+  exact card_subgraph_argument (by
+    exact @Classical.arbitrary _ (by
+      rw [← Cardinal.eq]
+      simp [← Nat.cast_card,Set.Nat.card_coe_set_eq,
+        hcyc (by
+          have := cycle_two_neighbors'' p hp (by aesop)
+          apply Set.Nonempty.mono (p.toSubgraph.neighborSet_subset v)
+          apply Set.nonempty_of_ncard_ne_zero
+          rw [this]
+          omega), cycle_two_neighbors'' p hp (by aesop)])
+    : G.neighborSet v ≃ (p.toSubgraph.neighborSet v)) (Set.toFinite _) w
+
 theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) (hab : G.Adj a b) (hnGxb : ¬G.Adj x b) (hnGac : ¬ G.Adj a c)
     (hnxb : x ≠ b) (hnxc : x ≠ c) (hnac : a ≠ c) (hnbc : b ≠ c)
     (hm1 : ∃ (M : Subgraph (G ⊔ edge x b)), M.IsPerfectMatching)
@@ -821,9 +837,15 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
   obtain ⟨M1, hM1⟩ := hm1
   obtain ⟨M2, hM2⟩ := hm2
 
+  have hM1nac : ¬M1.Adj a c := by
+    intro h
+    have := h.adj_sub
+    simp [hnGac, edge_adj, hnac, hxa.ne, hnbc.symm, hab.ne] at this
+
   have hM2nxb : ¬M2.Adj x b := by
     intro h
     simpa [hnGxb, edge_adj, hnxb, hxa.ne, hnxc] using h.adj_sub
+
 
 
   by_cases hM1xb : ¬M1.Adj x b
@@ -860,8 +882,11 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
   let cycles := symmDiff M1.spanningCoe M2.spanningCoe
   have hcalt : cycles.IsAlternating M2.spanningCoe := symmDiff_spanningCoe_IsPerfectMatching_IsAlternating_right hM1 hM2
   have hcycles := Subgraph.IsPerfectMatching.symmDiff_spanningCoe_IsCycles hM1 hM2
-  have hcxb : cycles.Adj x b := by sorry
-  have hcac : cycles.Adj a c := by sorry
+  have hcxb : cycles.Adj x b := by
+    simp [cycles, symmDiff_def, hM2nxb, hM1xb]
+  have hcac : cycles.Adj a c := by
+    simp [cycles, symmDiff_def, hM2ac, hM1nac]
+
 
   have hM1sub : M1.spanningCoe ≤ G ⊔ edge x b := Subgraph.spanningCoe_le M1
   have hM2sub := Subgraph.spanningCoe_le M2
@@ -992,9 +1017,10 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
     p.toSubgraph.Adj a c ∧ ¬ p.toSubgraph.Adj x b := by
       obtain ⟨p, hp⟩ := Path.of_IsCycles hcycles hacc (Set.nonempty_of_mem hcac)
       obtain ⟨p', hp'⟩ := IsCycle.first_two hp.1 (by
+        rwa [cycles_arg hp.1 hcycles (hp.2 ▸ hacc)])
 
-        sorry : p.toSubgraph.Adj a c)
-      have hxp' : x ∈ p'.support := by sorry
+      have hxp' : x ∈ p'.support := by
+        sorry
       have : DecidableEq V := by exact Classical.typeDecidableEq V
       by_cases hc : b ∈ (p'.takeUntil x hxp').support
       · use b, (by simp), ((p'.takeUntil x hxp').takeUntil b hc)
@@ -1008,13 +1034,12 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
           simp at this
           rw [hp'.2.1] at this
           exact this
-        ·
-          sorry
+        · sorry
+
       · use x, (by simp), (p'.takeUntil x hxp')
         sorry
 
   obtain ⟨x', hx', p, hp, hpac, hnpxb⟩ := this
 
   use p.toSubgraph.spanningCoe ⊔ edge x' a
-
   sorry
