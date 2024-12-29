@@ -914,6 +914,39 @@ lemma cycles_arg [Finite V] [DecidableEq V] {p : G.Walk u u} (hp : p.IsCycle) (h
     : G.neighborSet v ≃ (p.toSubgraph.neighborSet v)) (Set.toFinite _) w
 
 
+lemma IsAlternating.spanningCoe (H : Subgraph G) (halt : G.IsAlternating G') : H.spanningCoe.IsAlternating G' := by
+  intro v w w' hww' hvw hvv'
+  simp only [Subgraph.spanningCoe_adj] at hvw hvv'
+  exact halt hww' hvw.adj_sub hvv'.adj_sub
+
+lemma IsAlternating.sup_edge (halt : G.IsAlternating G') (hnadj : ¬G'.Adj u x) (hu' : ∀ u', u' ≠ u → G.Adj x u' → G'.Adj x u')
+  (hx' : ∀ x', x' ≠ x → G.Adj x' u → G'.Adj x' u): (G ⊔ edge u x).IsAlternating G' := by
+  by_cases hadj : G.Adj u x
+  · rwa [sup_edge_of_adj G hadj]
+  intro v w w' hww' hvw hvv'
+  simp only [sup_adj] at hvw hvv'
+  cases' hvw with hl hr <;> cases' hvv' with h1 h2
+  · exact halt hww' hl h1
+  · simp [edge_adj] at h2
+    have : s(v, w') = s(u, x) := by aesop
+    rw [adj_iff_of_sym2_eq this]
+    simp [hnadj]
+    rcases h2.1 with (⟨h2l1, h2l2⟩| ⟨h2r1, h2r2⟩)
+    · subst h2l1 h2l2
+      exact (hx' _ hww' hl.symm).symm
+    · aesop
+  · simp [edge_adj] at hr
+    have : s(v, w) = s(u, x) := by aesop
+    rw [adj_iff_of_sym2_eq this]
+    simp [hnadj]
+    rcases hr.1 with (⟨hrl1, hrl2⟩| ⟨hrr1, hrr2⟩)
+    · subst hrl1 hrl2
+      exact (hx' _ hww'.symm h1.symm).symm
+    · aesop
+  · exfalso
+    simp [edge_adj] at hr h2
+    aesop
+
 theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) (hab : G.Adj a b) (hnGxb : ¬G.Adj x b) (hnGac : ¬ G.Adj a c)
     (hnxb : x ≠ b) (hnxc : x ≠ c) (hnac : a ≠ c) (hnbc : b ≠ c)
     (hm1 : ∃ (M : Subgraph (G ⊔ edge x b)), M.IsPerfectMatching)
@@ -1140,7 +1173,30 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
         simpa [Walk.getVert_zero, takeUntil_getVert_one hxa.ne, hp'.2.1] using this
 
   obtain ⟨x', hx', p, hp, hpac, hnpxb⟩ := this
-
+  simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hx'
   use p.toSubgraph.spanningCoe ⊔ edge x' a
+  have hfinalt : (p.toSubgraph.spanningCoe ⊔ edge x' a).IsAlternating M2.spanningCoe := by
+    refine IsAlternating.sup_edge (hcalt.spanningCoe p.toSubgraph) (by
+      cases' hx' with hl hl <;>
+      · subst hl
+        simp only [Subgraph.spanningCoe_adj]
+        intro hadj
+        obtain ⟨w, hw⟩ := hM2.1 (hM2.2 a)
+        have := hw.2 _ hadj.symm
+        have := hw.2 _ hM2ac
+        aesop
+      ) ?_ ?_
+    · simp only [Subgraph.spanningCoe_adj]
+      intro u' hu'x hadj
+      have := hadj.adj_sub
+      simp [cycles, symmDiff_def] at this
+      cases' this with hl hr
+      · obtain ⟨w, hw⟩ := hM1.1 (hM1.2 a)
+        dsimp at hw
+        have := hw.2 _ hl.1
+        -- Is the condition to be proven acutally right?
+        sorry
+      · aesop
 
+    · sorry
   sorry
