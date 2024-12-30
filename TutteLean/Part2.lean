@@ -947,6 +947,43 @@ lemma IsAlternating.sup_edge (halt : G.IsAlternating G') (hnadj : ¬G'.Adj u x) 
     simp [edge_adj] at hr h2
     aesop
 
+lemma spanningCoe_neighborSet (H : Subgraph G) : H.spanningCoe.neighborSet = H.neighborSet := by
+  ext v w
+  simp
+
+lemma IsCycle.IsCycles_toSubgraph_spanningCoe {p : G.Walk u u} (hpc : p.IsCycle) :
+    p.toSubgraph.spanningCoe.IsCycles := by
+  intro v hv
+  rw [spanningCoe_neighborSet]
+  apply cycle_two_neighbors'' _ hpc
+  obtain ⟨_, hw⟩ := hv
+  exact p.toSubgraph_Adj_mem_support_new hw
+
+lemma mapSpanningSubgraph_inj (h : G ≤ G'): Function.Injective (Hom.mapSpanningSubgraphs h) := by
+  intro v w hvw
+  simpa [Hom.mapSpanningSubgraphs_apply] using hvw
+
+lemma path_map_spanning {w x : V} (p : G.Walk u v) : p.toSubgraph.Adj w x ↔ (p.mapLe (OrderTop.le_top G)).toSubgraph.Adj w x := by
+  simp only [Walk.toSubgraph_map, Subgraph.map_adj]
+  nth_rewrite 2 [← Hom.mapSpanningSubgraphs_apply (OrderTop.le_top _) w]
+  nth_rewrite 2 [← Hom.mapSpanningSubgraphs_apply (OrderTop.le_top _) x]
+  rw [Relation.map_apply_apply (mapSpanningSubgraph_inj _) (mapSpanningSubgraph_inj _)]
+
+lemma path_edge_IsCycles (p : G.Walk u v) (hp : p.IsPath) (h : u ≠ v) (hs : s(v, u) ∉ p.edges) : (p.toSubgraph.spanningCoe ⊔ edge v u).IsCycles := by
+  let p' := p.mapLe (OrderTop.le_top G)
+  let c := Walk.cons (by simp [h.symm] : (⊤ : SimpleGraph V).Adj v u) p'
+  simp only [Hom.coe_ofLE, id_eq] at p' c
+  have hc : c.IsCycle := by
+    unfold c p'
+    rw [@Walk.cons_isCycle_iff]
+    simp [hp, hs]
+  have : p.toSubgraph.spanningCoe ⊔ edge v u = c.toSubgraph.spanningCoe := by
+    ext w x
+    simp  [edge_adj, p', path_map_spanning]
+    aesop
+  rw [this]
+  exact IsCycle.IsCycles_toSubgraph_spanningCoe hc
+
 theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) (hab : G.Adj a b) (hnGxb : ¬G.Adj x b) (hnGac : ¬ G.Adj a c)
     (hnxb : x ≠ b) (hnxc : x ≠ c) (hnac : a ≠ c) (hnbc : b ≠ c)
     (hm1 : ∃ (M : Subgraph (G ⊔ edge x b)), M.IsPerfectMatching)
@@ -1009,6 +1046,8 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
   have hM1sub : M1.spanningCoe ≤ G ⊔ edge x b := Subgraph.spanningCoe_le M1
   have hM2sub := Subgraph.spanningCoe_le M2
 
+  have hsupG : G ⊔ edge x b ⊔ (G ⊔ edge a c) = (G ⊔ edge a c) ⊔ edge x b := by aesop
+
   by_cases hxc : x ∉ (cycles.connectedComponentMk c).supp
   · use (cycles.induce (cycles.connectedComponentMk c).supp).spanningCoe
     refine ⟨hcalt.induce_supp (cycles.connectedComponentMk c), ?_⟩
@@ -1020,101 +1059,8 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
     intro v w hvw
     rw [@induce_component_spanningCoe_Adj] at hvw
     have hs := symmDiff_le hM1sub hM2sub hvw.2
-    have : G ⊔ edge x b ⊔ (G ⊔ edge a c) = (G ⊔ edge a c) ⊔ edge x b := by
-      -- is aesop
-      simp_all only [ne_eq, ConnectedComponent.mem_supp_iff, ConnectedComponent.eq, sup_adj, cycles]
-      obtain ⟨left, right⟩ := hvw
-      cases hs with
-      | inl h =>
-        cases h with
-        | inl h_1 =>
-          ext x_1 x_2 : 4
-          simp_all only [sup_adj]
-          apply Iff.intro
-          · intro a_1
-            cases a_1 with
-            | inl h =>
-              cases h with
-              | inl h_2 => simp_all only [true_or]
-              | inr h_3 => simp_all only [or_true]
-            | inr h_2 =>
-              cases h_2 with
-              | inl h => simp_all only [true_or]
-              | inr h_3 => simp_all only [or_true, true_or]
-          · intro a_1
-            cases a_1 with
-            | inl h =>
-              cases h with
-              | inl h_2 => simp_all only [true_or, or_self]
-              | inr h_3 => simp_all only [or_true]
-            | inr h_2 => simp_all only [or_true, true_or]
-        | inr h_2 =>
-          ext x_1 x_2 : 4
-          simp_all only [sup_adj]
-          apply Iff.intro
-          · intro a_1
-            cases a_1 with
-            | inl h =>
-              cases h with
-              | inl h_1 => simp_all only [true_or]
-              | inr h_3 => simp_all only [or_true]
-            | inr h_1 =>
-              cases h_1 with
-              | inl h => simp_all only [true_or]
-              | inr h_3 => simp_all only [or_true, true_or]
-          · intro a_1
-            cases a_1 with
-            | inl h =>
-              cases h with
-              | inl h_1 => simp_all only [true_or, or_self]
-              | inr h_3 => simp_all only [or_true]
-            | inr h_1 => simp_all only [or_true, true_or]
-      | inr h_1 =>
-        cases h_1 with
-        | inl h =>
-          ext x_1 x_2 : 4
-          simp_all only [sup_adj]
-          apply Iff.intro
-          · intro a_1
-            cases a_1 with
-            | inl h_1 =>
-              cases h_1 with
-              | inl h_2 => simp_all only [true_or]
-              | inr h_3 => simp_all only [or_true]
-            | inr h_2 =>
-              cases h_2 with
-              | inl h_1 => simp_all only [true_or]
-              | inr h_3 => simp_all only [or_true, true_or]
-          · intro a_1
-            cases a_1 with
-            | inl h_1 =>
-              cases h_1 with
-              | inl h_2 => simp_all only [true_or, or_self]
-              | inr h_3 => simp_all only [or_true]
-            | inr h_2 => simp_all only [or_true, true_or]
-        | inr h_2 =>
-          ext x_1 x_2 : 4
-          simp_all only [sup_adj]
-          apply Iff.intro
-          · intro a_1
-            cases a_1 with
-            | inl h =>
-              cases h with
-              | inl h_1 => simp_all only [true_or]
-              | inr h_3 => simp_all only [or_true]
-            | inr h_1 =>
-              cases h_1 with
-              | inl h => simp_all only [true_or]
-              | inr h_3 => simp_all only [or_true, true_or]
-          · intro a_1
-            cases a_1 with
-            | inl h =>
-              cases h with
-              | inl h_1 => simp_all only [true_or, or_self]
-              | inr h_3 => simp_all only [or_true]
-            | inr h_1 => simp_all only [or_true, true_or]
 
-    rw [this, sup_adj] at hs
+    rw [hsupG, sup_adj] at hs
     cases' hs with h1 h2
     · exact h1
     · simp only [edge_adj, ne_eq] at h2
@@ -1188,15 +1134,91 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
       ) ?_ ?_
     · simp only [Subgraph.spanningCoe_adj]
       intro u' hu'x hadj
+      have hu' : p.getVert 1 = u' := toSubgraph_adj_sndOfNotNil p hp hadj
+      have hc : p.getVert 1 = c := toSubgraph_adj_sndOfNotNil p hp hpac
+      rw [← hu', hc]
+      exact hM2ac
+    · simp only [Subgraph.spanningCoe_adj]
+      intro c' hc'a hadj
       have := hadj.adj_sub
       simp [cycles, symmDiff_def] at this
       cases' this with hl hr
-      · obtain ⟨w, hw⟩ := hM1.1 (hM1.2 a)
-        dsimp at hw
-        have := hw.2 _ hl.1
-        -- Is the condition to be proven acutally right?
-        sorry
-      · aesop
+      · exfalso
+        cases' hx' with h1 h2
+        · subst h1
+          obtain ⟨w, hw⟩ := hM1.1 (hM1.2 x')
+          apply hnpxb
+          rw [hw.2 _ hM1xb, ← hw.2 _ hl.1.symm]
+          exact hadj.symm
+        · subst h2
+          obtain ⟨w, hw⟩ := hM1.1 (hM1.2 x')
+          apply hnpxb
+          rw [hw.2 _ hM1xb.symm, ← hw.2 _ hl.1.symm]
+          exact hadj
+      · exact hr.1
+  refine ⟨hfinalt, ?_⟩
 
-    · sorry
-  sorry
+  have hfincycle : (p.toSubgraph.spanningCoe ⊔ edge x' a).IsCycles := by
+    intro v hv
+    cases' hx' with hl hr
+    · subst hl
+      refine path_edge_IsCycles _ hp hxa.ne.symm ?_ hv
+      intro hadj
+      rw [← @Walk.mem_edges_toSubgraph] at hadj
+      rw [@Subgraph.mem_edgeSet] at hadj
+      have : p.getVert 1 = x' := toSubgraph_adj_sndOfNotNil p hp hadj.symm
+      have : p.getVert 1 = c := toSubgraph_adj_sndOfNotNil p hp hpac
+      simp_all only [ne_eq, ConnectedComponent.mem_supp_iff, ConnectedComponent.eq, not_true_eq_false, cycles]
+    · subst hr
+      refine path_edge_IsCycles _ hp hab.ne ?_ hv
+      intro hadj
+      rw [← @Walk.mem_edges_toSubgraph] at hadj
+      rw [@Subgraph.mem_edgeSet] at hadj
+      have : p.getVert 1 = x' := toSubgraph_adj_sndOfNotNil p hp hadj.symm
+      have : p.getVert 1 = c := toSubgraph_adj_sndOfNotNil p hp hpac
+      simp_all only [ne_eq, ConnectedComponent.mem_supp_iff, ConnectedComponent.eq, not_true_eq_false, cycles]
+
+  refine ⟨hfincycle, ?_⟩
+
+  have hfin3 : ¬(p.toSubgraph.spanningCoe ⊔ edge x' a).Adj x b := by
+    simp [sup_adj, Subgraph.spanningCoe_adj, not_or, hnpxb, edge_adj]
+    aesop
+
+  have hfin4 : (p.toSubgraph.spanningCoe ⊔ edge x' a).Adj a c := by
+    aesop
+
+  have hfin5 : p.toSubgraph.spanningCoe ⊔ edge x' a ≤ G ⊔ edge a c := by
+    rw [@sup_le_iff]
+    have hle1 := p.toSubgraph.spanningCoe_le
+    have hle2 : cycles ≤ M1.spanningCoe ⊔ M2.spanningCoe := symmDiff_le (fun ⦃v w⦄ a => a) fun ⦃v w⦄ a => a
+    have hle3 : M1.spanningCoe ⊔ M2.spanningCoe ≤ (G ⊔ edge x b) ⊔ (G ⊔ edge a c) := sup_le_sup hM1sub hM2sub
+    rw [hsupG] at hle3
+    have hle4 : p.toSubgraph.spanningCoe ≤ G ⊔ edge a c ⊔ edge x b := by
+      intro v w hvw
+      exact hle3 (hle2 (hle1 hvw))
+    rw [← @sdiff_le_iff'] at hle4
+    have h1 : p.toSubgraph.spanningCoe \ edge x b = p.toSubgraph.spanningCoe := by
+      ext v w
+      simp only [sdiff_adj, Subgraph.spanningCoe_adj, edge_adj, ne_eq, not_and, Decidable.not_not,
+        and_iff_left_iff_imp]
+      intro hvw hs
+      rw [← @Sym2.eq_iff] at hs
+      rw [Subgraph.adj_iff_of_sym2_eq hs] at hvw
+      exact (hnpxb hvw).elim
+    rw [h1] at hle4
+    refine ⟨hle4,?_⟩
+    intro v w hvw
+    simp only [sup_adj]
+    left
+    simp [edge_adj] at hvw
+    cases' hx' with hl hr
+    · subst hl
+      cases' hvw.1 with h1 h2
+      · aesop
+      · rw [h2.1, h2.2]
+        exact hxa.symm
+    · cases' hvw.1 with h1 h2
+      · rw [h1.1, h1.2, hr]
+        exact hab.symm
+      · aesop
+  exact ⟨hfin3, hfin4, hfin5⟩

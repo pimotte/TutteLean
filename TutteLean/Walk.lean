@@ -780,6 +780,10 @@ theorem toSubgraph_adj_sndOfNotNil {u v} (p : G.Walk u v) (hpp : p.IsPath)
   | inl hl => exact hl.symm
   | inr hr => exact (hadj.ne hr.1.symm).elim
 
+theorem toSubgraph_adj_lastButOne {u v} (p : G.Walk u v) (hp : p.IsPath)
+    (hadj : (p.toSubgraph).Adj v v') : p.getVert (p.length - 1) = v' := by
+  simpa [Walk.getVert_reverse] using toSubgraph_adj_sndOfNotNil p.reverse hp.reverse
+    ((Walk.toSubgraph_reverse _).symm ▸ hadj)
 
 lemma Walk.toSubgraph_Adj_sndOfNotNil {p : G.Walk u v} (hnp : ¬ p.Nil) : p.toSubgraph.Adj u (p.getVert 1) := by
   have := Walk.toSubgraph_adj_getVert p (by
