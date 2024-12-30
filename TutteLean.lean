@@ -14,7 +14,6 @@ import TutteLean.SingleEdge
 import TutteLean.ConnectedComponent
 import TutteLean.Clique
 import TutteLean.Set
-import TutteLean.SymDiff
 import TutteLean.PartNew
 import TutteLean.Part2
 -- import Mathlib.Algebra.BigOperators.Basic
