@@ -14,7 +14,7 @@ import TutteLean.SingleEdge
 import TutteLean.ConnectedComponent
 import TutteLean.Clique
 import TutteLean.Set
-import TutteLean.Walk
+-- import TutteLean.Walk
 import TutteLean.SymDiff
 import TutteLean.PartNew
 import TutteLean.Part2

@@ -6,7 +6,7 @@ import Mathlib.Data.Set.Operations
 import Mathlib.Data.Set.Card
 
 
-import TutteLean.Walk
+-- import TutteLean.Walk
 
 namespace SimpleGraph
 -- universe u
@@ -372,6 +372,33 @@ lemma List.nodup_tail_reverse (l : List α) (h : l.get? 0 = l.get? (l.length - 1
       rw [List.nodup_append_comm]
       simp_all only [List.take_append_drop, eq_iff_iff, List.nodup_cons, List.singleton_append]
       rw [List.getLast_eq_getElem]
+
+lemma get?_nonZero (a : α) (l : List α) (h : n ≠ 0) : (a :: l).get? n = l.get? (n - 1) := by
+    have : ∃ (i : ℕ), i.succ = n := by
+      use (n - 1)
+      exact Nat.sub_one_add_one_eq_of_pos (Nat.zero_lt_of_ne_zero h)
+    obtain ⟨i, hi⟩ := this
+    rw [← hi]
+    simp only [Nat.succ_eq_add_one, List.get?_cons_succ, add_tsub_cancel_right]
+
+lemma getVert_support_get (p : G.Walk u v) (h2 : n ≤ p.length) : p.getVert n = p.support.get? n := by
+  match p with
+  | .nil =>
+    simp only [Walk.length_nil, nonpos_iff_eq_zero] at h2
+    simp only [h2, Walk.getVert_zero, Walk.support_nil, List.get?_cons_zero]
+  | .cons h q =>
+    simp only [Walk.support_cons]
+    by_cases hn : n = 0
+    · simp only [hn, Walk.getVert_zero, List.get?_cons_zero]
+    · push_neg at hn
+      rw [Walk.getVert_cons q h hn]
+      rw [get?_nonZero _ _ hn]
+      exact getVert_support_get q (by
+        rw [@Walk.length_cons] at h2
+        exact Nat.sub_le_of_le_add h2
+        )
+
+
 -- In #19611 (variant)
 lemma getVert_support_get_new (p : G.Walk u v) (h2 : n ≤ p.length) : p.getVert n = (p.support.get? n) := by
   match p with
@@ -630,6 +657,11 @@ lemma Walk.getVert_mem_support (p : G.Walk u v) : p.getVert i ∈ p.support := b
   rw [← @getVert_tail _ _ _ _ (i - 1) _ hnp]
   apply p.tail.getVert_mem_support
 
+def Walk.coeWalk {H : Subgraph G} {u v : H.verts} (p : H.coe.Walk u v) : G.Walk u.val v.val :=
+  match p with
+  | .nil => Walk.nil
+  | .cons h q => Walk.cons (H.adj_sub h) (q.coeWalk)
+
 lemma Subgraph_eq_component_supp {H : Subgraph G} (hb : H ≠ ⊥) (h : ∀ v ∈ H.verts, ∀ w, H.Adj v w ↔ G.Adj v w)
     (hc : H.Connected) :
     ∃ c : G.ConnectedComponent, H.verts = c.supp := by
@@ -748,6 +780,12 @@ lemma IsPath.getVert_injOn {p : G.Walk u v} (hp : p.IsPath) :
     Set.InjOn p.getVert {i | i ≤ p.length} := by
   sorry
 
+lemma support_length (p : G.Walk v w) : p.support.length = p.length + 1 := by
+  match p with
+  | .nil => simp only [Walk.support_nil, List.length_singleton, Walk.length_nil, zero_add]
+  | .cons _ _ => simp only [Walk.support_cons, List.length_cons, Walk.length_support,
+    Nat.succ_eq_add_one, Walk.length_cons]
+
 lemma IsPath.getVert_injOn_iff (p : G.Walk u v): Set.InjOn p.getVert {i | i ≤ p.length} ↔ p.IsPath := by
   refine ⟨?_, fun a => getVert_injective a⟩
   intro hinj
@@ -793,6 +831,21 @@ lemma IsPath_of_IsCycle_append_left {p : G.Walk u v} {q : G.Walk v u} (h : (p.ap
     (by rw [Walk.length_append]; omega : j ≤ (p.append q).length - 1)
   apply this
   simp [Walk.getVert_append, show i < p.length from by omega, show j < p.length from by omega, hij]
+
+lemma Walk.IsCycle.of_append_left {p : G.Walk u v} {q : G.Walk v u} (h : u ≠ v) (hcyc : (p.append q).IsCycle) : p.IsPath := by
+  have := hcyc.2
+  rw [SimpleGraph.Walk.tail_support_append, List.nodup_append] at this
+  rw [@isPath_def, @support_eq_cons, @List.nodup_cons]
+  refine ⟨?_, this.1⟩
+  intro h'
+  apply this.2.2 h'
+  exact q.end_mem_tail_support_of_ne h.symm
+
+lemma Walk.IsCycle.of_append_right {p : G.Walk u v} {q : G.Walk v u} (h : u ≠ v) (hcyc : (p.append q).IsCycle) : q.IsPath := by
+  have := hcyc.2
+  rw [SimpleGraph.Walk.tail_support_append, List.nodup_append] at this
+  rw [@isPath_def, @support_eq_cons, @List.nodup_cons]
+  exact ⟨this.2.2 (p.end_mem_tail_support_of_ne h), this.2.1⟩
 
 lemma IsCycle_takeUntil [DecidableEq V] {p : G.Walk v v} (h : p.IsCycle) (hwp : w ∈ p.support) :
     (p.takeUntil w hwp).IsPath := by
@@ -855,6 +908,32 @@ lemma Walk.length_takeUntil_lt [DecidableEq V] {u v w : V} (p : G.Walk v w) (h :
     rw [takeUntil_getVert _ (by omega), hl]
   simp at this
   exact huw this
+
+lemma Walk.toSubgraph_Adj_mem_support (p : G.Walk u v) (hp : p.toSubgraph.Adj u' v') : u' ∈ p.support := by
+  unfold Walk.toSubgraph at hp
+  match p with
+  | nil =>
+    simp only [singletonSubgraph_adj, Pi.bot_apply] at hp
+    exact hp.elim
+  | .cons h q =>
+    simp only [Subgraph.sup_adj, subgraphOfAdj_adj, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq,
+      Prod.swap_prod_mk] at hp
+    rw [@support_cons]
+    rw [@List.mem_cons_eq]
+    cases hp with
+    | inl hl =>
+      cases hl with
+      | inl h1 => left; exact h1.1.symm
+      | inr h2 =>
+        right
+        rw [← h2.2]
+        exact start_mem_support q
+    | inr hr =>
+      right
+      exact q.toSubgraph_Adj_mem_support hr
+
+lemma Walk.toSubgraph_Adj_mem_support' (p : G.Walk u v) (hp : p.toSubgraph.Adj u' v') : v' ∈ p.support := p.toSubgraph_Adj_mem_support hp.symm
+
 
 lemma takeUntil_takeUntil_adj [DecidableEq V] (p : G.Walk u v) (hp : p.IsPath) (hw : w ∈ p.support) (hx : x ∈ (p.takeUntil w hw).support) :
     ¬((p.takeUntil w hw).takeUntil x hx).toSubgraph.Adj w x := by
@@ -983,6 +1062,74 @@ lemma path_edge_IsCycles (p : G.Walk u v) (hp : p.IsPath) (h : u ≠ v) (hs : s(
     aesop
   rw [this]
   exact IsCycle.IsCycles_toSubgraph_spanningCoe hc
+
+-- In getVert PR
+theorem toSubgraph_adj_exists {u v} (w : G.Walk u v)
+    (hadj : (w.toSubgraph).Adj u' v') : ∃ i, (u' = w.getVert i ∧ v' = w.getVert (i + 1) ∨ v' = w.getVert i ∧ u' = w.getVert (i + 1)) ∧ i < w.length := by
+  unfold Walk.toSubgraph at hadj
+  match w with
+  | .nil =>
+    simp at hadj
+  | .cons h p =>
+    simp at hadj
+    cases hadj with
+    | inl hl =>
+      cases hl with
+      | inl h1 =>
+        use 0
+        simp only [Walk.getVert_zero, zero_add, Walk.getVert_cons_succ]
+        constructor
+        · left
+          exact ⟨h1.1.symm, h1.2.symm⟩
+        · simp only [Walk.length_cons, lt_add_iff_pos_left, add_pos_iff, zero_lt_one, or_true]
+      | inr h2 =>
+        use 0
+        simp only [Walk.getVert_zero, zero_add, Walk.getVert_cons_succ]
+        constructor
+        · right
+          exact ⟨h2.1.symm, h2.2.symm⟩
+        · simp only [Walk.length_cons, lt_add_iff_pos_left, add_pos_iff, zero_lt_one, or_true]
+    | inr hr =>
+      obtain ⟨i, hi⟩ := toSubgraph_adj_exists _ hr
+      use (i + 1)
+      simp only [Walk.getVert_cons_succ]
+      constructor
+      · exact hi.1
+      · simp only [Walk.length_cons, add_lt_add_iff_right, hi.2]
+
+theorem toSubgraph_adj_sndOfNotNil {u v} (p : G.Walk u v) (hpp : p.IsPath)
+    (hadj : (p.toSubgraph).Adj u v') : p.getVert 1 = v' := by
+  have ⟨i, hi⟩ := toSubgraph_adj_exists _ hadj
+  have hnodup := hpp.2
+  rw [@List.nodup_iff_get?_ne_get?] at hnodup
+  have hi0 : i = 0 := by
+    by_contra! hc
+    cases hi.1 with
+    | inl hl =>
+      have := hnodup 0 i (by omega) (by
+        rw [support_length]
+        have := hi.2
+        omega)
+      apply this
+      rw [← getVert_support_get _ (by omega)]
+      rw [← getVert_support_get _ (by omega)]
+      simp only [Walk.getVert_zero, Option.some.injEq]
+      exact hl.1
+    | inr hr =>
+      have := hnodup 0 (i + 1) (by omega) (by
+        rw [support_length]
+        have := hi.2
+        omega)
+      apply this
+      rw [← getVert_support_get _ (by omega)]
+      rw [← getVert_support_get _ (by omega)]
+      simp only [Walk.getVert_zero, Option.some.injEq]
+      exact hr.2
+  rw [hi0] at hi
+  simp only [Walk.getVert_zero, zero_add, true_and] at hi
+  cases hi.1 with
+  | inl hl => exact hl.symm
+  | inr hr => exact (hadj.ne hr.1.symm).elim
 
 theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) (hab : G.Adj a b) (hnGxb : ¬G.Adj x b) (hnGac : ¬ G.Adj a c)
     (hnxb : x ≠ b) (hnxc : x ≠ c) (hnac : a ≠ c) (hnbc : b ≠ c)
