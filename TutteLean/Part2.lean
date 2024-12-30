@@ -662,6 +662,17 @@ def Walk.coeWalk {H : Subgraph G} {u v : H.verts} (p : H.coe.Walk u v) : G.Walk 
   | .nil => Walk.nil
   | .cons h q => Walk.cons (H.adj_sub h) (q.coeWalk)
 
+theorem Subgraph.verts_bot_iff (H : G.Subgraph) : H.verts = ∅ ↔ H = ⊥ := by
+  refine ⟨?_, by aesop⟩
+  intro h
+  rw [Subgraph.ext_iff]
+  refine ⟨h, ?_⟩
+  ext v w
+  simp only [not_bot_adj, iff_false]
+  intro hadj
+  have := hadj.fst_mem
+  simp_all only [Set.mem_empty_iff_false]
+
 lemma Subgraph_eq_component_supp {H : Subgraph G} (hb : H ≠ ⊥) (h : ∀ v ∈ H.verts, ∀ w, H.Adj v w ↔ G.Adj v w)
     (hc : H.Connected) :
     ∃ c : G.ConnectedComponent, H.verts = c.supp := by

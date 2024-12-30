@@ -14,7 +14,6 @@ import TutteLean.SingleEdge
 import TutteLean.ConnectedComponent
 import TutteLean.Clique
 import TutteLean.Set
--- import TutteLean.Walk
 import TutteLean.SymDiff
 import TutteLean.PartNew
 import TutteLean.Part2
@@ -48,6 +47,114 @@ lemma sndOfNotNil_mem_support (p : G.Walk u v) (hnp : ¬ p.Nil) : p.getVert 1 �
   rw [← Walk.support_tail_of_not_nil _ hnp]
   exact Walk.start_mem_support p.tail
 
+noncomputable def lift_walk {c : ConnectedComponent G} {v w : c.supp}  (p : G.Walk v w) : (G.induce c.supp).Walk v w :=
+  if hp : p.Nil
+  then
+    Subtype.val_injective (SimpleGraph.Walk.Nil.eq hp) ▸ Walk.nil
+  else
+    let u := (SimpleGraph.Walk.not_nil_iff.mp hp).choose
+    let h := (SimpleGraph.Walk.not_nil_iff.mp hp).choose_spec.choose
+    let q := (SimpleGraph.Walk.not_nil_iff.mp hp).choose_spec.choose_spec.choose
+    let h' := (SimpleGraph.Walk.not_nil_iff.mp hp).choose_spec.choose_spec.choose_spec
+    have hu : u ∈ c.supp := by
+      rw [SimpleGraph.ConnectedComponent.mem_supp_iff,
+        ← (c.mem_supp_iff w).mp w.coe_prop,
+        ConnectedComponent.eq]
+      exact Walk.reachable q
+    let u' : c.supp := ⟨u , hu⟩
+    Walk.cons (by simp only [comap_adj, Function.Embedding.coe_subtype, h] : (G.induce c.supp).Adj v u') (lift_walk q)
+termination_by p.length
+decreasing_by
+  simp_wf
+  rw [@Nat.lt_iff_add_one_le]
+  rw [← SimpleGraph.Walk.length_cons]
+  exact Nat.le_of_eq (congrArg Walk.length (id h'.symm))
+
+lemma reachable_in_connected_component_induce (c : ConnectedComponent G) (v w : c.supp) : (G.induce c.supp).Reachable v w := by
+  have hvc := (c.mem_supp_iff v).mp (Subtype.coe_prop v)
+  have hwc := (c.mem_supp_iff w).mp (Subtype.coe_prop w)
+  have : G.connectedComponentMk v = G.connectedComponentMk w := by
+    rw [hvc, hwc]
+  have p := (Classical.inhabited_of_nonempty (ConnectedComponent.exact this)).default
+  exact Walk.reachable (lift_walk p)
+
+lemma ConnectedComponent.supp_eq_of_mem_supp {c c' : ConnectedComponent G} {v} (h : v ∈ c.supp) (h' : v ∈ c'.supp) : c = c' := by
+  simp [SimpleGraph.ConnectedComponent.mem_supp_iff] at h h'
+  subst h h'
+  rfl
+
+lemma verts_of_walk (p : G.Walk v w) (hp : p.length = G.dist v w) (hl : 1 < G.dist v w) : ∃ (x a b : V), G.Adj x a ∧ G.Adj a b ∧ ¬ G.Adj x b ∧ x ≠ b := by
+
+  have hnp : ¬p.Nil := by
+    rw [SimpleGraph.Walk.nil_iff_length_eq]
+    rw [hp]
+    exact Nat.not_eq_zero_of_lt hl
+
+
+  have hnt : ¬p.tail.Nil := by
+    rw [SimpleGraph.Walk.nil_iff_length_eq]
+    rw [← hp] at hl
+    rw [← (SimpleGraph.Walk.length_tail_add_one hnp)] at hl
+    rw [@Nat.lt_add_left_iff_pos] at hl
+    exact Nat.not_eq_zero_of_lt hl
+
+  use v
+  use p.getVert 1
+  use p.tail.getVert 1
+  -- simp? [ne_eq, Walk.adj_getVert_one, Walk.adj_getVert_succ]
+  refine ⟨Walk.adj_getVert_one hnp, ?_, ?_⟩
+  · rw [Walk.getVert_tail p hnp]
+    simp [Walk.adj_getVert_succ _ (Nat.lt_of_lt_of_eq hl hp.symm)]
+  constructor
+  · intro hadj
+    let pcon := Walk.cons hadj p.tail.tail
+    have hdist : pcon.length < G.dist v w := by
+      rw [← hp]
+      rw [@Walk.length_cons]
+      rw [Walk.length_tail_add_one hnt]
+      apply @Nat.lt_of_add_lt_add_right _ _ 1
+      rw [Walk.length_tail_add_one hnp]
+      exact lt_add_one p.length
+
+    linarith [SimpleGraph.dist_le pcon]
+  · intro heq
+    let pcon := p.tail.tail
+    have hdist : pcon.length < G.dist (p.tail.getVert 1) w := by
+      apply @Nat.lt_of_add_lt_add_right _ _ 1
+      rw [Walk.length_tail_add_one hnt]
+      rw [← heq]
+      apply @Nat.lt_of_add_lt_add_right _ _ 1
+      rw [Walk.length_tail_add_one hnp]
+      rw [hp]
+      omega
+    linarith [SimpleGraph.dist_le pcon]
+
+lemma walk_length_one_adj : (∃ (p : G.Walk u v), p.length = 1) ↔ G.Adj u v := by
+  constructor
+  · rintro ⟨p , hp⟩
+    match p with
+    | Walk.nil' u => simp only [Walk.length_nil, zero_ne_one] at hp
+    | Walk.cons' u v w h p' =>
+      simp only [Walk.length_cons, add_left_eq_self] at hp
+      exact ((SimpleGraph.Walk.eq_of_length_eq_zero hp) ▸ h)
+  · intro h
+    use Walk.cons h Walk.nil
+    simp only [Walk.length_cons, Walk.length_nil, zero_add]
+
+lemma dist_gt_one_of_ne_and_nadj (h : G.Reachable u v) (hne : u ≠ v) (hnadj : ¬G.Adj u v) : 1 < G.dist u v := by
+  have : 1 ≠ G.dist u v := by
+    by_contra! hc
+    obtain ⟨p, hp⟩ := Reachable.exists_path_of_dist h
+    rw [← hc] at hp
+    exact hnadj (walk_length_one_adj.mp ⟨p, hp.2⟩)
+  exact Nat.lt_of_le_of_ne (h.pos_dist_of_ne hne) this
+
+lemma union_gt_iff : G < G ⊔ G' ↔ ¬ (G' ≤ G) := by
+  constructor
+  · intro h h'
+    simp only [sup_of_le_left h', lt_self_iff_false] at h
+  · intro h
+    exact left_lt_sup.mpr h
 
 theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
     (∃ (M : Subgraph G) , M.IsPerfectMatching) ↔
