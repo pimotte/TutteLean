@@ -972,43 +972,10 @@ lemma path_edge_IsCycles (p : G.Walk u v) (hp : p.IsPath) (h : u ≠ v) (hs : s(
   rw [this]
   exact IsCycle.IsCycles_toSubgraph_spanningCoe hc
 
--- In getVert PR
-theorem toSubgraph_adj_exists {u v} (w : G.Walk u v)
-    (hadj : (w.toSubgraph).Adj u' v') : ∃ i, (u' = w.getVert i ∧ v' = w.getVert (i + 1) ∨ v' = w.getVert i ∧ u' = w.getVert (i + 1)) ∧ i < w.length := by
-  unfold Walk.toSubgraph at hadj
-  match w with
-  | .nil =>
-    simp at hadj
-  | .cons h p =>
-    simp at hadj
-    cases hadj with
-    | inl hl =>
-      cases hl with
-      | inl h1 =>
-        use 0
-        simp only [Walk.getVert_zero, zero_add, Walk.getVert_cons_succ]
-        constructor
-        · left
-          exact ⟨h1.1.symm, h1.2.symm⟩
-        · simp only [Walk.length_cons, lt_add_iff_pos_left, add_pos_iff, zero_lt_one, or_true]
-      | inr h2 =>
-        use 0
-        simp only [Walk.getVert_zero, zero_add, Walk.getVert_cons_succ]
-        constructor
-        · right
-          exact ⟨h2.1.symm, h2.2.symm⟩
-        · simp only [Walk.length_cons, lt_add_iff_pos_left, add_pos_iff, zero_lt_one, or_true]
-    | inr hr =>
-      obtain ⟨i, hi⟩ := toSubgraph_adj_exists _ hr
-      use (i + 1)
-      simp only [Walk.getVert_cons_succ]
-      constructor
-      · exact hi.1
-      · simp only [Walk.length_cons, add_lt_add_iff_right, hi.2]
-
 theorem toSubgraph_adj_sndOfNotNil {u v} (p : G.Walk u v) (hpp : p.IsPath)
     (hadj : (p.toSubgraph).Adj u v') : p.getVert 1 = v' := by
-  have ⟨i, hi⟩ := toSubgraph_adj_exists _ hadj
+  have ⟨i, hi⟩ := (Walk.toSubgraph_adj_iff _).mp hadj
+  simp only [Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk] at hi
   have hnodup := hpp.2
   rw [@List.nodup_iff_get?_ne_get?] at hnodup
   have hi0 : i = 0 := by
@@ -1023,7 +990,7 @@ theorem toSubgraph_adj_sndOfNotNil {u v} (p : G.Walk u v) (hpp : p.IsPath)
       rw [← getVert_support_get _ (by omega)]
       rw [← getVert_support_get _ (by omega)]
       simp only [Walk.getVert_zero, Option.some.injEq]
-      exact hl.1
+      exact hl.1.symm
     | inr hr =>
       have := hnodup 0 (i + 1) (by omega) (by
         rw [support_length]
@@ -1033,12 +1000,12 @@ theorem toSubgraph_adj_sndOfNotNil {u v} (p : G.Walk u v) (hpp : p.IsPath)
       rw [← getVert_support_get _ (by omega)]
       rw [← getVert_support_get _ (by omega)]
       simp only [Walk.getVert_zero, Option.some.injEq]
-      exact hr.2
+      exact hr.2.symm
   rw [hi0] at hi
   simp only [Walk.getVert_zero, zero_add, true_and] at hi
   cases hi.1 with
-  | inl hl => exact hl.symm
-  | inr hr => exact (hadj.ne hr.1.symm).elim
+  | inl hl => exact hl
+  | inr hr => exact (hadj.ne hr.1).elim
 
 theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) (hab : G.Adj a b) (hnGxb : ¬G.Adj x b) (hnGac : ¬ G.Adj a c)
     (hnxb : x ≠ b) (hnxc : x ≠ c) (hnac : a ≠ c) (hnbc : b ≠ c)
