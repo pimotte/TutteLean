@@ -2,25 +2,10 @@ import TutteLean.Defs
 import TutteLean.Clique
 import TutteLean.ConnectedComponent
 
+import Mathlib.Combinatorics.SimpleGraph.UniversalVerts
+
 namespace SimpleGraph
 variable {V : Type*} {G : SimpleGraph V}
-
--- In universalVerts PR
-def universalVerts (G : SimpleGraph V) : Set V := {v : V | ∀ w, v ≠ w → G.Adj w v}
-
--- In universalVerts PR
-lemma isClique_universalVerts (G : SimpleGraph V) : G.IsClique G.universalVerts := by
-  intro x _ y hy hxy
-  exact hy x hxy.symm
-
--- In universalVerts PR
-def deleteUniversalVerts (G : SimpleGraph V) : Subgraph G := ((⊤ : Subgraph G).deleteVerts (universalVerts G))
-
--- In universalVerts PR
-@[simp]
-lemma deleteUniversalVerts_verts : G.deleteUniversalVerts.verts = Set.univ \ G.universalVerts := by
-  unfold deleteUniversalVerts
-  simp only [Subgraph.induce_verts, Subgraph.verts_top]
 
 def oddVerts (G : SimpleGraph V) : Set V := Subtype.val '' ((fun c ↦ c.exists_rep.choose) '' {(c : ConnectedComponent G.deleteUniversalVerts.coe) | Odd (c.supp.ncard)})
 
@@ -55,7 +40,6 @@ lemma isClique_lifts {K : G.deleteUniversalVerts.coe.ConnectedComponent}
   have := h hx'.1 hy'.1 (fun a => hxy (congrArg Subtype.val a))
   exact subgraph_coe G.deleteUniversalVerts this
 
--- In universalVerts PR
 lemma disjoint_supp_universalVerts {K : G.deleteUniversalVerts.coe.ConnectedComponent} :
     Disjoint (Subtype.val '' K.supp) G.universalVerts := by
   rw [Set.disjoint_left]
