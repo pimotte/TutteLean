@@ -13,7 +13,6 @@ import TutteLean.Supp
 import TutteLean.SingleEdge
 import TutteLean.ConnectedComponent
 import TutteLean.Clique
-import TutteLean.Set
 import TutteLean.PartNew
 import TutteLean.Part2
 -- import Mathlib.Algebra.BigOperators.Basic
