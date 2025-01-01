@@ -1,6 +1,2 @@
-- Refactor case of "decomposes into cliques"
-- PR matchings with cliques based refactored
-- Refactor other case 
-- Figure out what of `Walk.lean` is actually needed
 - Cleanup mem_support_iff_exists_getVert (in mathlib)
 - Fixup SimpleGraph.toSubgraph: https://github.com/leanprover-community/mathlib4/pull/19250#discussion_r1862815221

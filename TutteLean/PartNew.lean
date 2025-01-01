@@ -17,6 +17,9 @@ lemma rep_choose_inj : Function.Injective (fun (c : G.ConnectedComponent) ↦ c.
   exact congrArg G.connectedComponentMk hcd
 
 -- In represents PR/easy
+--lemma disjoint_image_val_universalVerts {s : Set (G.deleteUniversalVerts.verts)} :
+--   Disjoint (Subtype.val '' s) G.universalVerts := by
+--  exact Subgraph.disjoint_deleteVerts_verts_image_val.symm
 
 lemma oddVerts_core_disjoint : Disjoint G.oddVerts G.universalVerts := by
   rw [@Set.disjoint_left]
@@ -51,6 +54,12 @@ lemma disjoint_supp_universalVerts {K : G.deleteUniversalVerts.coe.ConnectedComp
 
 lemma component_rep (c : G.ConnectedComponent): G.connectedComponentMk c.exists_rep.choose = c := by
   exact c.exists_rep.choose_spec
+
+--lemma disjoint_even_supp_oddVerts {K : G.deleteUniversalVerts.coe.ConnectedComponent}
+--    {s : Set (G.deleteUniversalVerts.verts)}
+--    (hrep : s.Represents {(c : ConnectedComponent G.deleteUniversalVerts.coe) | Odd (c.supp.ncard)})
+--    (h : Even K.supp.ncard) : Disjoint s K.supp := by
+--  exact ConnectedComponent.disjoint_supp_of_represents hrep (Nat.not_odd_iff_even.mpr h)
 
 -- In represents PR/easy
 lemma disjoint_even_supp_oddVerts {K : G.deleteUniversalVerts.coe.ConnectedComponent}
