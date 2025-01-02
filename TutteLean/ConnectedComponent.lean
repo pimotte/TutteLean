@@ -23,6 +23,7 @@ lemma deleteAll [Fintype V] [Inhabited V] [DecidableEq V] {G : SimpleGraph V} [D
     · intro h
       exact h.elim
 
+-- In #20398
 lemma commonComponent [Fintype V] [DecidableEq V] {G G' : SimpleGraph V} [DecidableRel G.Adj] [DecidableRel G'.Adj]
      {c : ConnectedComponent G} {c' d' : ConnectedComponent G'} (hc' : c.supp ⊆ c'.supp) (hd' : c.supp ⊆ d'.supp) : c' = d' := by
     obtain ⟨ v, hv ⟩ := c.exists_rep
@@ -30,7 +31,7 @@ lemma commonComponent [Fintype V] [DecidableEq V] {G G' : SimpleGraph V} [Decida
     exact hd' hv
     exact hc' hv
 
-
+-- In #20398
 lemma ConnectedComponent.odd_components_mono [Fintype V] [DecidableEq V] (G G' : SimpleGraph V) [DecidableRel G.Adj] [DecidableRel G'.Adj]
     (h : G ≤ G') : ({c : ConnectedComponent G' | Odd (Nat.card c.supp)}).ncard ≤ ({c : ConnectedComponent G | Odd (Nat.card c.supp)}).ncard := by
   have ex_subcomponent (c : G'.ConnectedComponent) (hc : Odd (Nat.card c.supp)) : ∃ (c' : G.ConnectedComponent), c'.supp ⊆ c.supp ∧ Odd (Nat.card c'.supp) := by
@@ -54,9 +55,11 @@ lemma ConnectedComponent.odd_components_mono [Fintype V] [DecidableEq V] (G G' :
     exact Subtype.val_injective (commonComponent hc.1 hc'.1)
   exact Finite.card_le_of_injective f finj
 
+-- In #20398
 lemma oddComponentsIncrease [Fintype V] [DecidableEq V] (G G' : SimpleGraph V) [DecidableRel G.Adj] [DecidableRel G'.Adj]
     (h : G ≤ G') (u : Set V):
     ({c : ConnectedComponent ((⊤ : Subgraph G').deleteVerts u).coe | Odd (Nat.card c.supp)}).ncard ≤ ({c : ConnectedComponent ((⊤ : Subgraph G).deleteVerts u).coe | Odd (Nat.card c.supp)}).ncard  := by
+  -- set_option trace.Meta.synthInstance true in
   apply ConnectedComponent.odd_components_mono
   intro v w hvw
   simp at *

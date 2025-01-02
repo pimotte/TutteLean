@@ -22,7 +22,7 @@ lemma ConnectedComponent.isOdd_iff (c : G.ConnectedComponent) [Fintype c.supp] :
 
 lemma deleteVerts_verts_notmem_deleted (a : ((⊤ : G.Subgraph).deleteVerts u).verts) : a.val ∉ u := a.prop.2
 
-
+-- In #20398
 instance myInst3 [r : DecidableRel G.Adj] : DecidableRel (((⊤ : G.Subgraph).deleteVerts u).coe).Adj := by
   intro x y
   cases (r x y) with
@@ -64,6 +64,7 @@ instance [Fintype V] [DecidableEq V] [DecidableRel G.Adj] : DecidableEq (Connect
 -- noncomputable instance myInst5 [Fintype V] [DecidableEq V] (u : Set V) : Fintype u := by
 --   exact Fintype.ofFinite ↑u
 
+-- Was needed for #20398 but inlined
 noncomputable instance myInst4 [Fintype V] [DecidableEq V] [DecidableRel G.Adj]
     (u : Set V) :
     Fintype ((⊤ : G.Subgraph).deleteVerts u).verts := by
