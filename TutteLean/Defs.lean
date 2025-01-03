@@ -64,7 +64,7 @@ instance [Fintype V] [DecidableEq V] [DecidableRel G.Adj] : DecidableEq (Connect
 -- noncomputable instance myInst5 [Fintype V] [DecidableEq V] (u : Set V) : Fintype u := by
 --   exact Fintype.ofFinite ↑u
 
--- Was needed for #20398 but inlined
+-- Was needed for #20398 but inlined, can be removed when oddComponentsIncrease is removed
 noncomputable instance myInst4 [Fintype V] [DecidableEq V] [DecidableRel G.Adj]
     (u : Set V) :
     Fintype ((⊤ : G.Subgraph).deleteVerts u).verts := by

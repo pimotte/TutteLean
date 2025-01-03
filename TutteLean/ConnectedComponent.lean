@@ -3,26 +3,6 @@ import TutteLean.Defs
 namespace SimpleGraph
 variable {V : Type*} {G : SimpleGraph V}
 
-lemma deleteAll [Fintype V] [Inhabited V] [DecidableEq V] {G : SimpleGraph V} [DecidableRel G.Adj]  (H : Subgraph G): H.deleteVerts ⊤ = ⊥ := by
-  ext v w
-  · rw [@Subgraph.deleteVerts_verts]
-    rw [@Set.mem_diff]
-    constructor
-    · intro h
-      exfalso
-      apply h.2
-      exact trivial
-    · intro h
-      exact h.elim
-  · rw [@Subgraph.deleteVerts_adj]
-    constructor
-    · intro h
-      exfalso
-      apply h.2.1
-      exact trivial
-    · intro h
-      exact h.elim
-
 -- In #20398
 lemma commonComponent [Fintype V] [DecidableEq V] {G G' : SimpleGraph V} [DecidableRel G.Adj] [DecidableRel G'.Adj]
      {c : ConnectedComponent G} {c' d' : ConnectedComponent G'} (hc' : c.supp ⊆ c'.supp) (hd' : c.supp ⊆ d'.supp) : c' = d' := by
@@ -64,11 +44,6 @@ lemma oddComponentsIncrease [Fintype V] [DecidableEq V] (G G' : SimpleGraph V) [
   intro v w hvw
   simp at *
   exact h hvw
-
-lemma ConnectedComponentSubsetVerts (H : Subgraph G) (c : ConnectedComponent H.coe) : (c.supp : Set V) ⊆ H.verts := by
-  intro v hv
-  exact Set.image_val_subset hv
-
 
 lemma ConnectedComponent.exists_vert (c : ConnectedComponent G) : ∃ v, G.connectedComponentMk v = c := c.exists_rep
 
