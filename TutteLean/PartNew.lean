@@ -234,7 +234,8 @@ theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Ad
       simp only [(compMatching K).choose_spec.1, Set.mem_diff, Set.mem_image, ConnectedComponent.mem_supp_iff, Subtype.exists,
         deleteUniversalVerts_verts, Set.mem_univ, true_and, exists_and_right, exists_eq_right,
         exists_prop, and_true]
-      exact h.symm
+      aesop
+
   have subM1M2Clique : G.IsClique ((Set.univ : Set V) \ (M1.verts ∪ M2.verts)) := by
     exact G.isClique_universalVerts.subset sub
 

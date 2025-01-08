@@ -328,7 +328,7 @@ lemma cycle_getVert_injOn (p : G.Walk u u) (hpc : p.IsCycle) : Set.InjOn p.getVe
   rw [← SimpleGraph.Walk.length_tail_add_one hnp, Set.mem_setOf] at hn hm
   have := IsPath.getVert_injective hpc.1 (by omega : n - 1 ≤ p.tail.length) (by omega : m - 1 ≤ p.tail.length)
       (by
-        simp [SimpleGraph.Walk.getVert_tail _ hnp, show n - 1 + 1 = n from by omega,
+        simp [SimpleGraph.Walk.getVert_tail, show n - 1 + 1 = n from by omega,
           show m - 1 + 1 = m from by omega]
         exact hnm
         )
@@ -552,7 +552,7 @@ lemma Walk.getVert_mem_support (p : G.Walk u v) : p.getVert i ∈ p.support := b
     rw [getVert_of_length_le _ (by omega)] at hl
     exact hl (h.eq.symm)
   rw [← support_tail_of_not_nil p hnp, show i = (i - 1) + 1 from by omega]
-  rw [← @getVert_tail _ _ _ _ (i - 1) _ hnp]
+  rw [← @getVert_tail]
   apply p.tail.getVert_mem_support
 
 def Walk.coeWalk {H : Subgraph G} {u v : H.verts} (p : H.coe.Walk u v) : G.Walk u.val v.val :=
@@ -594,7 +594,7 @@ lemma Subgraph_eq_component_supp {H : Subgraph G} (hb : H ≠ ⊥) (h : ∀ v �
         exact this ▸ hv'
       have : p.getVert 1 ∈ H.verts := H.edge_vert (by
             rw [Subgraph.adj_comm, h _ hv' _]
-            exact Walk.adj_getVert_one hnp)
+            exact Walk.adj_snd hnp)
       exact aux this p.tail
     termination_by p.length
     decreasing_by {
@@ -656,7 +656,7 @@ lemma IsCycle.first_two {p : G.Walk v v} (h : p.IsCycle) (hadj : p.toSubgraph.Ad
     exact ⟨h.reverse, hr.symm, by rw [SimpleGraph.Walk.toSubgraph_reverse _]⟩
 
 lemma Walk.cons_tail_eq' (p : G.Walk x x) (hp : ¬ p.Nil) :
-    Walk.cons (p.adj_getVert_one hp) p.tail = p := by
+    Walk.cons (p.adj_snd hp) p.tail = p := by
   cases p with
   | nil => simp only [nil_nil, not_true_eq_false] at hp
   | cons h q =>
@@ -791,8 +791,7 @@ lemma takeUntil_getVert [DecidableEq V] {p : G.Walk u v} (hw : w ∈ p.support) 
   cases p with
   | nil =>
     simp only [Walk.support_nil, List.mem_singleton] at hw
-    subst hw
-    simp only [Walk.takeUntil, Walk.getVert]
+    aesop
   | @cons _ v' _ h q =>
     simp at hw
     by_cases huw : w = u
@@ -967,8 +966,10 @@ lemma path_edge_IsCycles (p : G.Walk u v) (hp : p.IsPath) (h : u ≠ v) (hs : s(
     simp [hp, hs]
   have : p.toSubgraph.spanningCoe ⊔ edge v u = c.toSubgraph.spanningCoe := by
     ext w x
-    simp  [edge_adj, p', path_map_spanning]
+    simp
+    simp only [edge_adj, c, p', SimpleGraph.Walk.toSubgraph.eq_2, Subgraph.sup_adj, subgraphOfAdj_adj, ← path_map_spanning]
     aesop
+
   rw [this]
   exact IsCycle.IsCycles_toSubgraph_spanningCoe hc
 

@@ -60,7 +60,7 @@ noncomputable def lift_walk {c : ConnectedComponent G} {v w : c.supp}  (p : G.Wa
         ConnectedComponent.eq]
       exact Walk.reachable q
     let u' : c.supp := ⟨u , hu⟩
-    Walk.cons (by simp only [comap_adj, Function.Embedding.coe_subtype, h] : (G.induce c.supp).Adj v u') (lift_walk q)
+    Walk.cons (by simp [comap_adj, Function.Embedding.coe_subtype, u', h, u] : (G.induce c.supp).Adj v u') (lift_walk q)
 termination_by p.length
 decreasing_by
   simp_wf
@@ -100,8 +100,8 @@ lemma verts_of_walk (p : G.Walk v w) (hp : p.length = G.dist v w) (hl : 1 < G.di
   use p.getVert 1
   use p.tail.getVert 1
   -- simp? [ne_eq, Walk.adj_getVert_one, Walk.adj_getVert_succ]
-  refine ⟨Walk.adj_getVert_one hnp, ?_, ?_⟩
-  · rw [Walk.getVert_tail p hnp]
+  refine ⟨Walk.adj_snd hnp, ?_, ?_⟩
+  · rw [Walk.getVert_tail]
     simp [Walk.adj_getVert_succ _ (Nat.lt_of_lt_of_eq hl hp.symm)]
   constructor
   · intro hadj
