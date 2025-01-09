@@ -312,13 +312,14 @@ lemma mem_rotate_support [DecidableEq V] {p : G.Walk u u} (h : v ∈ p.support) 
   rw [or_comm]
   simp [← Walk.mem_support_append_iff, Walk.take_spec]
 
+-- In #20602
 lemma cycle_cons_is_not_nil (p : G.Walk u v) (h : G.Adj v u) (hc : (Walk.cons h p).IsCycle) : ¬ p.Nil := by
   have hl := Walk.IsCycle.three_le_length hc
   rw [@Walk.not_nil_iff_lt_length]
   rw [@Walk.length_cons] at hl
   omega
 
-
+-- In #20602
 lemma cycle_getVert_injOn (p : G.Walk u u) (hpc : p.IsCycle) : Set.InjOn p.getVert {i | 1 ≤ i ∧ i ≤ p.length} := by
   have hnp : ¬ p.Nil := hpc.not_nil
   rw [← p.cons_tail_eq hpc.not_nil] at hpc
@@ -359,7 +360,7 @@ lemma getVert_support_get (p : G.Walk u v) (h2 : n ≤ p.length) : p.getVert n =
         exact Nat.sub_le_of_le_add h2
         )
 
-
+-- In #20602
 lemma cycle_getVert_injOn' (p : G.Walk u u) (hpc : p.IsCycle) : Set.InjOn p.getVert {i |  i ≤ p.length - 1} := by
   intro n hn m hm hnm
   simp only [Set.mem_setOf_eq] at hn hm
@@ -375,7 +376,7 @@ lemma cycle_getVert_injOn' (p : G.Walk u u) (hpc : p.IsCycle) : Set.InjOn p.getV
     show p.length - (p.length - m) = m from by omega, forall_const] at this
   omega
 
-
+-- In #20602
 lemma cycle_getVert_endpoint {p : G.Walk u u} (hpc : p.IsCycle) (hl : i ≤ p.length) : p.getVert i = u ↔ i = 0 ∨ i = p.length := by
   refine ⟨?_, by aesop⟩
   intro h
@@ -389,6 +390,7 @@ lemma cycle_getVert_endpoint {p : G.Walk u u} (hpc : p.IsCycle) (hl : i ≤ p.le
   rw [h]
   exact (Walk.getVert_length p).symm
 
+-- In #20602
 lemma cycle_startPoint_neighborSet (p : G.Walk u u) (hpc : p.IsCycle) : p.toSubgraph.neighborSet u = {p.getVert 1, p.getVert (p.length - 1)} := by
   have hl := hpc.three_le_length
   have hadj1 : p.toSubgraph.Adj (p.getVert 0) (p.getVert 1) := SimpleGraph.Walk.toSubgraph_adj_getVert _ (by omega)
@@ -415,6 +417,7 @@ lemma cycle_startPoint_neighborSet (p : G.Walk u u) (hpc : p.IsCycle) : p.toSubg
         aesop
   · aesop
 
+-- In #20602
 lemma cycle_internal_neighborSet (p : G.Walk u u) (hpc : p.IsCycle) (h : i ≠ 0) (h' : i < p.length): p.toSubgraph.neighborSet (p.getVert i) = {p.getVert (i - 1), p.getVert (i + 1)} := by
   have hl := hpc.three_le_length
   have hadj1 := ((show i - 1 + 1 = i from by omega) ▸ SimpleGraph.Walk.toSubgraph_adj_getVert _ (by omega : (i - 1) < p.length)).symm
@@ -453,6 +456,7 @@ lemma cycle_internal_neighborSet (p : G.Walk u u) (hpc : p.IsCycle) (h : i ≠ 0
     exact cycle_getVert_injOn' _ hpc (by simp; omega) (by simp; omega) hvii'
   aesop
 
+-- In #20602
 lemma cycle_getVert_sub_one_neq_getVert_add_one {p : G.Walk u u} (hpc : p.IsCycle) (h : i ≤ p.length) : p.getVert (i - 1) ≠ p.getVert (i + 1) := by
   have hl := hpc.three_le_length
   by_cases hi' : i ≥ p.length - 1
@@ -464,6 +468,7 @@ lemma cycle_getVert_sub_one_neq_getVert_add_one {p : G.Walk u u} (hpc : p.IsCycl
   have := cycle_getVert_injOn' _ hpc (by simp; omega) (by simp; omega) h'
   omega
 
+-- In #20602
 lemma cycle_two_neighbors'' (p : G.Walk u u) (hpc : p.IsCycle) (h : v ∈ p.support): (p.toSubgraph.neighborSet v).ncard = 2 := by
   rw [Set.ncard_eq_two]
   have hpcl :=  Walk.IsCycle.three_le_length hpc
