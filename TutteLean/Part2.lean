@@ -12,46 +12,6 @@ namespace SimpleGraph
 -- universe u
 variable {V : Type*} {G : SimpleGraph V}
 
--- Already in: IsPerfectMatching.toSubgraph_spanningCoe_iff
-theorem IsPerfectMatching.toSubgraph_spanningCoe {M : Subgraph G} (hM : M.IsPerfectMatching)
-    (h : M.spanningCoe ≤ G') : (G'.toSubgraph M.spanningCoe h).IsPerfectMatching := by
-  refine ⟨?_, fun v ↦ by simp⟩
-  intro v _
-  apply hM.1
-  simp only [Subgraph.IsSpanning.verts_eq_univ hM.2, Set.mem_univ]
-
--- In #19377
-theorem adj_iff_of_sym2_eq (h : s(v, w) = s(u, t)) : G.Adj v w ↔ G.Adj u t := by
-  simp only [Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk] at h
-  cases' h with hl hr
-  · rw [hl.1, hl.2]
-  · rw [hr.1, hr.2, adj_comm]
-
--- In #19377
-theorem Subgraph.adj_iff_of_sym2_eq {H : Subgraph G} (h2 : s(v, w) = s(u, t)) : H.Adj v w ↔ H.Adj u t := by
-  simp only [Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk] at h2
-  cases' h2 with hl hr
-  · rw [hl.1, hl.2]
-  · rw [hr.1, hr.2, Subgraph.adj_comm]
-
--- In #19377
-theorem Subgraph.sup_edge_spanningCoe_le {v w : V} {H : Subgraph (G ⊔ edge v w)} (h : ¬ H.Adj v w) :
-    H.spanningCoe ≤ G := by
-  intro v' w' hvw'
-  simp only [Subgraph.spanningCoe_adj] at *
-  by_cases hs : s(v', w') = s(v, w)
-  · exact (h ((Subgraph.adj_iff_of_sym2_eq hs).mp hvw')).elim
-  · have := hvw'.adj_sub
-    simp only [SimpleGraph.sup_adj, SimpleGraph.edge_adj] at this
-    cases' this with hl hr
-    · exact hl
-    · rw [Sym2.eq_iff] at hs
-      exact (hs hr.1).elim
-
--- In #19377
-lemma mem_spanningCoe_of_adj {v w : V} {s : Set V} (G : SimpleGraph s) (hadj : G.spanningCoe.Adj v w) : v ∈ s := by
-  aesop
-
 
 @[simp]
 lemma induce_adj {s : Set V} {G : SimpleGraph V} {v w : V}  (hv : v ∈ s) (hw : w ∈ s) : (G.induce s).spanningCoe.Adj v w ↔ G.Adj v w := by
@@ -60,9 +20,9 @@ lemma induce_adj {s : Set V} {G : SimpleGraph V} {v w : V}  (hv : v ∈ s) (hw :
 
 lemma IsAlternating.induce_supp (c : G.ConnectedComponent) (h : G.IsAlternating G') : (G.induce c.supp).spanningCoe.IsAlternating G' := by
   intro v w w' hww' hvw hvw'
-  have h1 := mem_spanningCoe_of_adj (induce c.supp G) hvw
-  have h2 : w ∈ c.supp := mem_spanningCoe_of_adj (induce c.supp G) (id (adj_symm (induce c.supp G).spanningCoe hvw))
-  have h3 : w' ∈ c.supp := mem_spanningCoe_of_adj (induce c.supp G) (id (adj_symm (induce c.supp G).spanningCoe hvw'))
+  have h1 := Subgraph.mem_of_adj_spanningCoe (induce c.supp G) hvw
+  have h2 : w ∈ c.supp := Subgraph.mem_of_adj_spanningCoe (induce c.supp G) (id (adj_symm (induce c.supp G).spanningCoe hvw))
+  have h3 : w' ∈ c.supp := Subgraph.mem_of_adj_spanningCoe (induce c.supp G) (id (adj_symm (induce c.supp G).spanningCoe hvw'))
   rw [induce_adj h1 h2] at hvw
   rw [induce_adj h1 h3] at hvw'
   exact h hww' hvw hvw'
@@ -921,7 +881,7 @@ lemma IsAlternating.sup_edge (halt : G.IsAlternating G') (hnadj : ¬G'.Adj u x) 
   · exact halt hww' hl h1
   · simp [edge_adj] at h2
     have : s(v, w') = s(u, x) := by aesop
-    rw [adj_iff_of_sym2_eq this]
+    rw [G'.adj_congr_of_sym2 this]
     simp [hnadj]
     rcases h2.1 with (⟨h2l1, h2l2⟩| ⟨h2r1, h2r2⟩)
     · subst h2l1 h2l2
@@ -929,7 +889,7 @@ lemma IsAlternating.sup_edge (halt : G.IsAlternating G') (hnadj : ¬G'.Adj u x) 
     · aesop
   · simp [edge_adj] at hr
     have : s(v, w) = s(u, x) := by aesop
-    rw [adj_iff_of_sym2_eq this]
+    rw [G'.adj_congr_of_sym2 this]
     simp [hnadj]
     rcases hr.1 with (⟨hrl1, hrl2⟩| ⟨hrr1, hrr2⟩)
     · subst hrl1 hrl2
@@ -1033,11 +993,11 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
 
 
   by_cases hM1xb : ¬M1.Adj x b
-  · use G.toSubgraph M1.spanningCoe (M1.sup_edge_spanningCoe_le hM1xb)
-    exact IsPerfectMatching.toSubgraph_spanningCoe hM1 (M1.sup_edge_spanningCoe_le hM1xb)
+  · use G.toSubgraph M1.spanningCoe (M1.spanningCoe_sup_edge_le _ hM1xb)
+    exact (Subgraph.IsPerfectMatching.toSubgraph_spanningCoe_iff (M1.spanningCoe_sup_edge_le _ hM1xb)).mpr hM1
   by_cases hM2ac : ¬M2.Adj a c
-  · use G.toSubgraph M2.spanningCoe (M2.sup_edge_spanningCoe_le hM2ac)
-    exact IsPerfectMatching.toSubgraph_spanningCoe hM2 (M2.sup_edge_spanningCoe_le hM2ac)
+  · use G.toSubgraph M2.spanningCoe (M2.spanningCoe_sup_edge_le _ hM2ac)
+    exact (Subgraph.IsPerfectMatching.toSubgraph_spanningCoe_iff (M2.spanningCoe_sup_edge_le _ hM2ac)).mpr hM2
   simp only [not_not] at hM1xb hM2ac
 
   suffices ∃ (G' : SimpleGraph V), G'.IsAlternating M2.spanningCoe ∧ G'.IsCycles ∧ symmDiff M2.spanningCoe G' ≤ G by
@@ -1052,7 +1012,7 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
     refine ⟨hG', hG'cyc, ?_⟩
     intro v w hv
     by_cases hsym : s(v, w) = s(a, c)
-    · simp [adj_iff_of_sym2_eq hsym, symmDiff_def, hM2ac, hnG'ac] at hv
+    · simp [adj_congr_of_sym2 _ hsym, symmDiff_def, hM2ac, hnG'ac] at hv
     · simp only [symmDiff_def, sup_adj, sdiff_adj] at hv
       rw [@Sym2.eq_iff] at hsym
       cases' hv with hl hr
@@ -1232,7 +1192,7 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
         and_iff_left_iff_imp]
       intro hvw hs
       rw [← @Sym2.eq_iff] at hs
-      rw [Subgraph.adj_iff_of_sym2_eq hs] at hvw
+      rw [Subgraph.adj_congr_of_sym2 hs] at hvw
       exact (hnpxb hvw).elim
     rw [h1] at hle4
     refine ⟨hle4,?_⟩
