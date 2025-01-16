@@ -80,31 +80,6 @@ lemma induce_component_IsCycles (c : G.ConnectedComponent) (h : G.IsCycles)
   ext w'
   simp only [mem_neighborSet, induce_component_spanningCoe_Adj, hw, true_and]
 
--- In #19373
-lemma IsPath.getVert_injective {p : G.Walk v w} (hp : p.IsPath) : Set.InjOn p.getVert {i | i ≤ p.length} := by
-  intro n hn m hm hnm
-  simp at *
-  induction p generalizing n m with
-  | nil => aesop
-  | @cons v w u h p ihp =>
-    simp at hn hm hnm
-    by_cases hn0 : n = 0 <;> by_cases hm0 : m = 0
-    · aesop
-    · simp [hn0, Walk.getVert_cons p h hm0] at hnm
-      have hvp : v ∉ p.support := by
-        aesop
-      exact (hvp (Walk.mem_support_iff_exists_getVert.mpr ⟨(m - 1), ⟨hnm.symm, by omega⟩⟩)).elim
-    · simp [hm0, Walk.getVert_cons p h hn0] at hnm
-      have hvp : v ∉ p.support := by
-        aesop
-      exact (hvp (Walk.mem_support_iff_exists_getVert.mpr ⟨(n - 1), ⟨hnm, by omega⟩⟩)).elim
-    · simp [Walk.getVert_cons _ _ hn0, Walk.getVert_cons _ _ hm0] at hnm
-      have hnl : (n - 1) ≤ p.length := by omega
-      have hml : (m - 1) ≤ p.length := by omega
-      have := ihp (Walk.IsPath.of_cons hp) hnl hml hnm
-      omega
-
-
 
 lemma IsCycles_Path_mem_support_is_second (p : G.Walk v w) (hw : w ≠ w') (hw' : w' ∈ p.support) (hp : p.IsPath)
     (hadj : G.Adj v w') (hcyc : G.IsCycles) : p.getVert 1 = w' := by
@@ -136,14 +111,14 @@ lemma IsCycles_Path_mem_support_is_second (p : G.Walk v w) (hw : w ≠ w') (hw' 
       simp_all only [ne_eq, and_true, Set.mem_insert_iff, Set.mem_singleton_iff, le_refl, Walk.getVert_length,
         not_true_eq_false]
     intro h
-    apply IsPath.getVert_injective hp (by rw [@Set.mem_setOf]; omega) (by rw [@Set.mem_setOf]; omega) at h
+    apply hp.getVert_injOn (by rw [@Set.mem_setOf]; omega) (by rw [@Set.mem_setOf]; omega) at h
 
     omega
 
   have hsnv : p.getVert (n - 1) ≠ v := by
     intro h
     have : p.getVert (n - 1) = p.getVert 0 := by aesop
-    apply IsPath.getVert_injective hp (by rw [Set.mem_setOf]; omega) (by rw [Set.mem_setOf]; omega) at this
+    apply hp.getVert_injOn (by rw [Set.mem_setOf]; omega) (by rw [Set.mem_setOf]; omega) at this
     omega
 
   have hpnv : p.getVert (n + 1) ≠ v := by
@@ -152,7 +127,7 @@ lemma IsCycles_Path_mem_support_is_second (p : G.Walk v w) (hw : w ≠ w') (hw' 
     · subst h
       simp_all only [ne_eq, and_true, Set.mem_insert_iff, Set.mem_singleton_iff, le_refl, Walk.getVert_length,
         not_true_eq_false]
-    apply IsPath.getVert_injective hp (by rw [Set.mem_setOf]; omega) (by rw [Set.mem_setOf]; omega) at this
+    apply hp.getVert_injOn (by rw [Set.mem_setOf]; omega) (by rw [Set.mem_setOf]; omega) at this
     omega
 
   simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hsgv hpgv
@@ -188,10 +163,10 @@ lemma IsCycles_Reachable_Path [Fintype V] (hcyc : G.IsCycles)
       aesop
     by_cases hpi : p.getVert i = v
     · have : p.getVert i = p.getVert 0 := by aesop
-      apply IsPath.getVert_injective hp (by rw [Set.mem_setOf]; omega) (by rw [Set.mem_setOf]; omega) at this
+      apply hp.getVert_injOn (by rw [Set.mem_setOf]; omega) (by rw [Set.mem_setOf]; omega) at this
       omega
     have : p.getVert (i + 1) = p.getVert 0 := by aesop
-    apply IsPath.getVert_injective hp (by rw [Set.mem_setOf]; omega) (by rw [Set.mem_setOf]; omega) at this
+    apply hp.getVert_injOn (by rw [Set.mem_setOf]; omega) (by rw [Set.mem_setOf]; omega) at this
     omega
   by_cases hww' : w = w'
   · subst hww'
@@ -278,7 +253,7 @@ lemma cycle_getVert_injOn (p : G.Walk u u) (hpc : p.IsCycle) : Set.InjOn p.getVe
   rw [@Walk.cons_isCycle_iff] at hpc
   intro n hn m hm hnm
   rw [← SimpleGraph.Walk.length_tail_add_one hnp, Set.mem_setOf] at hn hm
-  have := IsPath.getVert_injective hpc.1 (by omega : n - 1 ≤ p.tail.length) (by omega : m - 1 ≤ p.tail.length)
+  have := hpc.1.getVert_injOn (by omega : n - 1 ≤ p.tail.length) (by omega : m - 1 ≤ p.tail.length)
       (by
         simp [SimpleGraph.Walk.getVert_tail, show n - 1 + 1 = n from by omega,
           show m - 1 + 1 = m from by omega]
@@ -589,11 +564,6 @@ lemma takeUntil_notNil [DecidableEq V] (p : G.Walk u v) (hwp : w ∈ p.support) 
     simp only [Walk.support_cons, List.mem_cons, huw.symm, false_or] at hwp
     simp [cons_takeUntil hwp huw] at hnil
 
--- In #19373
-lemma IsPath.getVert_injOn {p : G.Walk u v} (hp : p.IsPath) :
-    Set.InjOn p.getVert {i | i ≤ p.length} := by
-  sorry
-
 lemma support_length (p : G.Walk v w) : p.support.length = p.length + 1 := by
   match p with
   | .nil => simp only [Walk.support_nil, List.length_singleton, Walk.length_nil, zero_add]
@@ -731,7 +701,7 @@ lemma cycle_takeUntil_takeUntil_adj [DecidableEq V] (p : G.Walk u u) (hp : p.IsC
   have heq : (p.takeUntil w hw).getVert n = (p.takeUntil w hw).getVert (p.takeUntil w hw).length := by simp_all only [Walk.getVert_length]
   have := Walk.length_takeUntil_lt (p.takeUntil w hw) hx h.ne
 
-  apply IsPath.getVert_injOn (hp.takeUntil hw) (by rw [@Set.mem_setOf]; omega) (by simp) at heq
+  apply (hp.takeUntil hw).getVert_injOn (by rw [@Set.mem_setOf]; omega) (by simp) at heq
   omega
 
 lemma cycles_arg [Finite V] [DecidableEq V] {p : G.Walk u u} (hp : p.IsCycle) (hcyc : G.IsCycles) (hv : v ∈ p.toSubgraph.verts) :
