@@ -66,12 +66,12 @@ lemma isClique_even_iff_matches [DecidableEq V]
       · cases' h with h' h' <;> subst h' <;> simpa
       · simp only [h, not_false_eq_true, and_true, false_or]
     have hu'e : Even (u \ {x, y}).ncard := by
-      rw [← Set.Finite.odd_card_insert_iff (hu.diff {x, y}) (by simp : y ∉ u \ {x, y})]
+      rw [← Set.Finite.odd_card_insert_iff (hu.diff) (by simp : y ∉ u \ {x, y})]
       rw [← Set.Finite.even_card_insert_iff (insert y (u \ {x, y})).toFinite (by
         simp [hxy] : x ∉ (insert y (u \ {x, y})))]
       rwa [this]
     have hu'c := hc.subset (Set.diff_subset : u' ⊆ u)
-    have hu'f := Set.Finite.diff hu {x, y}
+    have hu'f := @hu.diff _  _ {x, y}
     obtain ⟨M, hM⟩ := (isClique_even_iff_matches u' hu'f hu'c).mp hu'e
     use M ⊔ subgraphOfAdj _ (hc hx hy hxy)
     simp only [Subgraph.verts_sup, hM.1, subgraphOfAdj_verts]
