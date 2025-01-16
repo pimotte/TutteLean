@@ -16,7 +16,7 @@ variable {V : Type*} {G : SimpleGraph V}
 lemma induce_adj {s : Set V} {G : SimpleGraph V} {v w : V}  (hv : v ∈ s) (hw : w ∈ s) : (G.induce s).spanningCoe.Adj v w ↔ G.Adj v w := by
   aesop
 
-
+-- In alt_cycles PR, modified to mono
 lemma IsAlternating.induce_supp (c : G.ConnectedComponent) (h : G.IsAlternating G') : (G.induce c.supp).spanningCoe.IsAlternating G' := by
   intro v w w' hww' hvw hvw'
   have h1 := Subgraph.mem_of_adj_spanningCoe (induce c.supp G) hvw
@@ -27,7 +27,7 @@ lemma IsAlternating.induce_supp (c : G.ConnectedComponent) (h : G.IsAlternating 
   exact h hww' hvw hvw'
 
 open scoped symmDiff
-
+-- In alt_cycles PR
 lemma symmDiff_spanningCoe_IsPerfectMatching_IsAlternating_left
     {M : Subgraph G} {M' : Subgraph G'} (hM : M.IsPerfectMatching)
     (hM' : M'.IsPerfectMatching) : (M.spanningCoe ∆ M'.spanningCoe).IsAlternating M.spanningCoe := by
@@ -37,14 +37,14 @@ lemma symmDiff_spanningCoe_IsPerfectMatching_IsAlternating_left
   simp only [ne_eq, symmDiff_def, sup_adj, sdiff_adj, Subgraph.spanningCoe_adj] at *
   aesop
 
-
+-- In alt_cycles PR
 lemma symmDiff_spanningCoe_IsPerfectMatching_IsAlternating_right
     {M : Subgraph G} {M' : Subgraph G'} (hM : M.IsPerfectMatching)
     (hM' : M'.IsPerfectMatching) : (symmDiff M.spanningCoe M'.spanningCoe).IsAlternating M'.spanningCoe := by
   rw [symmDiff_comm]
   exact @symmDiff_spanningCoe_IsPerfectMatching_IsAlternating_left V G' G M' M hM' hM
 
-lemma symmDiff_le (h : G ≤ H) (h' : G' ≤ H') : (symmDiff G G') ≤ H ⊔ H' := by
+lemma symmDiff_le (h : G ≤ H) (h' : G' ≤ H') : (G ∆ G') ≤ H ⊔ H' := by
   intro v w hvw
   simp [symmDiff_def] at *
   aesop
@@ -54,7 +54,7 @@ lemma mem_supp_of_adj_alt {c : G.ConnectedComponent} (h : v ∈ c.supp) (h' : G.
   rw [← h]
   exact ConnectedComponent.connectedComponentMk_eq_of_adj h'.symm
 
-
+-- In alt_cycles PR
 lemma induce_component_spanningCoe_Adj (c : G.ConnectedComponent) :
   (G.induce c.supp).spanningCoe.Adj v w ↔ v ∈ c.supp ∧ G.Adj v w := by
   by_cases h : v ∈ c.supp
@@ -70,6 +70,7 @@ lemma induce_component_spanningCoe_Adj (c : G.ConnectedComponent) :
 @[simp]
 lemma sup_spanningCoe (H H' : Subgraph G) : (H ⊔ H').spanningCoe = H.spanningCoe ⊔ H'.spanningCoe := by rfl
 
+-- In alt_cycles PR
 lemma induce_component_IsCycles (c : G.ConnectedComponent) (h : G.IsCycles)
   : (G.induce c.supp).spanningCoe.IsCycles := by
   intro v ⟨w, hw⟩
