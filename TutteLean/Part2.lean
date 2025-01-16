@@ -238,29 +238,6 @@ lemma Walk.toSubgraph_Adj_mem_support_new (p : G.Walk u v) (hp : p.toSubgraph.Ad
       right
       exact q.toSubgraph_Adj_mem_support_new hr
 
--- In #20602
-lemma cycle_cons_is_not_nil (p : G.Walk u v) (h : G.Adj v u) (hc : (Walk.cons h p).IsCycle) : ¬ p.Nil := by
-  have hl := Walk.IsCycle.three_le_length hc
-  rw [@Walk.not_nil_iff_lt_length]
-  rw [@Walk.length_cons] at hl
-  omega
-
--- In #20602
-lemma cycle_getVert_injOn (p : G.Walk u u) (hpc : p.IsCycle) : Set.InjOn p.getVert {i | 1 ≤ i ∧ i ≤ p.length} := by
-  have hnp : ¬ p.Nil := hpc.not_nil
-  rw [← p.cons_tail_eq hpc.not_nil] at hpc
-  have hnpt : ¬ p.tail.Nil := cycle_cons_is_not_nil _ _ hpc
-  rw [@Walk.cons_isCycle_iff] at hpc
-  intro n hn m hm hnm
-  rw [← SimpleGraph.Walk.length_tail_add_one hnp, Set.mem_setOf] at hn hm
-  have := hpc.1.getVert_injOn (by omega : n - 1 ≤ p.tail.length) (by omega : m - 1 ≤ p.tail.length)
-      (by
-        simp [SimpleGraph.Walk.getVert_tail, show n - 1 + 1 = n from by omega,
-          show m - 1 + 1 = m from by omega]
-        exact hnm
-        )
-  omega
-
 lemma get?_nonZero (a : α) (l : List α) (h : n ≠ 0) : (a :: l).get? n = l.get? (n - 1) := by
     have : ∃ (i : ℕ), i.succ = n := by
       use (n - 1)
@@ -285,135 +262,6 @@ lemma getVert_support_get (p : G.Walk u v) (h2 : n ≤ p.length) : p.getVert n =
         rw [@Walk.length_cons] at h2
         exact Nat.sub_le_of_le_add h2
         )
-
--- In #20602
-lemma cycle_getVert_injOn' (p : G.Walk u u) (hpc : p.IsCycle) : Set.InjOn p.getVert {i |  i ≤ p.length - 1} := by
-  intro n hn m hm hnm
-  simp only [Set.mem_setOf_eq] at hn hm
-  have hl := hpc.three_le_length
-  have h1 : 1 ≤ (p.length - n) ∧ (p.length - n) ≤ p.reverse.length := by
-    rw [Walk.length_reverse]
-    omega
-  have h2 : 1 ≤ (p.length - m) ∧ (p.length - m) ≤ p.reverse.length := by
-    rw [Walk.length_reverse]
-    omega
-  have := cycle_getVert_injOn _ hpc.reverse h1 h2
-  simp only [Walk.getVert_reverse, show p.length - (p.length - n) = n from by omega, hnm,
-    show p.length - (p.length - m) = m from by omega, forall_const] at this
-  omega
-
--- In #20602
-lemma cycle_getVert_endpoint {p : G.Walk u u} (hpc : p.IsCycle) (hl : i ≤ p.length) : p.getVert i = u ↔ i = 0 ∨ i = p.length := by
-  refine ⟨?_, by aesop⟩
-  intro h
-  by_cases hi : i = 0
-  · left; exact hi
-  right
-  apply cycle_getVert_injOn _ hpc (by
-    simp only [Set.mem_setOf_eq]; omega) (by
-      simp only [Set.mem_setOf_eq, le_refl, and_true]; omega
-      )
-  rw [h]
-  exact (Walk.getVert_length p).symm
-
--- In #20602
-lemma cycle_startPoint_neighborSet (p : G.Walk u u) (hpc : p.IsCycle) : p.toSubgraph.neighborSet u = {p.getVert 1, p.getVert (p.length - 1)} := by
-  have hl := hpc.three_le_length
-  have hadj1 : p.toSubgraph.Adj (p.getVert 0) (p.getVert 1) := SimpleGraph.Walk.toSubgraph_adj_getVert _ (by omega)
-  have hadj2 : p.toSubgraph.Adj (p.getVert p.length) (p.getVert (p.length - 1)) :=
-    ((show p.length - 1 + 1 = p.length from by omega) ▸ SimpleGraph.Walk.toSubgraph_adj_getVert _ (by omega)).symm
-  simp at *
-  ext v
-  simp_all only [Subgraph.mem_neighborSet, Set.mem_insert_iff, Set.mem_singleton_iff]
-  constructor
-  · intro hadj
-    have hne := hadj.ne
-    rw [SimpleGraph.Walk.toSubgraph_adj_iff] at hadj
-    obtain ⟨i, hi⟩ := hadj
-    by_cases hp : p.getVert i = u
-    · rw [cycle_getVert_endpoint hpc (by omega)] at hp
-      aesop
-    · have hp' : p.getVert (i + 1) = u := by aesop
-      rw [cycle_getVert_endpoint hpc (by omega)] at hp'
-      cases' hp' with hl hr
-      · contradiction
-      · rw [← hr]
-        right
-        simp only [add_tsub_cancel_right]
-        aesop
-  · aesop
-
--- In #20602
-lemma cycle_internal_neighborSet (p : G.Walk u u) (hpc : p.IsCycle) (h : i ≠ 0) (h' : i < p.length): p.toSubgraph.neighborSet (p.getVert i) = {p.getVert (i - 1), p.getVert (i + 1)} := by
-  have hl := hpc.three_le_length
-  have hadj1 := ((show i - 1 + 1 = i from by omega) ▸ SimpleGraph.Walk.toSubgraph_adj_getVert _ (by omega : (i - 1) < p.length)).symm
-  have hadj2 := SimpleGraph.Walk.toSubgraph_adj_getVert _ (by omega : i < p.length)
-  ext v
-  simp at *
-  refine ⟨?_, by aesop⟩
-  intro hadj
-  rw [SimpleGraph.Walk.toSubgraph_adj_iff] at hadj
-  obtain ⟨i', hi'⟩ := hadj
-  by_cases hii' : i = i'
-  · --aesop
-    subst hii'
-    simp_all only [Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, true_and, Prod.swap_prod_mk]
-    obtain ⟨left, right⟩ := hi'
-    cases left with
-    | inl h_1 =>
-      subst h_1
-      simp_all only [or_true]
-    | inr h_2 => simp_all only [or_true]
-  have : p.getVert i ≠ p.getVert i' := by
-    intro h'
-    have := cycle_getVert_injOn' _ hpc (by simp; omega) (by simp; omega) h'
-    contradiction
-  have hvii' : p.getVert i = p.getVert (i' + 1) := by aesop
-  have hi'v : p.getVert i' = v := by aesop
-  by_cases hi0 : i = 0
-  · aesop
-  by_cases hi'l : i' = p.length - 1
-  · subst hi'l
-    simp [show p.length - 1 + 1 = p.length from by omega] at hvii'
-    rw [cycle_getVert_endpoint hpc (by omega)] at hvii'
-    aesop
-  have : i = i' + 1 := by
-    have := hi'.2
-    exact cycle_getVert_injOn' _ hpc (by simp; omega) (by simp; omega) hvii'
-  aesop
-
--- In #20602
-lemma cycle_getVert_sub_one_neq_getVert_add_one {p : G.Walk u u} (hpc : p.IsCycle) (h : i ≤ p.length) : p.getVert (i - 1) ≠ p.getVert (i + 1) := by
-  have hl := hpc.three_le_length
-  by_cases hi' : i ≥ p.length - 1
-  · rw [SimpleGraph.Walk.getVert_of_length_le _ (by omega : p.length ≤ i + 1)]
-    intro h'
-    rw [cycle_getVert_endpoint hpc (by omega)] at h'
-    omega
-  intro h'
-  have := cycle_getVert_injOn' _ hpc (by simp; omega) (by simp; omega) h'
-  omega
-
--- In #20602
-lemma cycle_two_neighbors'' (p : G.Walk u u) (hpc : p.IsCycle) (h : v ∈ p.support): (p.toSubgraph.neighborSet v).ncard = 2 := by
-  rw [Set.ncard_eq_two]
-  have hpcl :=  Walk.IsCycle.three_le_length hpc
-  rw [SimpleGraph.Walk.mem_support_iff_exists_getVert] at h
-  obtain ⟨i, hi⟩ := h
-  by_cases he : i = 0 ∨ i = p.length
-  · have huv : u = v := by aesop
-    use p.getVert 1, p.getVert (p.length - 1)
-    refine ⟨by
-      intro h'
-      have := cycle_getVert_injOn' _ hpc (by simp; omega) (by simp) h'
-      omega, ?_⟩
-    rw [← huv]
-    apply cycle_startPoint_neighborSet _ hpc
-  push_neg at he
-  use p.getVert (i - 1), p.getVert (i + 1)
-  rw [← hi.1]
-  refine ⟨?_, cycle_internal_neighborSet _ hpc he.1 (by omega)⟩
-  exact cycle_getVert_sub_one_neq_getVert_add_one hpc (by omega)
 
 lemma card_subgraph_argument [DecidableEq V] {H : Subgraph G} (h : G.neighborSet v ≃ H.neighborSet v) (hfin : (G.neighborSet v).Finite) : ∀ w, H.Adj v w ↔ G.Adj v w := by
   intro w
@@ -516,9 +364,9 @@ lemma Path.of_IsCycles [Fintype V] [DecidableEq V] {c : G.ConnectedComponent} (h
           rw [← Set.cast_ncard (Set.toFinite _),← Set.cast_ncard (Set.toFinite _)]
           rw [h (by
             rw [@Walk.mem_verts_toSubgraph] at hv
-            exact (Set.nonempty_of_ncard_ne_zero (by rw [cycle_two_neighbors'' _ hp.1 hv]; omega)).mono (p.toSubgraph.neighborSet_subset v)
+            exact (Set.nonempty_of_ncard_ne_zero (by rw [hp.1.ncard_neighborSet_toSubgraph_eq_two hv]; omega)).mono (p.toSubgraph.neighborSet_subset v)
             )]
-          rw [cycle_two_neighbors'' _ hp.1 (p.mem_verts_toSubgraph.mp hv)])
+          rw [hp.1.ncard_neighborSet_toSubgraph_eq_two (p.mem_verts_toSubgraph.mp hv)])
         ) p.toSubgraph_connected
     rw [hc']
     have : v ∈ c'.supp := by
@@ -533,13 +381,13 @@ lemma Path.of_IsCycles [Fintype V] [DecidableEq V] {c : G.ConnectedComponent} (h
 lemma IsCycle.first_two {p : G.Walk v v} (h : p.IsCycle) (hadj : p.toSubgraph.Adj v w) :
     ∃ (p' : G.Walk v v), p'.IsCycle ∧ p'.getVert 1 = w ∧ p'.toSubgraph.verts = p.toSubgraph.verts := by
   have : w ∈ p.toSubgraph.neighborSet v := hadj
-  rw [cycle_startPoint_neighborSet p h] at this
+  rw [h.neighborSet_toSubgraph_endpoint] at this
   simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at this
   cases' this with hl hr
   · use p
     exact ⟨h, hl.symm, rfl⟩
   · use p.reverse
-    rw [← @Walk.getVert_reverse] at hr
+    rw [Walk.penultimate, ← @Walk.getVert_reverse] at hr
     exact ⟨h.reverse, hr.symm, by rw [SimpleGraph.Walk.toSubgraph_reverse _]⟩
 
 lemma cons_takeUntil [DecidableEq V] {p : G.Walk v' v} (hwp : w ∈ p.support) (h : u ≠ w) (hadj : G.Adj u v')
@@ -571,7 +419,7 @@ lemma support_length (p : G.Walk v w) : p.support.length = p.length + 1 := by
     Nat.succ_eq_add_one, Walk.length_cons]
 
 lemma IsPath.getVert_injOn_iff (p : G.Walk u v): Set.InjOn p.getVert {i | i ≤ p.length} ↔ p.IsPath := by
-  refine ⟨?_, fun a => getVert_injective a⟩
+  refine ⟨?_, fun a => a.getVert_injOn⟩
   intro hinj
   rw [@Walk.isPath_def]
   rw [@List.nodup_iff_getElem?_ne_getElem?]
@@ -687,7 +535,7 @@ lemma Walk.IsCycle.takeUntil [DecidableEq V] {p : G.Walk u u} (hp : p.IsCycle) (
     simp only [Set.mem_setOf_eq] at hi hj
     rw [takeUntil_getVert _ (by omega)] at hij
     rw [takeUntil_getVert _ (by omega)] at hij
-    exact cycle_getVert_injOn' p hp (by rw [Set.mem_setOf_eq]; omega) (by rw [Set.mem_setOf_eq]; omega) hij
+    exact hp.getVert_injOn' (by rw [Set.mem_setOf_eq]; omega) (by rw [Set.mem_setOf_eq]; omega) hij
 
 lemma cycle_takeUntil_takeUntil_adj [DecidableEq V] (p : G.Walk u u) (hp : p.IsCycle) (hw : w ∈ p.support) (hx : x ∈ (p.takeUntil w hw).support) :
     ¬((p.takeUntil w hw).takeUntil x hx).toSubgraph.Adj w x := by
@@ -712,11 +560,11 @@ lemma cycles_arg [Finite V] [DecidableEq V] {p : G.Walk u u} (hp : p.IsCycle) (h
       rw [← Cardinal.eq]
       simp [← Nat.cast_card,Set.Nat.card_coe_set_eq,
         hcyc (by
-          have := cycle_two_neighbors'' p hp (by aesop)
+          have := hp.ncard_neighborSet_toSubgraph_eq_two (by aesop)
           apply Set.Nonempty.mono (p.toSubgraph.neighborSet_subset v)
           apply Set.nonempty_of_ncard_ne_zero
           rw [this]
-          omega), cycle_two_neighbors'' p hp (by aesop)])
+          omega), hp.ncard_neighborSet_toSubgraph_eq_two (by aesop)])
     : G.neighborSet v ≃ (p.toSubgraph.neighborSet v)) (Set.toFinite _) w
 
 
@@ -761,7 +609,7 @@ lemma IsCycle.IsCycles_toSubgraph_spanningCoe {p : G.Walk u u} (hpc : p.IsCycle)
     p.toSubgraph.spanningCoe.IsCycles := by
   intro v hv
   rw [spanningCoe_neighborSet]
-  apply cycle_two_neighbors'' _ hpc
+  apply hpc.ncard_neighborSet_toSubgraph_eq_two
   obtain ⟨_, hw⟩ := hv
   exact p.toSubgraph_Adj_mem_support_new hw
 
