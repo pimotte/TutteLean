@@ -67,6 +67,7 @@ lemma induce_component_spanningCoe_Adj (c : G.ConnectedComponent) :
       aesop
   · aesop
 
+-- In #20830
 @[simp]
 lemma sup_spanningCoe (H H' : Subgraph G) : (H ⊔ H').spanningCoe = H.spanningCoe ⊔ H'.spanningCoe := by rfl
 
@@ -80,7 +81,7 @@ lemma induce_component_IsCycles (c : G.ConnectedComponent) (h : G.IsCycles)
   ext w'
   simp only [mem_neighborSet, induce_component_spanningCoe_Adj, hw, true_and]
 
-
+-- In #20830
 lemma IsCycles_Path_mem_support_is_second (p : G.Walk v w) (hw : w ≠ w') (hw' : w' ∈ p.support) (hp : p.IsPath)
     (hadj : G.Adj v w') (hcyc : G.IsCycles) : p.getVert 1 = w' := by
   rw [@Walk.mem_support_iff_exists_getVert] at hw'
@@ -133,10 +134,12 @@ lemma IsCycles_Path_mem_support_is_second (p : G.Walk v w) (hw : w ≠ w') (hw' 
   simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hsgv hpgv
   aesop
 
+-- In #20830
 lemma subgraphOfAdj_spanningCoe (hadj : G.Adj v w) : (G.subgraphOfAdj hadj).spanningCoe = fromEdgeSet {s(v, w)} := by
   ext v w
   aesop
 
+-- In #20830
 lemma IsCycles_Reachable_Path [Fintype V] (hcyc : G.IsCycles)
   (p : G.Walk v w) (hp : p.IsPath) :
     (G \ p.toSubgraph.spanningCoe).Reachable w v := by
@@ -238,6 +241,7 @@ lemma Walk.toSubgraph_Adj_mem_support_new (p : G.Walk u v) (hp : p.toSubgraph.Ad
       right
       exact q.toSubgraph_Adj_mem_support_new hr
 
+-- In #20830 (obsoleted)
 lemma get?_nonZero (a : α) (l : List α) (h : n ≠ 0) : (a :: l).get? n = l.get? (n - 1) := by
     have : ∃ (i : ℕ), i.succ = n := by
       use (n - 1)
@@ -246,6 +250,7 @@ lemma get?_nonZero (a : α) (l : List α) (h : n ≠ 0) : (a :: l).get? n = l.ge
     rw [← hi]
     simp only [Nat.succ_eq_add_one, List.get?_cons_succ, add_tsub_cancel_right]
 
+-- In #20830 (obsoleted)
 lemma getVert_support_get (p : G.Walk u v) (h2 : n ≤ p.length) : p.getVert n = p.support.get? n := by
   match p with
   | .nil =>
@@ -263,6 +268,7 @@ lemma getVert_support_get (p : G.Walk u v) (h2 : n ≤ p.length) : p.getVert n =
         exact Nat.sub_le_of_le_add h2
         )
 
+-- In #20830
 lemma card_subgraph_argument [DecidableEq V] {H : Subgraph G} (h : G.neighborSet v ≃ H.neighborSet v) (hfin : (G.neighborSet v).Finite) : ∀ w, H.Adj v w ↔ G.Adj v w := by
   intro w
   refine ⟨fun a => a.adj_sub, ?_⟩
@@ -290,11 +296,13 @@ lemma card_subgraph_argument [DecidableEq V] {H : Subgraph G} (h : G.neighborSet
   rw [← hv'] at this
   aesop
 
+-- In #20830
 def Walk.coeWalk {H : Subgraph G} {u v : H.verts} (p : H.coe.Walk u v) : G.Walk u.val v.val :=
   match p with
   | .nil => Walk.nil
   | .cons h q => Walk.cons (H.adj_sub h) (q.coeWalk)
 
+-- In #20830 (obsoleted)
 theorem Subgraph.verts_bot_iff (H : G.Subgraph) : H.verts = ∅ ↔ H = ⊥ := by
   refine ⟨?_, by aesop⟩
   intro h
@@ -306,6 +314,7 @@ theorem Subgraph.verts_bot_iff (H : G.Subgraph) : H.verts = ∅ ↔ H = ⊥ := b
   have := hadj.fst_mem
   simp_all only [Set.mem_empty_iff_false]
 
+-- In #20830 (obsoleted)
 lemma Subgraph_eq_component_supp {H : Subgraph G} (hb : H ≠ ⊥) (h : ∀ v ∈ H.verts, ∀ w, H.Adj v w ↔ G.Adj v w)
     (hc : H.Connected) :
     ∃ c : G.ConnectedComponent, H.verts = c.supp := by
@@ -339,7 +348,7 @@ lemma Subgraph_eq_component_supp {H : Subgraph G} (hb : H ≠ ⊥) (h : ∀ v �
     }
     exact fun hr ↦ aux hv hr.some.reverse
 
-
+-- In #20830
 lemma Path.of_IsCycles [Fintype V] [DecidableEq V] {c : G.ConnectedComponent} (h : G.IsCycles) (hv : v ∈ c.supp)
   (hn : (G.neighborSet v).Nonempty) :
     ∃ (p : G.Walk v v), p.IsCycle ∧ p.toSubgraph.verts = c.supp := by
