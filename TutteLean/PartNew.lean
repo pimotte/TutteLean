@@ -7,8 +7,10 @@ import Mathlib.Combinatorics.SimpleGraph.UniversalVerts
 namespace SimpleGraph
 variable {V : Type*} {G : SimpleGraph V}
 
+-- In #20024/#21097 (refactored)
 def oddVerts (G : SimpleGraph V) : Set V := Subtype.val '' ((fun c ↦ c.exists_rep.choose) '' {(c : ConnectedComponent G.deleteUniversalVerts.coe) | Odd (c.supp.ncard)})
 
+-- In #20024/#21097 (refactored)
 lemma rep_choose_inj : Function.Injective (fun (c : G.ConnectedComponent) ↦ c.exists_rep.choose) := by
   intro c d hcd
   dsimp at hcd
@@ -79,6 +81,7 @@ lemma disjoint_even_supp_oddVerts {K : G.deleteUniversalVerts.coe.ConnectedCompo
   rw [this] at h
   exact hc'.1 h
 
+-- In #20024/#21097 (refactored)
 lemma supp_intersection_oddVerts_card {K : G.deleteUniversalVerts.coe.ConnectedComponent}
     (h : Odd (Subtype.val '' K.supp).ncard) : (Subtype.val '' K.supp ∩ G.oddVerts).ncard = 1 := by
   rw [@Set.ncard_eq_one]

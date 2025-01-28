@@ -154,6 +154,17 @@ lemma union_gt_iff : G < G ⊔ G' ↔ ¬ (G' ≤ G) := by
   · intro h
     exact left_lt_sup.mpr h
 
+theorem tutte_blocker_odd [Fintype V]
+    (hodd : Odd (Fintype.card V)) : ∃ u, u.ncard < cardOddComponents ((⊤ : G.Subgraph).deleteVerts u).coe  := by
+  use ∅
+  have ⟨c, hc⟩ := Classical.inhabited_of_nonempty
+    (Finite.card_pos_iff.mp <| Odd.pos <|
+    (odd_card_iff_odd_components ((⊤ : Subgraph G).deleteVerts ∅).coe).mp (by
+    simpa [Fintype.card_congr (Equiv.Set.univ V)] using hodd))
+  rw [cardOddComponents, Set.ncard_empty, Set.ncard_pos]
+  use c
+  exact hc
+
 theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
     (∃ (M : Subgraph G) , M.IsPerfectMatching) ↔
       (∀ (u : Set V),
@@ -184,22 +195,8 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
     intro h
     if hvOdd : Odd (Fintype.card V)
     then
-      use ∅
-      simp only [Set.ncard_empty, Subgraph.induce_verts, Subgraph.verts_top]
-      have : Odd (Nat.card ↑((⊤ : Subgraph G).deleteVerts ∅).verts) := by
-        simp only [Nat.card_eq_fintype_card,Finset.card_univ, Subgraph.deleteVerts_empty,
-          Subgraph.verts_top, Fintype.card_congr (Equiv.Set.univ V), hvOdd]
-
-      have ⟨c , hc⟩ := Classical.inhabited_of_nonempty
-        (Finite.card_pos_iff.mp <| Odd.pos <|
-        (odd_card_iff_odd_components ((⊤ : Subgraph G).deleteVerts ∅).coe).mp this)
-      unfold cardOddComponents
-      rw [Set.ncard_pos]
-      use c
-      exact hc
+      exact tutte_blocker_odd hvOdd
     else
-
-      -- let Gmax := maximalWithoutMatching h
       obtain ⟨Gmax, hSubgraph, hMatchingFree, hMaximal⟩ := exists_maximal_isMatchingFree h
 
       suffices ∃ u, Set.ncard u < cardOddComponents ((⊤ : Subgraph Gmax).deleteVerts u).coe by
@@ -233,93 +230,74 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
         simp_rw [ConnectedComponent.isOdd_iff, Fintype.card_eq_nat_card, Set.Nat.card_coe_set_eq] at h''
         obtain ⟨M, hM⟩ := tutte_part' hvOdd h'' h'
         exact hMatchingFree M hM
-    else
-      push_neg at h'
-      obtain ⟨K, hK⟩ := h'
-      rw [isNotClique_iff] at hK
-      obtain ⟨x, ⟨y, hxy⟩⟩ := hK
+      else
+        push_neg at h'
+        obtain ⟨K, hK⟩ := h'
+        rw [isNotClique_iff] at hK
+        obtain ⟨x, ⟨y, hxy⟩⟩ := hK
 
 
-      obtain ⟨p , hp⟩ := SimpleGraph.Reachable.exists_path_of_dist (reachable_in_connected_component_induce K x y)
+        obtain ⟨p , hp⟩ := SimpleGraph.Reachable.exists_path_of_dist (reachable_in_connected_component_induce K x y)
 
 
-      obtain ⟨x, ⟨a, ⟨b, hxab⟩⟩⟩ := verts_of_walk p hp.2 (dist_gt_one_of_ne_and_nadj (Walk.reachable p) hxy.1 hxy.2)
+        obtain ⟨x, ⟨a, ⟨b, hxab⟩⟩⟩ := verts_of_walk p hp.2 (dist_gt_one_of_ne_and_nadj (Walk.reachable p) hxy.1 hxy.2)
 
-      have ha : (a : V) ∉ S := by exact deleteVerts_verts_notmem_deleted _
-      have hc : ∃ (c : V), ¬ Gmax.Adj a c ∧ (a : V) ≠ c := by
+        have ha : (a : V) ∉ S := by exact deleteVerts_verts_notmem_deleted _
+        have hc : ∃ (c : V), ¬ Gmax.Adj a c ∧ (a : V) ≠ c := by
 
-        have : ¬ ∀ (w : V), (a : V) ≠ w → Gmax.Adj (w : V) a := by exact ha
-        push_neg at this
-        obtain ⟨c, hc⟩ := this
-        use c
-        constructor
-        · intro h
-          exact hc.2 (adj_symm Gmax h)
-        · exact hc.1
-      obtain ⟨c, hc⟩ := hc
+          have : ¬ ∀ (w : V), (a : V) ≠ w → Gmax.Adj (w : V) a := by exact ha
+          push_neg at this
+          obtain ⟨c, hc⟩ := this
+          use c
+          constructor
+          · intro h
+            exact hc.2 (adj_symm Gmax h)
+          · exact hc.1
+        obtain ⟨c, hc⟩ := hc
 
-      have hbnec : b.val.val ≠ c := by
-        intro h
-        apply (h ▸ hc.1)
-        have := hxab.2.1
-        rw [@induce_eq_coe_induce_top] at this
-        rw [@Subgraph.coe_adj] at this
-        have := this.adj_sub
-        exact Subgraph.coe_adj_sub Gsplit (↑a) (↑b) this
+        have hbnec : b.val.val ≠ c := by
+          intro h
+          apply (h ▸ hc.1)
+          have := hxab.2.1
+          rw [@induce_eq_coe_induce_top] at this
+          rw [@Subgraph.coe_adj] at this
+          have := this.adj_sub
+          exact Subgraph.coe_adj_sub Gsplit (↑a) (↑b) this
 
-      let G1 := Gmax ⊔ (edge x.val.val b.val.val)
-      let G2 := Gmax ⊔ (edge a.val.val c)
+        let G1 := Gmax ⊔ (edge x.val.val b.val.val)
+        let G2 := Gmax ⊔ (edge a.val.val c)
 
-      have hG1nxb : ¬ Gmax.Adj x.val.val b.val.val := by
+        have hG1nxb : ¬ Gmax.Adj x.val.val b.val.val := by
 
-        intro h
-        apply hxab.2.2.1
-        rw [@induce_eq_coe_induce_top]
-        simp only [Subgraph.coe_adj, Subgraph.induce_verts, Subgraph.induce_adj, Subgraph.top_adj]
-        refine ⟨Subtype.coe_prop x, Subtype.coe_prop b, ?_⟩
-        rw [@Subgraph.deleteVerts_adj]
-        simp only [Subgraph.verts_top, Set.mem_univ, deleteVerts_verts_notmem_deleted,
-          not_false_eq_true, Subgraph.top_adj, h, and_self]
+          intro h
+          apply hxab.2.2.1
+          rw [@induce_eq_coe_induce_top]
+          simp only [Subgraph.coe_adj, Subgraph.induce_verts, Subgraph.induce_adj, Subgraph.top_adj]
+          refine ⟨Subtype.coe_prop x, Subtype.coe_prop b, ?_⟩
+          rw [@Subgraph.deleteVerts_adj]
+          simp only [Subgraph.verts_top, Set.mem_univ, deleteVerts_verts_notmem_deleted,
+            not_false_eq_true, Subgraph.top_adj, h, and_self]
 
-      have hG1 : Gmax < G1 := by
+        have hG1 := left_lt_sup.mpr (by rw [edge_le_iff (fun h ↦ hxab.2.2.2 (Subtype.val_injective (Subtype.val_injective h)))]; exact hG1nxb)
 
-        apply union_gt_iff.mpr
-        rw [singleEdge_le_iff (Subtype.coe_ne_coe.mpr <| Subtype.coe_ne_coe.mpr hxab.2.2.2)]
-        exact hG1nxb
+        have hG2 := left_lt_sup.mpr (by rw [edge_le_iff (fun h ↦ hc.2 h)]; exact hc.1)
 
-      have hG2 : Gmax < G2 := by
+        obtain ⟨M1, hM1⟩ := hMaximal _ hG1
+        obtain ⟨M2, hM2⟩ := hMaximal _ hG2
 
-        apply union_gt_iff.mpr
-        rw [singleEdge_le_iff hc.2]
-        intro h
-        exact hc.1 h
+        have hGMaxadjax : Gmax.Adj ↑↑a ↑↑x := by
+          refine Gsplit.coe_adj_sub _ _ (adj_symm Gsplit.coe ?_)
+          simpa using hxab.1
 
-      obtain ⟨M1, hM1⟩ := hMaximal _ hG1
-      obtain ⟨M2, hM2⟩ := hMaximal _ hG2
+        have hGMaxadjab : Gmax.Adj ↑↑a ↑↑b := by
+          refine Gsplit.coe_adj_sub _ _ (adj_symm Gsplit.coe ?_)
+          simpa using hxab.2.1.symm
 
-      have hGMaxadjax : Gmax.Adj ↑↑a ↑↑x := by
-        have := hxab.1
-        rw [@induce_eq_coe_induce_top] at this
-        rw [@Subgraph.coe_adj] at this
-        rw [@Subgraph.induce_adj] at this
-        have := this.2.2.adj_sub
-        exact Gsplit.coe_adj_sub _ _ (adj_symm Gsplit.coe this)
+        have hcnex : c ≠ x.val.val := fun hxc ↦ hc.1 (hxc ▸ hGMaxadjax)
 
-      have hGMaxadjab : Gmax.Adj ↑↑a ↑↑b := by
-        have := hxab.2.1
-        rw [@induce_eq_coe_induce_top] at this
-        rw [@Subgraph.coe_adj] at this
-        rw [@Subgraph.induce_adj] at this
-        have := this.2.2.adj_sub
-        exact Gsplit.coe_adj_sub _ _ (adj_symm Gsplit.coe this.symm)
-      have hcnex : c ≠ x.val.val := by
-          intro hxc
-          apply hc.1
-          rw [hxc]
-          exact hGMaxadjax
-      obtain ⟨Mcon, hMcon⟩ := tutte_part2 hGMaxadjax.symm hGMaxadjab hG1nxb hc.1 (by
-        intro h
-        apply hxab.2.2.2
-        exact Subtype.val_injective (Subtype.val_injective h)) hcnex.symm hc.2 hbnec (hMaximal _ hG1) (hMaximal _ hG2)
-      exact hMatchingFree Mcon hMcon
+        obtain ⟨Mcon, hMcon⟩ := tutte_part2 hGMaxadjax.symm hGMaxadjab hG1nxb hc.1 (by
+          intro h
+          apply hxab.2.2.2
+          exact Subtype.val_injective (Subtype.val_injective h)) hcnex.symm hc.2 hbnec (hMaximal _ hG1) (hMaximal _ hG2)
+        exact hMatchingFree Mcon hMcon
   }

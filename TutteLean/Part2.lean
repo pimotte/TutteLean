@@ -684,6 +684,12 @@ theorem toSubgraph_adj_sndOfNotNil {u v} (p : G.Walk u v) (hpp : p.IsPath)
   | inl hl => exact hl
   | inr hr => exact (hadj.ne hr.1).elim
 
+-- In alt_cycles
+lemma IsPerfectMatching.symmDiff_spanningCoe_of_isAlternating' {M : Subgraph G} (hM : M.IsPerfectMatching)
+    (hG' : G'.IsAlternating M.spanningCoe) (hG'cyc : G'.IsCycles) :
+    (⊤ : Subgraph (M.spanningCoe ∆ G')).IsPerfectMatching := by
+  sorry
+
 theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) (hab : G.Adj a b) (hnGxb : ¬G.Adj x b) (hnGac : ¬ G.Adj a c)
     (hnxb : x ≠ b) (hnxc : x ≠ c) (hnac : a ≠ c) (hnbc : b ≠ c)
     (hm1 : ∃ (M : Subgraph (G ⊔ edge x b)), M.IsPerfectMatching)
@@ -714,7 +720,7 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
   suffices ∃ (G' : SimpleGraph V), G'.IsAlternating M2.spanningCoe ∧ G'.IsCycles ∧ symmDiff M2.spanningCoe G' ≤ G by
     obtain ⟨G', hg⟩ := this
     use (G.toSubgraph (symmDiff M2.spanningCoe G') hg.2.2)
-    apply IsPerfectMatching.symmDiff_spanningCoe_of_isAlternating hM2 hg.1 hg.2.1
+    apply IsPerfectMatching.symmDiff_spanningCoe_of_isAlternating' hM2 hg.1 hg.2.1
 
   suffices ∃ (G' : SimpleGraph V), G'.IsAlternating M2.spanningCoe ∧ G'.IsCycles  ∧ ¬G'.Adj x b ∧ G'.Adj a c
       ∧ G' ≤ G ⊔ edge a c by
