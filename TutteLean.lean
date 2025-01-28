@@ -224,7 +224,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
 
       if h' : ∀ (K : ConnectedComponent Gsplit.coe), Gsplit.coe.IsClique K.supp
       then
-        rw [← @Nat.even_iff_not_odd] at hvOdd
+        rw [Nat.not_odd_iff_even] at hvOdd
         rw [Fintype.card_eq_nat_card] at h''
 
         simp_rw [ConnectedComponent.isOdd_iff, Fintype.card_eq_nat_card, Set.Nat.card_coe_set_eq] at h''
