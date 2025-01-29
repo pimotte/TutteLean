@@ -5,40 +5,6 @@ import TutteLean.Defs
 namespace SimpleGraph
 variable {V : Type*} {G : SimpleGraph V}
 
-
-@[simps]
-def Subgraph.empty (G : SimpleGraph V) : Subgraph G where
-  verts := ∅
-  Adj _ _ := False
-  adj_sub := False.elim
-  edge_vert := False.elim
-
-lemma Set.Finite.one_lt_ncard_of_nonempty_of_even (hs : Set.Finite s) (hn : Set.Nonempty s)
-    (he : Even (s.ncard)) : 1 < s.ncard := by
-  have : s.ncard ≠ 0 := by
-    intro h
-    rw [@Set.nonempty_iff_ne_empty] at hn
-    exact hn <| (Set.ncard_eq_zero hs).mp h
-  have : s.ncard ≠ 1 := by
-    intro h
-    simp [h] at he
-  omega
-
-
-@[simp]
-lemma Set.Finite.odd_card_insert_iff {x : V} {u : Set V} (hu : Set.Finite u) (hx : x ∉ u) :
-    Odd (insert x u).ncard ↔ Even u.ncard := by
-  rw [Set.ncard_insert_of_not_mem hx hu, Nat.odd_add]
-  simp only [Nat.odd_add, Nat.odd_iff_not_even, Nat.not_even_one, iff_false, Decidable.not_not]
-
-@[simp]
-lemma Set.Finite.even_card_insert_iff {x : V} {u : Set V} (hu : Set.Finite u) (hx : x ∉ u) :
-    Even (insert x u).ncard ↔ Odd u.ncard := by
-  rw [Set.ncard_insert_of_not_mem hx hu, Nat.even_add]
-  simp only [Nat.not_even_one, iff_false, Nat.odd_iff_not_even]
-
-
-
 lemma isClique_even_iff_matches [DecidableEq V]
     (u : Set V) (hu : Set.Finite u) (hc : G.IsClique u) : Even u.ncard ↔ ∃ (M : Subgraph G), M.verts = u ∧ M.IsMatching := by
   haveI : Fintype u := hu.fintype
@@ -52,11 +18,11 @@ lemma isClique_even_iff_matches [DecidableEq V]
   intro he
   cases' Set.eq_empty_or_nonempty u with h h
   · subst h
-    use (Subgraph.empty G)
-    simp only [Subgraph.empty_verts, true_and]
+    use ⊥
+    simp only [Subgraph.verts_bot, true_and]
     intro _ h
     contradiction
-  · obtain ⟨x, y, ⟨hx, hy, hxy⟩⟩ := (Set.one_lt_ncard_iff hu).mp (Set.Finite.one_lt_ncard_of_nonempty_of_even hu h he)
+  · obtain ⟨x, y, ⟨hx, hy, hxy⟩⟩ := (Set.one_lt_ncard_iff hu).mp (Set.one_lt_ncard_of_nonempty_of_even hu h he)
     let u' := u \ {x, y}
     have : insert x (insert y (u \ {x, y})) = u := by
       ext v
@@ -66,8 +32,8 @@ lemma isClique_even_iff_matches [DecidableEq V]
       · cases' h with h' h' <;> subst h' <;> simpa
       · simp only [h, not_false_eq_true, and_true, false_or]
     have hu'e : Even (u \ {x, y}).ncard := by
-      rw [← Set.Finite.odd_card_insert_iff (hu.diff) (by simp : y ∉ u \ {x, y})]
-      rw [← Set.Finite.even_card_insert_iff (insert y (u \ {x, y})).toFinite (by
+      rw [← Set.odd_card_insert_iff (hu.diff) (by simp : y ∉ u \ {x, y})]
+      rw [← Set.even_card_insert_iff (insert y (u \ {x, y})).toFinite (by
         simp [hxy] : x ∉ (insert y (u \ {x, y})))]
       rwa [this]
     have hu'c := hc.subset (Set.diff_subset : u' ⊆ u)
