@@ -350,18 +350,21 @@ lemma IsCycle.first_two {p : G.Walk v v} (h : p.IsCycle) (hadj : p.toSubgraph.Ad
     rw [Walk.penultimate, ← @Walk.getVert_reverse] at hr
     exact ⟨h.reverse, hr.symm, by rw [SimpleGraph.Walk.toSubgraph_reverse _]⟩
 
+-- In takeUntil PR
 lemma cons_takeUntil [DecidableEq V] {p : G.Walk v' v} (hwp : w ∈ p.support) (h : u ≠ w) (hadj : G.Adj u v')
-  (hwp' : w ∈ (Walk.cons hadj p).support := List.mem_of_mem_tail hwp):
+  (hwp' : w ∈ (Walk.cons hadj p).support := List.mem_of_mem_tail hwp) :
   (Walk.cons hadj p).takeUntil w hwp' = Walk.cons hadj (p.takeUntil w hwp) := by
   nth_rewrite 1 [Walk.takeUntil]
   simp [h]
 
+-- In takeUntil PR
 @[simp]
 lemma takeUntil_first [DecidableEq V] (p : G.Walk u v) (hup : u ∈ p.support) : p.takeUntil u hup = Walk.nil := by
   cases p with
   | nil => rfl
   | cons h q => simp [Walk.takeUntil]
 
+-- In takeUntil PR
 lemma takeUntil_notNil [DecidableEq V] (p : G.Walk u v) (hwp : w ∈ p.support) (huw : u ≠ w) : ¬ (p.takeUntil w hwp).Nil := by
   intro hnil
   cases p with
@@ -392,12 +395,14 @@ lemma IsPath.getVert_injOn_iff (p : G.Walk u v): Set.InjOn p.getVert {i | i ≤ 
       ← SimpleGraph.Walk.getVert_eq_support_get? _ (by omega : j ≤ p.length)] at hsij
   exact Option.some_injective _ hsij
 
+-- In takeUntil PR
 lemma Walk.IsCycle.of_append_right {p : G.Walk u v} {q : G.Walk v u} (h : u ≠ v) (hcyc : (p.append q).IsCycle) : q.IsPath := by
   have := hcyc.2
   rw [SimpleGraph.Walk.tail_support_append, List.nodup_append] at this
   rw [@isPath_def, @support_eq_cons, @List.nodup_cons]
   exact ⟨this.2.2 (p.end_mem_tail_support_of_ne h), this.2.1⟩
 
+-- In takeUntil PR
 lemma IsCycle_takeUntil [DecidableEq V] {p : G.Walk v v} (h : p.IsCycle) (hwp : w ∈ p.support) :
     (p.takeUntil w hwp).IsPath := by
   by_cases hvw : v = w
@@ -410,6 +415,7 @@ lemma IsCycle_takeUntil [DecidableEq V] {p : G.Walk v v} (h : p.IsCycle) (hwp : 
   rw [← @Walk.isPath_reverse_iff]
   exact Walk.IsCycle.of_append_right hvw h
 
+-- In takeUntil PR
 lemma takeUntil_getVert_one [DecidableEq V] {p : G.Walk u v} (hsu : w ≠ u) (h : w ∈ p.support)
   : (p.takeUntil w h).getVert 1 = p.getVert 1 := by
   have : ¬ p.Nil := by
@@ -428,6 +434,7 @@ lemma takeUntil_getVert_one [DecidableEq V] {p : G.Walk u v} (hsu : w ≠ u) (h 
     rw [cons_takeUntil hr hsu.symm _]
     simp
 
+-- In takeUntil PR
 lemma takeUntil_getVert [DecidableEq V] {p : G.Walk u v} (hw : w ∈ p.support) (hn : n ≤ (p.takeUntil w hw).length) :
     (p.takeUntil w hw).getVert n = p.getVert n := by
   cases p with
@@ -439,7 +446,7 @@ lemma takeUntil_getVert [DecidableEq V] {p : G.Walk u v} (hw : w ∈ p.support) 
     by_cases huw : w = u
     · subst huw
       simp_all only [takeUntil_first, Walk.length_nil, nonpos_iff_eq_zero, Walk.getVert_zero]
-    simp [huw] at hw
+    simp only [huw, false_or] at hw
     push_neg at huw
     rw [cons_takeUntil hw huw.symm] at hn ⊢
     by_cases hn0 : n = 0
@@ -450,6 +457,7 @@ lemma takeUntil_getVert [DecidableEq V] {p : G.Walk u v} (hw : w ∈ p.support) 
     rw [@Walk.length_cons] at hn
     omega
 
+-- In takeUntil PR
 lemma Walk.length_takeUntil_lt [DecidableEq V] {u v w : V} (p : G.Walk v w) (h : u ∈ p.support) (huw : u ≠ w) : (p.takeUntil u h).length < p.length := by
   have := SimpleGraph.Walk.length_takeUntil_le p h
   rw [this.lt_iff_ne]
@@ -484,19 +492,36 @@ lemma Walk.toSubgraph_Adj_mem_support (p : G.Walk u v) (hp : p.toSubgraph.Adj u'
 
 lemma Walk.toSubgraph_Adj_mem_support' (p : G.Walk u v) (hp : p.toSubgraph.Adj u' v') : v' ∈ p.support := p.toSubgraph_Adj_mem_support hp.symm
 
-lemma Walk.IsCycle.takeUntil [DecidableEq V] {p : G.Walk u u} (hp : p.IsCycle) (hw : w ∈ p.support) : (p.takeUntil w hw).IsPath := by
-  by_cases huw : u = w
-  · subst huw
-    simp [takeUntil_first]
-  · rw [← @IsPath.getVert_injOn_iff]
-    rw [← @Ne.eq_def] at huw
-    have := Walk.length_takeUntil_lt p hw huw.symm
-    intro i hi j hj hij
-    simp only [Set.mem_setOf_eq] at hi hj
-    rw [takeUntil_getVert _ (by omega)] at hij
-    rw [takeUntil_getVert _ (by omega)] at hij
-    exact hp.getVert_injOn' (by rw [Set.mem_setOf_eq]; omega) (by rw [Set.mem_setOf_eq]; omega) hij
+-- In takeUntil PR
+lemma takeUntil_takeUntil [DecidableEq V] {p : G.Walk u v} (w x : V) (hw : w ∈ p.support) (hx : x ∈ (p.takeUntil w hw).support) :
+  (p.takeUntil w hw).takeUntil x hx = p.takeUntil x (p.support_takeUntil_subset hw hx) := by
+  cases p
+  · sorry
+  · sorry
 
+-- In takeUntil PR
+lemma Walk.IsCycle.takeUntil [DecidableEq V] {p : G.Walk u u} (hp : p.IsCycle) (hw : w ∈ p.support) : (p.takeUntil w hw).IsPath := by
+  exact IsCycle_takeUntil hp hw
+
+-- In takeUntil PR
+lemma takeUntil_last [DecidableEq V] {p : G.Walk u v} (hp : p.IsPath) (hw : w ∈ p.support) (h : v ≠ w) :
+  v ∉ (p.takeUntil w hw).support := by
+  intro hv
+  rw [@Walk.mem_support_iff_exists_getVert] at hv
+  obtain ⟨n, ⟨hn, hnl⟩⟩ := hv
+  rw [takeUntil_getVert hw hnl] at hn
+  have := Walk.length_takeUntil_lt p hw h.symm
+  have : n = p.length := hp.getVert_injOn (by rw [@Set.mem_setOf]; omega) (by rw [@Set.mem_setOf]) (hn.symm ▸ p.getVert_length.symm)
+  omega
+
+-- In takeUntil (not really, but easy to inline)
+lemma cycle_takeUntil_new [DecidableEq V] (p : G.Walk u u) (hp : p.IsCycle) (hw : w ∈ p.support) (hx : x ∈ (p.takeUntil w hw).support)  (hwx : w ≠ x):
+    w ∉ (p.takeUntil x (p.support_takeUntil_subset hw hx)).support :=
+  (takeUntil_takeUntil w x hw hx) ▸
+    takeUntil_last (IsCycle_takeUntil hp hw) hx hwx
+
+
+-- In takeUntil PR
 lemma cycle_takeUntil_takeUntil_adj [DecidableEq V] (p : G.Walk u u) (hp : p.IsCycle) (hw : w ∈ p.support) (hx : x ∈ (p.takeUntil w hw).support) :
     ¬((p.takeUntil w hw).takeUntil x hx).toSubgraph.Adj w x := by
   rw [Subgraph.adj_comm]
@@ -740,22 +765,25 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
 
       have : DecidableEq V := by exact Classical.typeDecidableEq V
       by_cases hc : b ∈ (p'.takeUntil x hxp').support
-      · use b, (by simp), ((p'.takeUntil x hxp').takeUntil b hc)
+      · use b, (by simp), (p'.takeUntil b (p'.support_takeUntil_subset _ hc))
 
-        refine ⟨(IsCycle_takeUntil hp'.1 hxp').takeUntil hc, ?_⟩
+        refine ⟨(IsCycle_takeUntil hp'.1 (p'.support_takeUntil_subset _ hc)), ?_⟩
         constructor
-        · have : 0 < ((p'.takeUntil x hxp').takeUntil b hc).length := by
+        · have : 0 < (p'.takeUntil b (p'.support_takeUntil_subset _ hc)).length := by
             rw [Nat.pos_iff_ne_zero]
             intro h
             rw [← @Walk.nil_iff_length_eq] at h
-            exact (takeUntil_notNil (p'.takeUntil x hxp') hc hab.ne) h
-          have := ((p'.takeUntil x hxp').takeUntil b hc).toSubgraph_adj_getVert this
-          rw [takeUntil_getVert_one hab.ne.symm hc] at this
-          rw [takeUntil_getVert_one hxa.ne hxp'] at this
+            exact takeUntil_notNil p' (p'.support_takeUntil_subset _ hc) hab.ne h
+          have := (p'.takeUntil b (p'.support_takeUntil_subset _ hc)).toSubgraph_adj_getVert this
+          rw [takeUntil_getVert_one hab.ne.symm, hp'.2.1] at this
           simp at this
-          rw [hp'.2.1] at this
           exact this
-        · exact cycle_takeUntil_takeUntil_adj p' hp'.1 _ _
+        · intro h
+          have : x ∈ (p'.takeUntil b (p'.support_takeUntil_subset _ hc)).support := by
+            exact
+              Walk.toSubgraph_Adj_mem_support_new
+                (p'.takeUntil b (Walk.support_takeUntil_subset p' hxp' hc)) h
+          exact cycle_takeUntil_new p' hp'.1 _ this hnxb.symm hc
       · use x, (by simp), (p'.takeUntil x hxp')
         refine ⟨IsCycle_takeUntil hp'.1 hxp', ?_⟩
         refine ⟨?_, by
