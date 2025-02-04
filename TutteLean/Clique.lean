@@ -10,7 +10,7 @@ theorem exists_union_disjoint_ncard_eq_of_even (he : Even s.ncard) : ∃ (t u : 
     t ∪ u = s ∧ Disjoint t u ∧ t.ncard = u.ncard := by
   sorry
 
-lemma isClique_even_iff_matches' [DecidableEq V]
+lemma isClique_even_iff_matches [DecidableEq V]
     (u : Set V) (hu : Set.Finite u) (hc : G.IsClique u) : Even u.ncard ↔ ∃ (M : Subgraph G), M.verts = u ∧ M.IsMatching := by
   refine ⟨?_ , by
     rintro ⟨M, ⟨rfl, hMr⟩⟩
