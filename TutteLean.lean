@@ -49,16 +49,13 @@ lemma ConnectedComponent.supp_eq_of_mem_supp {c c' : ConnectedComponent G} {v} (
   rfl
 
 lemma walk_length_one_adj : (∃ (p : G.Walk u v), p.length = 1) ↔ G.Adj u v := by
-  constructor
-  · rintro ⟨p , hp⟩
-    match p with
-    | Walk.nil' u => simp only [Walk.length_nil, zero_ne_one] at hp
-    | Walk.cons' u v w h p' =>
-      simp only [Walk.length_cons, add_left_eq_self] at hp
-      exact ((SimpleGraph.Walk.eq_of_length_eq_zero hp) ▸ h)
-  · intro h
-    use Walk.cons h Walk.nil
-    simp only [Walk.length_cons, Walk.length_nil, zero_add]
+  refine ⟨?_, fun h ↦ ⟨h.toWalk, by simp⟩⟩
+  rintro ⟨p , hp⟩
+  match p with
+  | Walk.nil' u => simp only [Walk.length_nil, zero_ne_one] at hp
+  | Walk.cons' u v w h p' =>
+    simp only [Walk.length_cons, add_left_eq_self] at hp
+    exact ((p'.eq_of_length_eq_zero hp) ▸ h)
 
 lemma tail_length_le (p : G.Walk v w): p.tail.length ≤ p.length := by
   induction p with
@@ -66,7 +63,6 @@ lemma tail_length_le (p : G.Walk v w): p.tail.length ≤ p.length := by
   | cons h p ih =>
     rw [Walk.length_cons, Walk.tail_cons, Walk.length_copy]
     omega
-
 
 lemma verts_of_walk (p : G.Walk v w) (hp : p.length = G.dist v w) (hl : 1 < G.dist v w) : ∃ (x a b : V), G.Adj x a ∧ G.Adj a b ∧ ¬ G.Adj x b ∧ x ≠ b := by
   use v, p.getVert 1, p.getVert 2
@@ -188,9 +184,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
         obtain ⟨K, hK⟩ := h'
         rw [isNotClique_iff] at hK
         obtain ⟨x, ⟨y, hxy⟩⟩ := hK
-
-
-        obtain ⟨p , hp⟩ := SimpleGraph.Reachable.exists_path_of_dist (reachable_in_connected_component_induce K x y)
+        obtain ⟨p , hp⟩ := SimpleGraph.Reachable.exists_path_of_dist (K.connected_induce_supp x y)
 
 
         obtain ⟨x, ⟨a, ⟨b, hxab⟩⟩⟩ := verts_of_walk p hp.2 (dist_gt_one_of_ne_and_nadj (Walk.reachable p) hxy.1 hxy.2)
@@ -201,35 +195,22 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
           have : ¬ ∀ (w : V), (a : V) ≠ w → Gmax.Adj (w : V) a := by exact ha
           push_neg at this
           obtain ⟨c, hc⟩ := this
-          use c
-          constructor
-          · intro h
-            exact hc.2 (adj_symm Gmax h)
-          · exact hc.1
+          exact ⟨c, ⟨fun h ↦ hc.2 h.symm, hc.1⟩⟩
         obtain ⟨c, hc⟩ := hc
 
         have hbnec : b.val.val ≠ c := by
           intro h
           apply (h ▸ hc.1)
-          have := hxab.2.1
-          rw [@induce_eq_coe_induce_top] at this
-          rw [@Subgraph.coe_adj] at this
-          have := this.adj_sub
-          exact Subgraph.coe_adj_sub Gsplit (↑a) (↑b) this
+          simp only [comap_adj, Function.Embedding.coe_subtype, Subgraph.coe_adj, ne_eq] at hxab
+          simpa using hxab.2.1.adj_sub
 
         let G1 := Gmax ⊔ (edge x.val.val b.val.val)
         let G2 := Gmax ⊔ (edge a.val.val c)
 
         have hG1nxb : ¬ Gmax.Adj x.val.val b.val.val := by
-
           intro h
           apply hxab.2.2.1
-          rw [@induce_eq_coe_induce_top]
-          simp only [Subgraph.coe_adj, Subgraph.induce_verts, Subgraph.induce_adj, Subgraph.top_adj]
-          refine ⟨Subtype.coe_prop x, Subtype.coe_prop b, ?_⟩
-          rw [@Subgraph.deleteVerts_adj]
-          simp only [Subgraph.verts_top, Set.mem_univ, deleteVerts_verts_notmem_deleted,
-            not_false_eq_true, Subgraph.top_adj, h, and_self]
+          simp [h, Gsplit]
 
         have hG1 := left_lt_sup.mpr (by rw [edge_le_iff (fun h ↦ hxab.2.2.2 (Subtype.val_injective (Subtype.val_injective h)))]; exact hG1nxb)
 

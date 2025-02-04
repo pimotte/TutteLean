@@ -70,9 +70,6 @@ lemma existsIsMatching [Fintype V] [DecidableEq V]
   (u : Set V) (hu : Set.Finite u) (h : G.IsClique u) (uEven : Even (u.ncard)) : ((isClique_even_iff_matches u hu h).mp uEven).choose.IsMatching := by
   exact (Exists.choose_spec ((isClique_even_iff_matches u hu h).mp uEven)).2
 
-
-lemma componentExistsRep (c : ConnectedComponent G) : ∃ v, SimpleGraph.connectedComponentMk G v = c := c.exists_rep
-
 lemma oddSubOneEven (n : Nat) (h : Odd n) : Even (n - 1) := by
   obtain ⟨ k , hk ⟩ := h
   use k
