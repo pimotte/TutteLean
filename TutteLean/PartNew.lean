@@ -12,11 +12,7 @@ def oddVerts (G : SimpleGraph V) : Set V := Subtype.val '' ((fun c ↦ c.exists_
 
 -- In #20024/#21097 (refactored)
 lemma rep_choose_inj : Function.Injective (fun (c : G.ConnectedComponent) ↦ c.exists_rep.choose) := by
-  intro c d hcd
-  dsimp at hcd
-  rw [← (SimpleGraph.ConnectedComponent.mem_supp_iff _ _).mp (ConnectedComponent.exists_vert_mem_supp c)]
-  rw [← (SimpleGraph.ConnectedComponent.mem_supp_iff _ _).mp (ConnectedComponent.exists_vert_mem_supp d)]
-  exact congrArg G.connectedComponentMk hcd
+  sorry
 
 -- In represents PR/easy
 --lemma disjoint_image_val_universalVerts {s : Set (G.deleteUniversalVerts.verts)} :
@@ -84,61 +80,19 @@ lemma disjoint_even_supp_oddVerts {K : G.deleteUniversalVerts.coe.ConnectedCompo
 -- In #20024/#21097 (refactored)
 lemma supp_intersection_oddVerts_card {K : G.deleteUniversalVerts.coe.ConnectedComponent}
     (h : Odd (Subtype.val '' K.supp).ncard) : (Subtype.val '' K.supp ∩ G.oddVerts).ncard = 1 := by
-  rw [@Set.ncard_eq_one]
-  use K.exists_rep.choose
-  ext v
-  constructor
-  · intro hv
-    simp only [Set.mem_singleton_iff]
-    rw [Set.mem_inter_iff] at hv
-    obtain ⟨⟨w, ⟨hw, rfl⟩⟩, ⟨w', ⟨⟨c, ⟨hc, rfl⟩⟩, hw''⟩⟩⟩ := hv
-    apply Subtype.val_injective at hw''
-    rw [← hw''] at hw ⊢
-    congr
-    dsimp at hw
-    rw [@ConnectedComponent.mem_supp_iff] at hw
-    rw [← hw]
-    exact Eq.symm (component_rep c)
-  · intro hv
-    simp only [Set.mem_singleton_iff] at hv
-    rw [hv]
-    refine ⟨Set.mem_image_of_mem _ K.exists_vert_mem_supp, ?_⟩
-    apply Set.mem_image_of_mem
-    simp only [Set.mem_image, Set.mem_setOf_eq]
-    simp [Subtype.val_injective, Set.ncard_image_of_injective] at h
-    exact ⟨K, ⟨h, rfl⟩⟩
-
-
-lemma IsMatching.exists_of_disjoint_sets_of_equiv {s t : Set V} (h : Disjoint s t)
-    (f : s ≃ t) (hadj : ∀ v : s, G.Adj v (f v)) :
-    ∃ M : Subgraph G, M.verts = s ∪ t ∧ M.IsMatching := by
-
   sorry
 
 lemma IsMatching.exists_of_universalVerts [Fintype V] [DecidableEq V] {s : Set V} (h : Disjoint G.universalVerts s) (hc : s.ncard ≤ G.universalVerts.ncard) :
     ∃ t ⊆ G.universalVerts, ∃ (M : Subgraph G), M.IsMatching ∧ M.verts = s ∪ t := by
-  obtain ⟨t, ht⟩ := Set.exists_subset_card_eq hc
+  obtain ⟨t, ⟨ht, hts⟩⟩ := Set.exists_subset_card_eq hc
   use t
-  refine ⟨ht.1, ?_⟩
-  have f : s ≃ t := by
-    simp only [← Set.Nat.card_coe_set_eq, Nat.card.eq_1] at ht
-    have : Nonempty (s ≃ t) := by
-      rw [← Cardinal.eq]
-      exact Cardinal.toNat_injOn (Set.mem_Iio.mpr (Set.Finite.lt_aleph0 (s.toFinite)))
-        (Set.mem_Iio.mpr (Set.Finite.lt_aleph0 (Set.toFinite t))) ht.2.symm
-    exact (Classical.inhabited_of_nonempty this).default
-  have hd := (Set.disjoint_of_subset_left ht.1 h).symm
-  obtain ⟨M1, hM1⟩ := IsMatching.exists_of_disjoint_sets_of_equiv
-    hd
-    f
-    (by
-      intro v
-      have : ((f v) : V) ∈ G.universalVerts := ht.1 (f v).coe_prop
-      simp only [universalVerts, Set.mem_setOf_eq] at this
-      apply this
-      rw [ne_comm]
-      exact Disjoint.ne_of_mem hd v.coe_prop (f v).coe_prop
-      : ∀ (v : ↑s), G.Adj ↑v ↑(f v))
+  refine ⟨ht, ?_⟩
+  obtain ⟨f⟩ : Nonempty (s ≃ t) := by
+    rw [← Cardinal.eq, ← t.cast_ncard (Set.toFinite _), ← s.cast_ncard (Set.toFinite _)]
+    exact congrArg Nat.cast hts.symm
+  have hd := (Set.disjoint_of_subset_left ht h).symm
+  obtain ⟨M1, hM1⟩ := Subgraph.IsMatching.exists_of_disjoint_sets_of_equiv hd f
+    (fun v ↦ ht (f v).coe_prop (hd.symm.ne_of_mem (f v).coe_prop v.coe_prop) : ∀ (v : ↑s), G.Adj ↑v ↑(f v))
   aesop
 
 theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj]

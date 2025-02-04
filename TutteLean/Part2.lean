@@ -158,6 +158,7 @@ decreasing_by
   have : p.length < Fintype.card V := by exact Walk.IsPath.length_lt hp
   omega
 
+-- In #20830
 lemma IsCycles_Reachable [Fintype V] (hadj : G.Adj v w) (hcyc : G.IsCycles) :
     (G \ SimpleGraph.fromEdgeSet {s(v, w)}).Reachable v w := by
   -- have := hcyc (Set.nonempty_of_mem hadj)
@@ -467,30 +468,6 @@ lemma Walk.length_takeUntil_lt [DecidableEq V] {u v w : V} (p : G.Walk v w) (h :
   simp at this
   exact huw this
 
-lemma Walk.toSubgraph_Adj_mem_support (p : G.Walk u v) (hp : p.toSubgraph.Adj u' v') : u' ∈ p.support := by
-  unfold Walk.toSubgraph at hp
-  match p with
-  | nil =>
-    simp only [singletonSubgraph_adj, Pi.bot_apply] at hp
-    exact hp.elim
-  | .cons h q =>
-    simp only [Subgraph.sup_adj, subgraphOfAdj_adj, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq,
-      Prod.swap_prod_mk] at hp
-    rw [@support_cons]
-    rw [@List.mem_cons]
-    cases hp with
-    | inl hl =>
-      cases hl with
-      | inl h1 => left; exact h1.1.symm
-      | inr h2 =>
-        right
-        rw [← h2.2]
-        exact start_mem_support q
-    | inr hr =>
-      right
-      exact q.toSubgraph_Adj_mem_support hr
-
-lemma Walk.toSubgraph_Adj_mem_support' (p : G.Walk u v) (hp : p.toSubgraph.Adj u' v') : v' ∈ p.support := p.toSubgraph_Adj_mem_support hp.symm
 
 -- In takeUntil PR
 lemma takeUntil_takeUntil [DecidableEq V] {p : G.Walk u v} (w x : V) (hw : w ∈ p.support) (hx : x ∈ (p.takeUntil w hw).support) :
@@ -527,7 +504,7 @@ lemma cycle_takeUntil_takeUntil_adj [DecidableEq V] (p : G.Walk u u) (hp : p.IsC
   rw [Subgraph.adj_comm]
   intro h
   have hww : (p.takeUntil w hw).getVert (p.takeUntil w hw).length = w := Walk.getVert_length _
-  have hx := Walk.toSubgraph_Adj_mem_support' _ h
+  have hx := Walk.toSubgraph_Adj_mem_support_new _ h.symm
   rw [@Walk.mem_support_iff_exists_getVert] at hx
   obtain ⟨n, ⟨hn, hnl⟩⟩ := hx
   rw [takeUntil_getVert _ (by omega)] at hn
