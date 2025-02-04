@@ -24,7 +24,7 @@ namespace SimpleGraph
 variable {V : Type*} {G : SimpleGraph V}
 
 
-lemma reachable_from_walk (c : ConnectedComponent G) (v w : V) (hv : v ∈ c.supp) (hw : w ∈ c.supp) (p : G.Walk v w) : (G.induce c.supp).Reachable ⟨v, hv⟩ ⟨w, hw⟩ := by
+lemma reachable_induce_supp (c : ConnectedComponent G) (v w : V) (hv : v ∈ c.supp) (hw : w ∈ c.supp) (p : G.Walk v w) : (G.induce c.supp).Reachable ⟨v, hv⟩ ⟨w, hw⟩ := by
   induction p with
   | nil => rfl
   | @cons u v w h p ih =>
@@ -33,69 +33,20 @@ lemma reachable_from_walk (c : ConnectedComponent G) (v w : V) (hv : v ∈ c.sup
     have hadj : (G.induce c.supp).Adj ⟨u, hv⟩ ⟨v, this⟩ := h
     use q.cons hadj
 
-lemma reachable_in_connected_component_induce (c : ConnectedComponent G) (v w : c.supp) : (G.induce c.supp).Reachable v w := by
-  have hvc := (c.mem_supp_iff v).mp (Subtype.coe_prop v)
-  have hwc := (c.mem_supp_iff w).mp (Subtype.coe_prop w)
-  obtain ⟨p⟩ := ConnectedComponent.exact (show G.connectedComponentMk v = G.connectedComponentMk w from by
-    rw [hvc, hwc])
-  simpa using reachable_from_walk c _ _ hvc hwc p
-
-
-lemma componentConnected (c : ConnectedComponent G) : (G.induce c.supp).Connected := by
-  rw [@connected_iff_exists_forall_reachable]
+lemma ConnectedComponent.connected_induce_supp (c : ConnectedComponent G) : (G.induce c.supp).Connected := by
+  rw [connected_iff_exists_forall_reachable]
   use ⟨c.out, c.out_eq⟩
-  exact fun w ↦ reachable_in_connected_component_induce c _ w
+  intro w
+  have hwc := (c.mem_supp_iff w).mp (Subtype.coe_prop w)
+  obtain ⟨p⟩ := ConnectedComponent.exact (show G.connectedComponentMk c.out = G.connectedComponentMk w from by
+    rw [hwc]
+    simp [connectedComponentMk])
+  exact reachable_induce_supp c _ _ c.out_eq hwc p
 
 lemma ConnectedComponent.supp_eq_of_mem_supp {c c' : ConnectedComponent G} {v} (h : v ∈ c.supp) (h' : v ∈ c'.supp) : c = c' := by
   simp [SimpleGraph.ConnectedComponent.mem_supp_iff] at h h'
   subst h h'
   rfl
-
-lemma verts_of_walk (p : G.Walk v w) (hp : p.length = G.dist v w) (hl : 1 < G.dist v w) : ∃ (x a b : V), G.Adj x a ∧ G.Adj a b ∧ ¬ G.Adj x b ∧ x ≠ b := by
-
-  have hnp : ¬p.Nil := by
-    rw [SimpleGraph.Walk.nil_iff_length_eq]
-    rw [hp]
-    exact Nat.not_eq_zero_of_lt hl
-
-
-  have hnt : ¬p.tail.Nil := by
-    rw [SimpleGraph.Walk.nil_iff_length_eq]
-    rw [← hp] at hl
-    rw [← (SimpleGraph.Walk.length_tail_add_one hnp)] at hl
-    rw [@Nat.lt_add_left_iff_pos] at hl
-    exact Nat.not_eq_zero_of_lt hl
-
-  use v
-  use p.getVert 1
-  use p.tail.getVert 1
-  -- simp? [ne_eq, Walk.adj_getVert_one, Walk.adj_getVert_succ]
-  refine ⟨Walk.adj_snd hnp, ?_, ?_⟩
-  · rw [Walk.getVert_tail]
-    simp [Walk.adj_getVert_succ _ (Nat.lt_of_lt_of_eq hl hp.symm)]
-  constructor
-  · intro hadj
-    let pcon := Walk.cons hadj p.tail.tail
-    have hdist : pcon.length < G.dist v w := by
-      rw [← hp]
-      rw [@Walk.length_cons]
-      rw [Walk.length_tail_add_one hnt]
-      apply @Nat.lt_of_add_lt_add_right _ _ 1
-      rw [Walk.length_tail_add_one hnp]
-      exact lt_add_one p.length
-
-    linarith [SimpleGraph.dist_le pcon]
-  · intro heq
-    let pcon := p.tail.tail
-    have hdist : pcon.length < G.dist (p.tail.getVert 1) w := by
-      apply @Nat.lt_of_add_lt_add_right _ _ 1
-      rw [Walk.length_tail_add_one hnt]
-      rw [← heq]
-      apply @Nat.lt_of_add_lt_add_right _ _ 1
-      rw [Walk.length_tail_add_one hnp]
-      rw [hp]
-      omega
-    linarith [SimpleGraph.dist_le pcon]
 
 lemma walk_length_one_adj : (∃ (p : G.Walk u v), p.length = 1) ↔ G.Adj u v := by
   constructor
@@ -108,6 +59,38 @@ lemma walk_length_one_adj : (∃ (p : G.Walk u v), p.length = 1) ↔ G.Adj u v :
   · intro h
     use Walk.cons h Walk.nil
     simp only [Walk.length_cons, Walk.length_nil, zero_add]
+
+lemma tail_length_le (p : G.Walk v w): p.tail.length ≤ p.length := by
+  induction p with
+  | nil => rfl
+  | cons h p ih =>
+    rw [Walk.length_cons, Walk.tail_cons, Walk.length_copy]
+    omega
+
+
+lemma verts_of_walk (p : G.Walk v w) (hp : p.length = G.dist v w) (hl : 1 < G.dist v w) : ∃ (x a b : V), G.Adj x a ∧ G.Adj a b ∧ ¬ G.Adj x b ∧ x ≠ b := by
+  use v, p.getVert 1, p.getVert 2
+  have hnp : ¬p.Nil := by simpa [SimpleGraph.Walk.nil_iff_length_eq, hp] using Nat.not_eq_zero_of_lt hl
+  have hntp : ¬p.tail.Nil := by
+    rw [Walk.not_nil_iff_lt_length]
+    rw [← p.length_tail_add_one hnp] at hp
+    omega
+  have hadj1 : G.Adj v (p.getVert 1) := by simpa using p.adj_snd hnp
+  have hadj2 : G.Adj (p.getVert 1) (p.getVert 2) := by simpa using p.adj_getVert_succ (hp ▸ hl)
+  have : p.tail.tail.length < p.tail.length := by
+    rw [← p.tail.length_tail_add_one hntp]
+    omega
+  have : p.tail.length < p.length := by
+      rw [← p.length_tail_add_one hnp]
+      omega
+  by_cases hv : v = p.getVert 2
+  · have : G.dist v w ≤ p.tail.tail.length := by
+      simpa [hv, p.getVert_tail] using dist_le p.tail.tail
+    omega
+  by_cases hadj : G.Adj v (p.getVert 2)
+  · have : G.dist v w ≤ p.tail.tail.length + 1 := by simpa using dist_le (p.tail.tail.cons (p.getVert_tail ▸ hadj))
+    omega
+  simp_all
 
 lemma dist_gt_one_of_ne_and_nadj (h : G.Reachable u v) (hne : u ≠ v) (hnadj : ¬G.Adj u v) : 1 < G.dist u v := by
   have : 1 ≠ G.dist u v := by
