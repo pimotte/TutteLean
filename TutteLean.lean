@@ -24,57 +24,27 @@ namespace SimpleGraph
 variable {V : Type*} {G : SimpleGraph V}
 
 
-
-
-
-
-
-
-
-
-
-
-
--- lemma ConnectedComponent.exists_vert_unique (c c' : ConnectedComponent G) (h : c.exists_vert.choose ∈ c'.supp) :  :
-
-
-
-lemma sndOfNotNil_mem_support (p : G.Walk u v) (hnp : ¬ p.Nil) : p.getVert 1 ∈ p.support := by
-  rw [SimpleGraph.Walk.mem_support_iff]
-  right
-  rw [← Walk.support_tail_of_not_nil _ hnp]
-  exact Walk.start_mem_support p.tail
-
-noncomputable def lift_walk {c : ConnectedComponent G} {v w : c.supp}  (p : G.Walk v w) : (G.induce c.supp).Walk v w :=
-  if hp : p.Nil
-  then
-    Subtype.val_injective (SimpleGraph.Walk.Nil.eq hp) ▸ Walk.nil
-  else
-    let u := (SimpleGraph.Walk.not_nil_iff.mp hp).choose
-    let h := (SimpleGraph.Walk.not_nil_iff.mp hp).choose_spec.choose
-    let q := (SimpleGraph.Walk.not_nil_iff.mp hp).choose_spec.choose_spec.choose
-    let h' := (SimpleGraph.Walk.not_nil_iff.mp hp).choose_spec.choose_spec.choose_spec
-    have hu : u ∈ c.supp := by
-      rw [SimpleGraph.ConnectedComponent.mem_supp_iff,
-        ← (c.mem_supp_iff w).mp w.coe_prop,
-        ConnectedComponent.eq]
-      exact Walk.reachable q
-    let u' : c.supp := ⟨u , hu⟩
-    Walk.cons (by simp [comap_adj, Function.Embedding.coe_subtype, u', h, u] : (G.induce c.supp).Adj v u') (lift_walk q)
-termination_by p.length
-decreasing_by
-  simp_wf
-  rw [@Nat.lt_iff_add_one_le]
-  rw [← SimpleGraph.Walk.length_cons]
-  exact Nat.le_of_eq (congrArg Walk.length (id h'.symm))
+lemma reachable_from_walk (c : ConnectedComponent G) (v w : V) (hv : v ∈ c.supp) (hw : w ∈ c.supp) (p : G.Walk v w) : (G.induce c.supp).Reachable ⟨v, hv⟩ ⟨w, hw⟩ := by
+  induction p with
+  | nil => rfl
+  | @cons u v w h p ih =>
+    have : v ∈ c.supp := (ConnectedComponent.mem_supp_congr_adj c h).mp hv
+    obtain ⟨q⟩ := ih this hw
+    have hadj : (G.induce c.supp).Adj ⟨u, hv⟩ ⟨v, this⟩ := h
+    use q.cons hadj
 
 lemma reachable_in_connected_component_induce (c : ConnectedComponent G) (v w : c.supp) : (G.induce c.supp).Reachable v w := by
   have hvc := (c.mem_supp_iff v).mp (Subtype.coe_prop v)
   have hwc := (c.mem_supp_iff w).mp (Subtype.coe_prop w)
-  have : G.connectedComponentMk v = G.connectedComponentMk w := by
-    rw [hvc, hwc]
-  have p := (Classical.inhabited_of_nonempty (ConnectedComponent.exact this)).default
-  exact Walk.reachable (lift_walk p)
+  obtain ⟨p⟩ := ConnectedComponent.exact (show G.connectedComponentMk v = G.connectedComponentMk w from by
+    rw [hvc, hwc])
+  simpa using reachable_from_walk c _ _ hvc hwc p
+
+
+lemma componentConnected (c : ConnectedComponent G) : (G.induce c.supp).Connected := by
+  rw [@connected_iff_exists_forall_reachable]
+  use ⟨c.out, c.out_eq⟩
+  exact fun w ↦ reachable_in_connected_component_induce c _ w
 
 lemma ConnectedComponent.supp_eq_of_mem_supp {c c' : ConnectedComponent G} {v} (h : v ∈ c.supp) (h' : v ∈ c'.supp) : c = c' := by
   simp [SimpleGraph.ConnectedComponent.mem_supp_iff] at h h'

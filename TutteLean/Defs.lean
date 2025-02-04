@@ -45,8 +45,6 @@ instance myInst3 [r : DecidableRel G.Adj] : DecidableRel (((⊤ : G.Subgraph).de
       constructor
       · exact deleteVerts_verts_notmem_deleted y
       exact h
-      done
-
     )
   }
 

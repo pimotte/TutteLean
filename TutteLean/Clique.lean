@@ -115,7 +115,7 @@ lemma oddCliqueAlmostMatchesDoesNotContainNode [Fintype V] [DecidableEq V]
   rw [Set.insert_eq_of_mem hv] at hM
 
   rw [← hM.1] at uOdd
-  rw [@Nat.even_iff_not_odd] at this
+  rw [← Nat.not_odd_iff_even] at this
   -- rw? at this
   -- rw [← @Set.toFinset_card] at uOdd
   rw [Set.ncard_eq_toFinset_card] at uOdd

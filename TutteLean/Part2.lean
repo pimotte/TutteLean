@@ -179,7 +179,7 @@ lemma Walk.toSubgraph_Adj_mem_support_new (p : G.Walk u v) (hp : p.toSubgraph.Ad
     simp only [Subgraph.sup_adj, subgraphOfAdj_adj, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq,
       Prod.swap_prod_mk] at hp
     rw [@support_cons]
-    rw [@List.mem_cons_eq]
+    rw [@List.mem_cons]
     cases hp with
     | inl hl =>
       cases hl with
@@ -477,7 +477,7 @@ lemma Walk.toSubgraph_Adj_mem_support (p : G.Walk u v) (hp : p.toSubgraph.Adj u'
     simp only [Subgraph.sup_adj, subgraphOfAdj_adj, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq,
       Prod.swap_prod_mk] at hp
     rw [@support_cons]
-    rw [@List.mem_cons_eq]
+    rw [@List.mem_cons]
     cases hp with
     | inl hl =>
       cases hl with
