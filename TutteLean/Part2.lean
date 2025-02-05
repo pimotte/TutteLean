@@ -630,6 +630,15 @@ theorem toSubgraph_adj_sndOfNotNil {u v} (p : G.Walk u v) (hpp : p.IsPath)
   | inl hl => exact hl
   | inr hr => exact (hadj.ne hr.1).elim
 
+lemma Subgraph.IsMatching.not_adj_of_ne {M : Subgraph G} {u v w : V} (hM : M.IsMatching) (huv : v ≠ w) (hadj : M.Adj u v) : ¬ M.Adj u w := by
+  intro hadj'
+  obtain ⟨x, hx⟩ := hM (M.edge_vert hadj)
+  exact huv (hx.2 _ hadj ▸ (hx.2 _ hadj').symm)
+
+lemma disjoint_edge {u v : V} (h : u ≠ v): Disjoint G (edge u v) ↔ ¬ G.Adj u v := by
+  simp [← disjoint_edgeSet, edge_edgeSet_of_ne h]
+
+
 theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) (hab : G.Adj a b) (hnGxb : ¬G.Adj x b) (hnGac : ¬ G.Adj a c)
     (hnxb : x ≠ b) (hnxc : x ≠ c) (hnac : a ≠ c) (hnbc : b ≠ c)
     (hm1 : ∃ (M : Subgraph (G ⊔ edge x b)), M.IsPerfectMatching)
@@ -676,6 +685,7 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
   let cycles := symmDiff M1.spanningCoe M2.spanningCoe
   have hcalt : cycles.IsAlternating M2.spanningCoe := IsPerfectMatching.isAlternating_symmDiff_right hM1 hM2
   have hcycles := Subgraph.IsPerfectMatching.symmDiff_isCycles hM1 hM2
+
   have hcxb : cycles.Adj x b := by
     simp [cycles, symmDiff_def, hM2nxb, hM1xb]
   have hcac : cycles.Adj a c := by
@@ -687,34 +697,30 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
 
   have hsupG : G ⊔ edge x b ⊔ (G ⊔ edge a c) = (G ⊔ edge a c) ⊔ edge x b := by aesop
 
+  have cycles_le : cycles ≤ (G ⊔ edge a c) ⊔ (edge x b) := by
+    simp only [← hsupG, cycles]
+    exact symmDiff_le hM1sub hM2sub
+
+  have induce_le : (induce (cycles.connectedComponentMk c).supp cycles).spanningCoe ≤ (G ⊔ edge a c) ⊔ edge x b := by
+    refine le_trans ?_ cycles_le
+    exact spanningCoe_induce_le cycles (cycles.connectedComponentMk c).supp
+
   by_cases hxc : x ∉ (cycles.connectedComponentMk c).supp
   · use (cycles.induce (cycles.connectedComponentMk c).supp).spanningCoe
     refine ⟨hcalt.mono (spanningCoe_induce_le cycles (cycles.connectedComponentMk c).supp), ?_⟩
-
-    simp only [ConnectedComponent.adj_spanningCoe_induce_supp, hxc, hcac]
-    simp only [false_and, not_false_eq_true, ConnectedComponent.mem_supp_iff, ConnectedComponent.eq,
+    simp only [ConnectedComponent.adj_spanningCoe_induce_supp, hxc, hcac, false_and, not_false_eq_true, ConnectedComponent.mem_supp_iff, ConnectedComponent.eq,
       and_true, true_and, hcac.reachable]
-    refine ⟨hcycles.induce_supp (cycles.connectedComponentMk c), ?_⟩
-    intro v w hvw
-    rw [ConnectedComponent.adj_spanningCoe_induce_supp] at hvw
-    have hs := symmDiff_le hM1sub hM2sub hvw.2
-
-    rw [hsupG, sup_adj] at hs
-    cases' hs with h1 h2
-    · exact h1
-    · simp only [edge_adj, ne_eq] at h2
-      cases' h2.1 with hl hr
-      · rw [hl.1] at hvw
-        exact (hxc hvw.1).elim
-      · rw [hr.2] at hvw
-        have : x ∈ (cycles.connectedComponentMk c) := by
-          exact mem_supp_of_adj_alt hvw.1 hvw.2
-        exact (hxc this).elim
+    refine ⟨hcycles.induce_supp (cycles.connectedComponentMk c), Disjoint.left_le_of_le_sup_right induce_le ?_⟩
+    rw [disjoint_edge hnxb]
+    aesop
   push_neg at hxc
 
   have hacc : a ∈ (cycles.connectedComponentMk c).supp := by
     exact mem_supp_of_adj_alt rfl hcac.symm
 
+  have hnM2 (x' : V) (h : x' ≠ c) : ¬ M2.Adj x' a := by
+    rw [M2.adj_comm]
+    exact hM2.1.not_adj_of_ne h.symm hM2ac
 
   have : ∃ x' ∈ ({x, b} : Set V), ∃ (p : cycles.Walk a x'), p.IsPath ∧
     p.toSubgraph.Adj a c ∧ ¬ p.toSubgraph.Adj x b := by
@@ -728,7 +734,6 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
       have : DecidableEq V := by exact Classical.typeDecidableEq V
       by_cases hc : b ∈ (p'.takeUntil x hxp').support
       · use b, (by simp), (p'.takeUntil b (p'.support_takeUntil_subset _ hc))
-
         refine ⟨(IsCycle_takeUntil hp'.1 (p'.support_takeUntil_subset _ hc)), ?_⟩
         constructor
         · have : 0 < (p'.takeUntil b (p'.support_takeUntil_subset _ hc)).length := by
@@ -764,26 +769,15 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
   simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hx'
   use p.toSubgraph.spanningCoe ⊔ edge x' a
   have hfinalt : (p.toSubgraph.spanningCoe ⊔ edge x' a).IsAlternating M2.spanningCoe := by
-    refine IsAlternating.sup_edge (hcalt.spanningCoe p.toSubgraph) (by
-      cases' hx' with hl hl <;>
-      · subst hl
-        simp only [Subgraph.spanningCoe_adj]
-        intro hadj
-        obtain ⟨w, hw⟩ := hM2.1 (hM2.2 a)
-        have := hw.2 _ hadj.symm
-        have := hw.2 _ hM2ac
-        aesop
-      ) ?_ ?_
-    · simp only [Subgraph.spanningCoe_adj]
-      intro u' hu'x hadj
+    refine IsAlternating.sup_edge (hcalt.spanningCoe p.toSubgraph) (by cases hx' <;> aesop) ?_ ?_
+    · intro u' hu'x hadj
       have hu' : p.getVert 1 = u' := toSubgraph_adj_sndOfNotNil p hp hadj
       have hc : p.getVert 1 = c := toSubgraph_adj_sndOfNotNil p hp hpac
-      rw [← hu', hc]
-      exact hM2ac
-    · simp only [Subgraph.spanningCoe_adj]
-      intro c' hc'a hadj
+      simp_all
+    · intro c' hc'a hadj
       have := hadj.adj_sub
-      simp [cycles, symmDiff_def] at this
+      simp only [symmDiff_def, sup_adj, sdiff_adj, Subgraph.spanningCoe_adj, cycles] at this
+
       cases' this with hl hr
       · exfalso
         cases' hx' with h1 h2
@@ -830,6 +824,7 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
     aesop
 
   have hfin5 : p.toSubgraph.spanningCoe ⊔ edge x' a ≤ G ⊔ edge a c := by
+
     rw [@sup_le_iff]
     have hle1 := p.toSubgraph.spanningCoe_le
     have hle2 : cycles ≤ M1.spanningCoe ⊔ M2.spanningCoe := symmDiff_le (fun ⦃v w⦄ a => a) fun ⦃v w⦄ a => a
