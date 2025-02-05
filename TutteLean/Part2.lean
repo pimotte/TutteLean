@@ -594,41 +594,49 @@ lemma path_edge_IsCycles (p : G.Walk u v) (hp : p.IsPath) (h : u ≠ v) (hs : s(
   rw [this]
   exact IsCycle.IsCycles_toSubgraph_spanningCoe hc
 
+lemma Walk.IsPath.getVert_start_iff {i : ℕ} {p : G.Walk u w} (hp : p.IsPath) (hi : i ≤ p.length) :
+    p.getVert i = u ↔ i = 0 := by
+  refine ⟨?_, by aesop⟩
+  intro h
+  by_cases hi : i = 0
+  · exact hi
+  · apply hp.getVert_injOn (by rw [Set.mem_setOf]; omega) (by rw [Set.mem_setOf]; omega)
+    simp [h]
+
+lemma Walk.IsPath.getVert_end_iff {i : ℕ} {p : G.Walk u w} (hp : p.IsPath) (hi : i ≤ p.length) :
+    p.getVert i = w ↔ i = p.length := by
+  have := hp.reverse.getVert_start_iff (by omega : p.reverse.length - i ≤ p.reverse.length)
+  simp only [length_reverse, getVert_reverse,
+    show p.length - (p.length - i) = i from by omega] at this
+  rw [this]
+  omega
+
+lemma Walk.IsPath.neighborSet_toSubgraph_start {u} {p : G.Walk u v} (hp : p.IsPath) (hnp : ¬p.Nil):
+    p.toSubgraph.neighborSet u = {p.snd} := by
+  have hadj1 := p.toSubgraph_adj_snd hnp
+  ext v
+  simp_all only [Subgraph.mem_neighborSet, Set.mem_insert_iff, Set.mem_singleton_iff,
+    SimpleGraph.Walk.toSubgraph_adj_iff, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk]
+  refine ⟨?_, by aesop⟩
+  rintro ⟨i, (hl | hl)⟩ <;> rw [hp.getVert_start_iff (by omega)] at hl <;> aesop
+
+-- In #21250
+lemma nil_reverse {p : G.Walk v w} : p.reverse.Nil ↔ p.Nil := by
+  sorry
+
+lemma Walk.snd_reverse {p : G.Walk v w} : p.reverse.snd = p.penultimate := by
+  simp [getVert_reverse]
+
+lemma Walk.IsPath.neighborSet_toSubgraph_end {u} {p : G.Walk u v} (hp : p.IsPath) (hnp : ¬p.Nil):
+    p.toSubgraph.neighborSet v = {p.penultimate} := by
+  simpa [toSubgraph_reverse, Walk.snd_reverse] using hp.reverse.neighborSet_toSubgraph_start (by simpa [nil_reverse])
+
+lemma Walk.not_nil_of_adj_toSubgraph {u v} (p : G.Walk u v) (hadj : p.toSubgraph.Adj w x) : ¬p.Nil := by
+  cases p <;> simp_all
+
 theorem toSubgraph_adj_sndOfNotNil {u v} (p : G.Walk u v) (hpp : p.IsPath)
-    (hadj : (p.toSubgraph).Adj u v') : p.getVert 1 = v' := by
-  -- have : (p.toSubgraph).neighborSet u = {p.snd} := by exact?
-  have ⟨i, hi⟩ := (Walk.toSubgraph_adj_iff _).mp hadj
-  simp only [Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk] at hi
-  have hnodup := hpp.2
-  rw [@List.nodup_iff_get?_ne_get?] at hnodup
-  have hi0 : i = 0 := by
-    by_contra! hc
-    cases hi.1 with
-    | inl hl =>
-      have := hnodup 0 i (by omega) (by
-        rw [support_length]
-        have := hi.2
-        omega)
-      apply this
-      rw [← getVert_support_get _ (by omega)]
-      rw [← getVert_support_get _ (by omega)]
-      simp only [Walk.getVert_zero, Option.some.injEq]
-      exact hl.1.symm
-    | inr hr =>
-      have := hnodup 0 (i + 1) (by omega) (by
-        rw [support_length]
-        have := hi.2
-        omega)
-      apply this
-      rw [← getVert_support_get _ (by omega)]
-      rw [← getVert_support_get _ (by omega)]
-      simp only [Walk.getVert_zero, Option.some.injEq]
-      exact hr.2.symm
-  rw [hi0] at hi
-  simp only [Walk.getVert_zero, zero_add, true_and] at hi
-  cases hi.1 with
-  | inl hl => exact hl
-  | inr hr => exact (hadj.ne hr.1).elim
+    (h : v' ∈ p.toSubgraph.neighborSet u) : p.getVert 1 = v' := by
+  simpa [hpp.neighborSet_toSubgraph_start (p.not_nil_of_adj_toSubgraph h), Eq.comm] using h
 
 lemma Subgraph.IsMatching.not_adj_of_ne {M : Subgraph G} {u v w : V} (hM : M.IsMatching) (huv : v ≠ w) (hadj : M.Adj u v) : ¬ M.Adj u w := by
   intro hadj'
@@ -666,6 +674,8 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
     exact (Subgraph.IsPerfectMatching.toSubgraph_iff (M2.spanningCoe_sup_edge_le _ hM2ac)).mpr hM2
   simp only [not_not] at hM1xb hM2ac
 
+  have hsupG : G ⊔ edge x b ⊔ (G ⊔ edge a c) = (G ⊔ edge a c) ⊔ edge x b := by aesop
+
   suffices ∃ (G' : SimpleGraph V), G'.IsAlternating M2.spanningCoe ∧ G'.IsCycles ∧ symmDiff M2.spanningCoe G' ≤ G by
     obtain ⟨G', hg⟩ := this
     use (G.toSubgraph (symmDiff M2.spanningCoe G') hg.2.2)
@@ -695,7 +705,7 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
   have hM1sub : M1.spanningCoe ≤ G ⊔ edge x b := Subgraph.spanningCoe_le M1
   have hM2sub := Subgraph.spanningCoe_le M2
 
-  have hsupG : G ⊔ edge x b ⊔ (G ⊔ edge a c) = (G ⊔ edge a c) ⊔ edge x b := by aesop
+
 
   have cycles_le : cycles ≤ (G ⊔ edge a c) ⊔ (edge x b) := by
     simp only [← hsupG, cycles]
