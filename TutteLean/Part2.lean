@@ -582,9 +582,7 @@ lemma path_edge_IsCycles (p : G.Walk u v) (hp : p.IsPath) (h : u ≠ v) (hs : s(
   let c := Walk.cons (by simp [h.symm] : (⊤ : SimpleGraph V).Adj v u) p'
   simp only [Hom.coe_ofLE, id_eq] at p' c
   have hc : c.IsCycle := by
-    unfold c p'
-    rw [@Walk.cons_isCycle_iff]
-    simp [hp, hs]
+    simp [Walk.cons_isCycle_iff, c, p', hp, hs]
   have : p.toSubgraph.spanningCoe ⊔ edge v u = c.toSubgraph.spanningCoe := by
     ext w x
     simp
@@ -686,12 +684,9 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
     obtain ⟨G', ⟨hG', hG'cyc, hG'xb, hnG'ac, hle⟩⟩ := this
     use G'
     refine ⟨hG', hG'cyc, ?_⟩
-    intro v w hv
-    by_cases hsym : s(v, w) = s(a, c)
-    · simp [adj_congr_of_sym2 _ hsym, symmDiff_def, hM2ac, hnG'ac] at hv
-    · have :  (G ⊔ edge a c).Adj v w := (le_trans symmDiff_le_sup (sup_le M2.spanningCoe_le hle)) hv
-      simp only [sup_adj, edge_adj, hsym] at this
-      aesop
+    apply Disjoint.left_le_of_le_sup_right (_root_.symmDiff_le (le_sup_of_le_right M2.spanningCoe_le) (le_sup_of_le_right hle))
+    simp [disjoint_edge hnac, symmDiff_def, hM2ac, hnG'ac]
+
   let cycles := symmDiff M1.spanningCoe M2.spanningCoe
   have hcalt : cycles.IsAlternating M2.spanningCoe := IsPerfectMatching.isAlternating_symmDiff_right hM1 hM2
   have hcycles := Subgraph.IsPerfectMatching.symmDiff_isCycles hM1 hM2
@@ -722,7 +717,12 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
       and_true, true_and, hcac.reachable]
     refine ⟨hcycles.induce_supp (cycles.connectedComponentMk c), Disjoint.left_le_of_le_sup_right induce_le ?_⟩
     rw [disjoint_edge hnxb]
-    aesop
+    -- is aesop
+    simp_all only [ne_eq, ConnectedComponent.mem_supp_iff, ConnectedComponent.eq, map_adj, comap_adj,
+      Function.Embedding.coe_subtype, Subtype.exists, exists_and_left, exists_prop, not_exists, not_and, cycles]
+    intro x_1 a_1 x_2 a_2 a_3 a_4
+    subst a_3
+    simp_all only [not_true_eq_false]
   push_neg at hxc
 
   have hacc : a ∈ (cycles.connectedComponentMk c).supp := by
