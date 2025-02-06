@@ -6,19 +6,6 @@ namespace SimpleGraph
 -- universe u
 variable {V : Type*} {G : SimpleGraph V}
 
-/-- A connected component is *odd* if it has an add number of vertices
-in its support. -/
--- Note: only connected components with finitely many vertices can be odd.
-def ConnectedComponent.isOdd (c : G.ConnectedComponent) : Prop :=
-  Odd (Nat.card c.supp)
-
-noncomputable def cardOddComponents (G : SimpleGraph V) : Nat :=
-  Set.ncard {c : G.ConnectedComponent | c.isOdd}
-
-lemma ConnectedComponent.isOdd_iff (c : G.ConnectedComponent) [Fintype c.supp] :
-    c.isOdd ↔ Odd (Fintype.card c.supp) := by
-  rw [isOdd, Nat.card_eq_fintype_card]
-
 
 lemma deleteVerts_verts_notmem_deleted (a : ((⊤ : G.Subgraph).deleteVerts u).verts) : a.val ∉ u := a.prop.2
 

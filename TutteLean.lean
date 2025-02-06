@@ -104,20 +104,20 @@ lemma union_gt_iff : G < G ⊔ G' ↔ ¬ (G' ≤ G) := by
     exact left_lt_sup.mpr h
 
 theorem tutte_blocker_odd [Fintype V]
-    (hodd : Odd (Fintype.card V)) : ∃ u, u.ncard < cardOddComponents ((⊤ : G.Subgraph).deleteVerts u).coe  := by
+    (hodd : Odd (Fintype.card V)) : ∃ u, u.ncard < {c : ((⊤ : G.Subgraph).deleteVerts u).coe.ConnectedComponent | Odd (c.supp.ncard)}.ncard  := by
   use ∅
   have ⟨c, hc⟩ := Classical.inhabited_of_nonempty
     (Finite.card_pos_iff.mp <| Odd.pos <|
     (odd_card_iff_odd_components ((⊤ : Subgraph G).deleteVerts ∅).coe).mp (by
     simpa [Fintype.card_congr (Equiv.Set.univ V)] using hodd))
-  rw [cardOddComponents, Set.ncard_empty, Set.ncard_pos]
+  rw [Set.ncard_empty, Set.ncard_pos]
   use c
   exact hc
 
 theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
     (∃ (M : Subgraph G) , M.IsPerfectMatching) ↔
       (∀ (u : Set V),
-        cardOddComponents ((⊤ : G.Subgraph).deleteVerts u).coe ≤ u.ncard) := by
+         {c : ((⊤ : G.Subgraph).deleteVerts u).coe.ConnectedComponent | Odd (c.supp.ncard)}.ncard  ≤ u.ncard) := by
   constructor
   {
     rintro ⟨M, hM⟩ u
@@ -127,16 +127,11 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
       intro x y hxy
       obtain ⟨v, hv⟩:= (x.1.odd_matches_node_outside hM x.2).choose_spec.2
       obtain ⟨w, hw⟩:= (y.1.odd_matches_node_outside hM y.2).choose_spec.2
-      rw [Subtype.mk_eq_mk.mp hxy] at hv
       obtain ⟨v', hv'⟩ := (M.isPerfectMatching_iff).mp hM (f y)
-      rw [(Subtype.val_injective (hv'.2 _ hw.1.symm ▸ hv'.2 _ hv.1.symm) : v = w)] at hv
-      rw [Subtype.mk_eq_mk]
-      exact ConnectedComponent.supp_eq_of_mem_supp hv.2 hw.2
+      rw [Subtype.mk_eq_mk.mp hxy, (Subtype.val_injective (hv'.2 _ hw.1.symm ▸ hv'.2 _ hv.1.symm) : v = w)] at hv
+      exact Subtype.mk_eq_mk.mpr <| ConnectedComponent.supp_eq_of_mem_supp hv.2 hw.2
       )
     simp only [Set.Nat.card_coe_set_eq] at this
-    unfold cardOddComponents
-    simp_rw [ConnectedComponent.isOdd_iff, Fintype.card_eq_nat_card, Set.Nat.card_coe_set_eq]
-
     exact this
   }
   {
@@ -148,7 +143,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
     else
       obtain ⟨Gmax, hSubgraph, hMatchingFree, hMaximal⟩ := exists_maximal_isMatchingFree h
 
-      suffices ∃ u, Set.ncard u < cardOddComponents ((⊤ : Subgraph Gmax).deleteVerts u).coe by
+      suffices ∃ u, Set.ncard u <  {c : ((⊤ : Gmax.Subgraph).deleteVerts u).coe.ConnectedComponent | Odd (c.supp.ncard)}.ncard  by
         · obtain ⟨u, hu ⟩ := this
           use u
           exact lt_of_lt_of_le hu (by
@@ -164,9 +159,9 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
       by_contra! hc
 
       have h' := hc S
-      unfold cardOddComponents at h'
+      -- unfold cardOddComponents at h'
       haveI : DecidableRel Gmax.Adj := Classical.decRel _
-      haveI : Fintype ↑{ (c : ConnectedComponent ((⊤ : Subgraph Gmax).deleteVerts S).coe) | ConnectedComponent.isOdd c} := Fintype.ofFinite _
+      haveI : Fintype ↑{c : ((⊤ : G.Subgraph).deleteVerts S).coe.ConnectedComponent | Odd (c.supp.ncard)} := Fintype.ofFinite _
       rw [@Set.ncard_eq_toFinset_card', Set.ncard_eq_toFinset_card'] at h'
       rw [Set.toFinset_card, Set.toFinset_card] at h'
       let h'' := h'
@@ -176,7 +171,7 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
         rw [Nat.not_odd_iff_even] at hvOdd
         rw [Fintype.card_eq_nat_card] at h''
 
-        simp_rw [ConnectedComponent.isOdd_iff, Fintype.card_eq_nat_card, Set.Nat.card_coe_set_eq] at h''
+        simp_rw [Fintype.card_eq_nat_card, Set.Nat.card_coe_set_eq] at h''
         obtain ⟨M, hM⟩ := tutte_part' hvOdd h'' h'
         exact hMatchingFree M hM
       else
