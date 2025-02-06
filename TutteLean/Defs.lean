@@ -46,9 +46,6 @@ instance [Fintype V] [DecidableEq V] [DecidableRel G.Adj] : DecidableEq (Connect
     (fun _ _ _ _ => Subsingleton.elim _ _)
 
 
--- noncomputable instance myInst5 [Fintype V] [DecidableEq V] (u : Set V) : Fintype u := by
---   exact Fintype.ofFinite ↑u
-
 -- Was needed for #20398 but inlined, can be removed when oddComponentsIncrease is removed
 noncomputable instance myInst4 [Fintype V] [DecidableEq V] [DecidableRel G.Adj]
     (u : Set V) :
@@ -57,13 +54,3 @@ noncomputable instance myInst4 [Fintype V] [DecidableEq V] [DecidableRel G.Adj]
         exact Fintype.ofFinite u
       simp only [Subgraph.induce_verts, Subgraph.verts_top]
       infer_instance
-
-def isMatchingFree (G : SimpleGraph V) := ∀ (M : Subgraph G), ¬Subgraph.IsPerfectMatching M
-
-def singleEdge {v w : V} (h : v ≠ w) : SimpleGraph V where
-  Adj v' w' := (v = v' ∧ w = w') ∨ (v = w' ∧ w = v')
-
-def Subgraph.IsCycle (M : Subgraph G) := (∀ v ∈ M.support, (M.neighborSet v).ncard = 2) ∧ M.Connected
-
-def Subgraph.IsAlternating (B : Subgraph G) (M : Subgraph G) :=
-  ∀ (v w w': V), w ≠ w' → B.Adj v w → B.Adj v w' → (M.Adj v w ↔ ¬ M.Adj v w')
