@@ -7,7 +7,7 @@ namespace SimpleGraph
 variable {V : Type*} {G : SimpleGraph V}
 
 
-lemma deleteVerts_verts_notmem_deleted (a : ((⊤ : G.Subgraph).deleteVerts u).verts) : a.val ∉ u := a.prop.2
+-- lemma deleteVerts_verts_notmem_deleted (a : ((⊤ : G.Subgraph).deleteVerts u).verts) : a.val ∉ u := a.prop.2
 
 -- In #20398
 instance myInst3 [r : DecidableRel G.Adj] : DecidableRel (((⊤ : G.Subgraph).deleteVerts u).coe).Adj := by
@@ -26,11 +26,11 @@ instance myInst3 [r : DecidableRel G.Adj] : DecidableRel (((⊤ : G.Subgraph).de
       constructor
       · trivial
       constructor
-      · exact deleteVerts_verts_notmem_deleted x
+      · exact x.2.2
       constructor
       · trivial
       constructor
-      · exact deleteVerts_verts_notmem_deleted y
+      · exact y.2.2
       exact h
     )
   }

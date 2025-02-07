@@ -16,12 +16,8 @@ import TutteLean.Clique
 import TutteLean.PartNew
 import TutteLean.Part2
 
-
-
-
 namespace SimpleGraph
 variable {V : Type*} {G : SimpleGraph V}
-
 
 lemma reachable_induce_supp (c : ConnectedComponent G) (v w : V) (hv : v ∈ c.supp) (hw : w ∈ c.supp) (p : G.Walk v w) : (G.induce c.supp).Reachable ⟨v, hv⟩ ⟨w, hw⟩ := by
   induction p with
@@ -157,7 +153,7 @@ lemma tutte_sufficient [Fintype V] [DecidableEq V]
     obtain ⟨p , hp⟩ := SimpleGraph.Reachable.exists_path_of_dist (K.connected_induce_supp x y)
     obtain ⟨x, ⟨a, ⟨b, hxab⟩⟩⟩ := verts_of_walk p hp.2 (dist_gt_one_of_ne_and_nadj (Walk.reachable p) hxy.1 hxy.2)
 
-    have ha : (a : V) ∉ S := by exact deleteVerts_verts_notmem_deleted _
+    have ha : (a : V) ∉ S := a.1.2.2
     have hc : ∃ (c : V), ¬ Gmax.Adj a c ∧ (a : V) ≠ c := by
       have : ¬ ∀ (w : V), (a : V) ≠ w → Gmax.Adj (w : V) a := by exact ha
       push_neg at this
