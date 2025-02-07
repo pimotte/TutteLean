@@ -655,6 +655,53 @@ lemma adj_edge_iff {u v x w : V} : (edge u v).Adj x w ↔ (s(u, v) = s(x, w) ∧
     and_congr_left_iff]
   tauto
 
+
+lemma tutte_part2b [Fintype V] [DecidableEq V] {x b a c : V} {cycles : SimpleGraph V} {M2 : Subgraph (G ⊔ edge a c)} (hM2 : M2.IsPerfectMatching)
+    (p : cycles.Walk a x) (hp : p.IsPath) (hcalt : cycles.IsAlternating M2.spanningCoe)
+    (hM2nadj : ¬ M2.Adj x a) (hpac : p.toSubgraph.Adj a c) (hnpxb : ¬p.toSubgraph.Adj x b) (hM2ac :  M2.Adj a c) (hgadj : G.Adj x a) (hnxc : x ≠ c)
+    (hnab : a ≠ b) (hle : p.toSubgraph.spanningCoe ≤ G ⊔ edge a c) (aux : (c' : V) → c' ≠ a → p.toSubgraph.Adj c' x → M2.Adj c' x):
+    ∃ G', G'.IsAlternating M2.spanningCoe ∧ G'.IsCycles ∧ ¬G'.Adj x b ∧ G'.Adj a c ∧ G' ≤ G ⊔ edge a c := by
+  use p.toSubgraph.spanningCoe ⊔ edge x a
+
+  have hfinalt : (p.toSubgraph.spanningCoe ⊔ edge x a).IsAlternating M2.spanningCoe := by
+    refine IsAlternating.sup_edge (hcalt.spanningCoe p.toSubgraph) (by simp_all) ?_ ?_
+    · intro u' hu'x hadj
+      have hu' : p.getVert 1 = u' := toSubgraph_adj_sndOfNotNil p hp hadj
+      have hc : p.getVert 1 = c := toSubgraph_adj_sndOfNotNil p hp hpac
+      simp_all
+    · intro c' hc'a hadj
+      exact aux _ hc'a hadj
+  refine ⟨hfinalt, ?_⟩
+
+  have hfincycle : (p.toSubgraph.spanningCoe ⊔ edge x a).IsCycles := by
+    intro v hv
+    refine path_edge_IsCycles _ hp hgadj.ne.symm ?_ hv
+    intro hadj
+    rw [← @Walk.mem_edges_toSubgraph] at hadj
+    rw [@Subgraph.mem_edgeSet] at hadj
+    have : p.getVert 1 = x := toSubgraph_adj_sndOfNotNil p hp hadj.symm
+    have : p.getVert 1 = c := toSubgraph_adj_sndOfNotNil p hp hpac
+    simp_all
+
+  refine ⟨hfincycle, ?_⟩
+
+  have hfin3 : ¬(p.toSubgraph.spanningCoe ⊔ edge x a).Adj x b := by
+    simp only [sup_adj, Subgraph.spanningCoe_adj, hnpxb, edge_adj]
+    aesop
+
+  have hfin4 : (p.toSubgraph.spanningCoe ⊔ edge x a).Adj a c := by
+    aesop
+
+  have hsupG : G ⊔ edge x b ⊔ (G ⊔ edge a c) = (G ⊔ edge a c) ⊔ edge x b := by aesop
+
+  have hfin5 : p.toSubgraph.spanningCoe ⊔ edge x a ≤ G ⊔ edge a c := by
+    rw [@sup_le_iff]
+    refine ⟨hle,?_⟩
+    intro v w hvw
+    simp only [sup_adj, edge_adj, adj_congr_of_sym2 _ (adj_edge_iff.mp hvw).1.symm]
+    exact .inl hgadj
+  exact ⟨hfin3, hfin4, hfin5⟩
+
 theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) (hab : G.Adj a b) (hnGxb : ¬G.Adj x b) (hnGac : ¬ G.Adj a c)
     (hnxb : x ≠ b) (hnxc : x ≠ c) (hnac : a ≠ c) (hnbc : b ≠ c)
     (hm1 : ∃ (M : Subgraph (G ⊔ edge x b)), M.IsPerfectMatching)
@@ -761,73 +808,37 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
 
   obtain ⟨x', hx', p, hp, hpac, hnpxb⟩ := this
 
-  simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hx'
-  use p.toSubgraph.spanningCoe ⊔ edge x' a
-  have hfinalt : (p.toSubgraph.spanningCoe ⊔ edge x' a).IsAlternating M2.spanningCoe := by
-    refine IsAlternating.sup_edge (hcalt.spanningCoe p.toSubgraph) (by cases hx' <;> aesop) ?_ ?_
-    · intro u' hu'x hadj
-      have hu' : p.getVert 1 = u' := toSubgraph_adj_sndOfNotNil p hp hadj
-      have hc : p.getVert 1 = c := toSubgraph_adj_sndOfNotNil p hp hpac
-      simp_all
-    · intro c' hc'a hadj
-      have := hadj.adj_sub
-
-      simp only [symmDiff_def, sup_adj, sdiff_adj, Subgraph.spanningCoe_adj, cycles] at this
-
-      cases' this with hl hr
-      · exfalso
-        obtain ⟨w, hw⟩ := hM1.1 (hM1.2 x')
-
-        apply hnpxb
-        cases' hx' with h1 h2
-        · subst h1
-          rw [hw.2 _ hM1xb, ← hw.2 _ hl.1.symm]
-          exact hadj.symm
-        · subst h2
-          rw [hw.2 _ hM1xb.symm, ← hw.2 _ hl.1.symm]
-          exact hadj
-      · exact hr.1
-  refine ⟨hfinalt, ?_⟩
-
-  have hfincycle : (p.toSubgraph.spanningCoe ⊔ edge x' a).IsCycles := by
-    intro v hv
-    cases' hx' with hl hr
-    · subst hl
-      refine path_edge_IsCycles _ hp hxa.ne.symm ?_ hv
-      intro hadj
-      rw [← @Walk.mem_edges_toSubgraph] at hadj
-      rw [@Subgraph.mem_edgeSet] at hadj
-      have : p.getVert 1 = x' := toSubgraph_adj_sndOfNotNil p hp hadj.symm
-      have : p.getVert 1 = c := toSubgraph_adj_sndOfNotNil p hp hpac
-      simp_all [cycles]
-    · subst hr
-      refine path_edge_IsCycles _ hp hab.ne ?_ hv
-      intro hadj
-      rw [← @Walk.mem_edges_toSubgraph] at hadj
-      rw [@Subgraph.mem_edgeSet] at hadj
-      have : p.getVert 1 = x' := toSubgraph_adj_sndOfNotNil p hp hadj.symm
-      have : p.getVert 1 = c := toSubgraph_adj_sndOfNotNil p hp hpac
-      simp_all [cycles]
-
-  refine ⟨hfincycle, ?_⟩
-
-  have hfin3 : ¬(p.toSubgraph.spanningCoe ⊔ edge x' a).Adj x b := by
-    simp [sup_adj, Subgraph.spanningCoe_adj, not_or, hnpxb, edge_adj]
-    aesop
-
-  have hfin4 : (p.toSubgraph.spanningCoe ⊔ edge x' a).Adj a c := by
-    aesop
-
-  have hfin5 : p.toSubgraph.spanningCoe ⊔ edge x' a ≤ G ⊔ edge a c := by
-    rw [@sup_le_iff]
-    have hle4 : p.toSubgraph.spanningCoe ≤ G ⊔ edge a c := by
-      rw [← sdiff_edge (by simpa : ¬ p.toSubgraph.spanningCoe.Adj x b), sdiff_le_iff']
-      intro v w hvw
-      exact (hsupG ▸ sup_le_sup hM1sub hM2sub) ((symmDiff_le (fun ⦃v w⦄ a => a) fun ⦃v w⦄ a => a) (p.toSubgraph.spanningCoe_le hvw))
-    refine ⟨hle4,?_⟩
+  have hle4 : p.toSubgraph.spanningCoe ≤ G ⊔ edge a c := by
+    rw [← sdiff_edge (by simpa : ¬ p.toSubgraph.spanningCoe.Adj x b), sdiff_le_iff']
     intro v w hvw
-    simp only [sup_adj, edge_adj, adj_congr_of_sym2 _ (adj_edge_iff.mp hvw).1.symm]
-    cases' hx' with hl hl <;> subst hl
-    · exact .inl hxa
-    · exact .inl hab.symm
-  exact ⟨hfin3, hfin4, hfin5⟩
+    exact (hsupG ▸ sup_le_sup hM1sub hM2sub) ((symmDiff_le (fun ⦃v w⦄ a => a) fun ⦃v w⦄ a => a) (p.toSubgraph.spanningCoe_le hvw))
+  -- simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hx'
+  -- use p.toSubgraph.spanningCoe ⊔ edge x' a
+
+  have aux {x' : V} (hx' : x' ∈ ({x, b} : Set V)) (c' : V) : c' ≠ a → p.toSubgraph.Adj c' x' → M2.Adj c' x' := by
+    intro hc hadj
+    have := hadj.adj_sub
+    simp [cycles, symmDiff_def] at this
+    cases' this with hl hr
+    · exfalso
+      obtain ⟨w, hw⟩ := hM1.1 (hM1.2 x')
+
+      apply hnpxb
+      cases' hx' with h1 h2
+      · subst h1
+        rw [hw.2 _ hM1xb, ← hw.2 _ hl.1.symm]
+        exact hadj.symm
+      · subst h2
+        rw [hw.2 _ hM1xb.symm, ← hw.2 _ hl.1.symm]
+        exact hadj
+    · exact hr.1
+
+
+  cases' hx' with hl hl <;> subst hl
+  · exact tutte_part2b hM2 p hp hcalt (hnM2 x' hnxc) hpac hnpxb hM2ac hxa hnxc hab.ne hle4 (aux (by simp))
+  · conv =>
+      enter [1, G', 2, 2, 1, 1]
+      rw [adj_comm]
+    rw [Subgraph.adj_comm] at hnpxb
+    apply tutte_part2b hM2 p hp hcalt (hnM2 _ hnbc) hpac hnpxb hM2ac (hab.symm) hnbc hxa.ne.symm hle4 (aux (by simp))
+
