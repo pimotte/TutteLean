@@ -15,12 +15,11 @@ import TutteLean.ConnectedComponent
 import TutteLean.Clique
 import TutteLean.PartNew
 import TutteLean.Part2
--- import Mathlib.Algebra.BigOperators.Basic
+
 
 
 
 namespace SimpleGraph
--- universe u
 variable {V : Type*} {G : SimpleGraph V}
 
 
@@ -142,35 +141,25 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
       exact tutte_blocker_odd hvOdd
     else
       obtain ⟨Gmax, hSubgraph, hMatchingFree, hMaximal⟩ := exists_maximal_isMatchingFree h
-
+      haveI : DecidableRel Gmax.Adj := Classical.decRel _
       suffices ∃ u, Set.ncard u <  {c : ((⊤ : Gmax.Subgraph).deleteVerts u).coe.ConnectedComponent | Odd (c.supp.ncard)}.ncard  by
-        · obtain ⟨u, hu ⟩ := this
+        · obtain ⟨u, hu⟩ := this
           use u
-          exact lt_of_lt_of_le hu (by
-            haveI : DecidableRel Gmax.Adj := Classical.decRel _
-            exact oddComponentsIncrease G Gmax hSubgraph u
-            )
+          exact lt_of_lt_of_le hu (oddComponentsIncrease G Gmax hSubgraph u)
 
       let S : Set V := {v | ∀ w, v ≠ w → Gmax.Adj w v}
 
       let Gsplit := ((⊤ : Subgraph Gmax).deleteVerts S)
 
-
       by_contra! hc
-
       have h' := hc S
-      -- unfold cardOddComponents at h'
-      haveI : DecidableRel Gmax.Adj := Classical.decRel _
-      haveI : Fintype ↑{c : ((⊤ : G.Subgraph).deleteVerts S).coe.ConnectedComponent | Odd (c.supp.ncard)} := Fintype.ofFinite _
-      rw [@Set.ncard_eq_toFinset_card', Set.ncard_eq_toFinset_card'] at h'
-      rw [Set.toFinset_card, Set.toFinset_card] at h'
-      let h'' := h'
+      simp only [Set.ncard_eq_toFinset_card', Set.toFinset_card] at h'
+      have h'' := h'
 
       if h' : ∀ (K : ConnectedComponent Gsplit.coe), Gsplit.coe.IsClique K.supp
       then
         rw [Nat.not_odd_iff_even] at hvOdd
         rw [Fintype.card_eq_nat_card] at h''
-
         simp_rw [Fintype.card_eq_nat_card, Set.Nat.card_coe_set_eq] at h''
         obtain ⟨M, hM⟩ := tutte_part' hvOdd h'' h'
         exact hMatchingFree M hM
@@ -180,13 +169,10 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
         rw [isNotClique_iff] at hK
         obtain ⟨x, ⟨y, hxy⟩⟩ := hK
         obtain ⟨p , hp⟩ := SimpleGraph.Reachable.exists_path_of_dist (K.connected_induce_supp x y)
-
-
         obtain ⟨x, ⟨a, ⟨b, hxab⟩⟩⟩ := verts_of_walk p hp.2 (dist_gt_one_of_ne_and_nadj (Walk.reachable p) hxy.1 hxy.2)
 
         have ha : (a : V) ∉ S := by exact deleteVerts_verts_notmem_deleted _
         have hc : ∃ (c : V), ¬ Gmax.Adj a c ∧ (a : V) ≠ c := by
-
           have : ¬ ∀ (w : V), (a : V) ≠ w → Gmax.Adj (w : V) a := by exact ha
           push_neg at this
           obtain ⟨c, hc⟩ := this
@@ -199,16 +185,12 @@ theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
           simp only [comap_adj, Function.Embedding.coe_subtype, Subgraph.coe_adj, ne_eq] at hxab
           simpa using hxab.2.1.adj_sub
 
-        let G1 := Gmax ⊔ (edge x.val.val b.val.val)
-        let G2 := Gmax ⊔ (edge a.val.val c)
-
         have hG1nxb : ¬ Gmax.Adj x.val.val b.val.val := by
           intro h
           apply hxab.2.2.1
           simp [h, Gsplit]
 
         have hG1 := left_lt_sup.mpr (by rw [edge_le_iff (fun h ↦ hxab.2.2.2 (Subtype.val_injective (Subtype.val_injective h)))]; exact hG1nxb)
-
         have hG2 := left_lt_sup.mpr (by rw [edge_le_iff (fun h ↦ hc.2 h)]; exact hc.1)
 
         obtain ⟨M1, hM1⟩ := hMaximal _ hG1
