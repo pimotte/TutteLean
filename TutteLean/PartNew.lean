@@ -95,7 +95,7 @@ lemma IsMatching.exists_of_universalVerts [Fintype V] [DecidableEq V] {s : Set V
     (fun v ↦ ht (f v).coe_prop (hd.symm.ne_of_mem (f v).coe_prop v.coe_prop) : ∀ (v : ↑s), G.Adj ↑v ↑(f v))
   aesop
 
-theorem tutte_part' [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj]
+theorem tutte_part' [Fintype V] [DecidableEq V] [DecidableRel G.Adj]
   (hveven : Even (Fintype.card V))
   (h : {c : G.deleteUniversalVerts.coe.ConnectedComponent | Odd (c.supp.ncard)}.ncard ≤ G.universalVerts.ncard)
   (h' : ∀ (K : G.deleteUniversalVerts.coe.ConnectedComponent), G.deleteUniversalVerts.coe.IsClique K.supp) :
