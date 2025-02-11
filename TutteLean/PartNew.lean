@@ -3,31 +3,15 @@ import TutteLean.Clique
 import TutteLean.ConnectedComponent
 
 import Mathlib.Combinatorics.SimpleGraph.UniversalVerts
+import Mathlib.Combinatorics.SimpleGraph.Connectivity.Represents
 
 namespace SimpleGraph
 variable {V : Type*} {G : SimpleGraph V}
 
--- In #20024/#21097 (refactored)
-def oddVerts (G : SimpleGraph V) : Set V := Subtype.val '' ((fun c ↦ c.exists_rep.choose) '' {(c : ConnectedComponent G.deleteUniversalVerts.coe) | Odd (c.supp.ncard)})
+lemma disjoint_image_val_universalVerts (s : Set G.deleteUniversalVerts.verts) : Disjoint (Subtype.val '' s) G.universalVerts := by
+  simpa [deleteUniversalVerts, Subgraph.deleteVerts_verts, ← Set.disjoint_compl_right_iff_subset,
+    Set.compl_eq_univ_diff] using Subtype.coe_image_subset _ s
 
--- In #20024/#21097 (refactored)
-lemma rep_choose_inj : Function.Injective (fun (c : G.ConnectedComponent) ↦ c.exists_rep.choose) := by
-  sorry
-
--- In represents PR/easy
---lemma disjoint_image_val_universalVerts {s : Set (G.deleteUniversalVerts.verts)} :
---   Disjoint (Subtype.val '' s) G.universalVerts := by
---  exact Subgraph.disjoint_deleteVerts_verts_image_val.symm
-
-lemma oddVerts_core_disjoint : Disjoint G.oddVerts G.universalVerts := by
-  rw [Set.disjoint_left]
-  intro v hv
-  rw [oddVerts, Set.mem_image] at hv
-  simp_rw [Set.mem_image] at hv
-  obtain ⟨w, hw⟩ := hv
-  obtain ⟨c, hc⟩ := hw.1
-  rw [← hw.2, ← hc.2]
-  exact (oddVerts.proof_1 _ _).choose.2.2
 
 lemma subgraph_coe (H : Subgraph G) {x y : H.verts} (h : H.coe.Adj x y) : G.Adj x.val y.val := h.adj_sub
 
@@ -50,31 +34,8 @@ lemma disjoint_supp_universalVerts {K : G.deleteUniversalVerts.coe.ConnectedComp
     exists_eq_right] at hv
   exact hv.choose
 
-lemma component_rep (c : G.ConnectedComponent): G.connectedComponentMk c.exists_rep.choose = c := by
-  exact c.exists_rep.choose_spec
-
--- In represents PR/easy
-lemma disjoint_even_supp_oddVerts {K : G.deleteUniversalVerts.coe.ConnectedComponent}
-    (h : Even (Subtype.val '' K.supp).ncard) : Disjoint (Subtype.val '' K.supp) G.oddVerts := by
-  by_contra hc
-  simp [Subtype.val_injective, Set.ncard_image_of_injective] at h
-  rw [@Set.not_disjoint_iff] at hc
-  obtain ⟨v, ⟨⟨v', ⟨hv', rfl⟩⟩, ⟨w, ⟨⟨c, hc'⟩, hw'⟩⟩⟩⟩ := hc
-  simp only [Set.mem_setOf_eq] at hc'
-  rw [@ConnectedComponent.mem_supp_iff] at hv'
-  have : K = c := by
-    rw [← hv']
-    rw [← Subtype.val_injective hw']
-    rw [← hc'.2]
-    exact component_rep c
-  rw [← Nat.not_even_iff_odd] at hc'
-  rw [this] at h
-  exact hc'.1 h
-
--- In #20024/#21097 (refactored)
-lemma supp_intersection_oddVerts_card {K : G.deleteUniversalVerts.coe.ConnectedComponent}
-    (h : Odd (Subtype.val '' K.supp).ncard) : (Subtype.val '' K.supp ∩ G.oddVerts).ncard = 1 := by
-  sorry
+lemma quot_out_inj (r : V → V → Prop): Function.Injective (@Quot.out _ r) :=
+  fun v w h ↦ by simpa [Quot.out_eq] using (congrArg _ h : Quot.mk r v.out = Quot.mk r w.out)
 
 lemma IsMatching.exists_of_universalVerts [Fintype V] [DecidableEq V] {s : Set V} (h : Disjoint G.universalVerts s) (hc : s.ncard ≤ G.universalVerts.ncard) :
     ∃ t ⊆ G.universalVerts, ∃ (M : Subgraph G), M.IsMatching ∧ M.verts = s ∪ t := by
@@ -89,6 +50,7 @@ lemma IsMatching.exists_of_universalVerts [Fintype V] [DecidableEq V] {s : Set V
     (fun v ↦ ht (f v).coe_prop (hd.symm.ne_of_mem (f v).coe_prop v.coe_prop) : ∀ (v : ↑s), G.Adj ↑v ↑(f v))
   aesop
 
+
 theorem tutte_part' [Fintype V] [DecidableEq V] [DecidableRel G.Adj]
   (hveven : Even (Fintype.card V))
   (h : {c : G.deleteUniversalVerts.coe.ConnectedComponent | Odd (c.supp.ncard)}.ncard ≤ G.universalVerts.ncard)
@@ -97,17 +59,15 @@ theorem tutte_part' [Fintype V] [DecidableEq V] [DecidableRel G.Adj]
   classical
   simp only [← Set.Nat.card_coe_set_eq, Nat.card_eq_fintype_card] at h
 
-  obtain ⟨t, ht, M1, hM1⟩ := IsMatching.exists_of_universalVerts oddVerts_core_disjoint.symm (by
-      unfold oddVerts
-      simp only [Subtype.val_injective, Set.ncard_image_of_injective, rep_choose_inj]
+  have hrep := ConnectedComponent.Represents.image_out {c : G.deleteUniversalVerts.coe.ConnectedComponent | Odd (c.supp.ncard)}
+  let oddVerts := Quot.out '' {c : G.deleteUniversalVerts.coe.ConnectedComponent | Odd (c.supp.ncard)}
+  obtain ⟨t, ht, M1, hM1⟩ := IsMatching.exists_of_universalVerts (disjoint_image_val_universalVerts _).symm (by
       simp only [Fintype.card_eq_nat_card, Set.Nat.card_coe_set_eq] at h
-      exact h
-      : G.oddVerts.ncard ≤ G.universalVerts.ncard)
+      rwa [Set.ncard_image_of_injective _ Subtype.val_injective, Set.ncard_image_of_injective _ (quot_out_inj _)])
 
 
   have evenKsubM1 (K : G.deleteUniversalVerts.coe.ConnectedComponent) : Even ((Subtype.val '' K.supp) \ M1.verts).ncard := by
-    rw [hM1.2]
-    rw [← @Set.diff_inter_diff]
+    rw [hM1.2, ← @Set.diff_inter_diff]
     have : Subtype.val '' K.supp \ t = Subtype.val '' K.supp := by
       simp only [sdiff_eq_left]
       apply Set.disjoint_of_subset_right ht
@@ -115,15 +75,21 @@ theorem tutte_part' [Fintype V] [DecidableEq V] [DecidableRel G.Adj]
     simp only [this, Set.inter_diff_distrib_right, Set.inter_self, Set.diff_inter_self_eq_diff]
 
     by_cases h : Even (Subtype.val '' K.supp).ncard
-    · have : Subtype.val '' K.supp \ G.oddVerts = Subtype.val '' K.supp := by
+    · have : Subtype.val '' K.supp \ oddVerts = Subtype.val '' K.supp := by
         simp only [sdiff_eq_left]
-        exact disjoint_even_supp_oddVerts h
+        rw [Set.disjoint_image_iff Subtype.val_injective]
+        exact (hrep.disjoint_supp_of_not_mem (by
+          simpa [oddVerts, Set.ncard_image_of_injective, ← Nat.not_odd_iff_even] using h)).symm
       rw [this]
       exact h
     · have hOdd := h
       rw [@Nat.not_even_iff_odd] at hOdd
-      rw [← Set.ncard_inter_add_ncard_diff_eq_ncard (Subtype.val '' K.supp) G.oddVerts] at h
-      rw [supp_intersection_oddVerts_card hOdd] at h
+      rw [← Set.ncard_inter_add_ncard_diff_eq_ncard (Subtype.val '' K.supp) oddVerts] at h
+      simp only [oddVerts] at h
+      rw [← Set.InjOn.image_inter Set.injOn_subtype_val (Set.subset_univ _) (Set.subset_univ _)] at h
+      rw [Set.ncard_image_of_injective _ Subtype.val_injective] at h
+      rw [Set.inter_comm] at h
+      rw [hrep.ncard_inter (by simpa [Set.ncard_image_of_injective] using hOdd)] at h
       simp only [Nat.not_even_iff_odd] at h
       rw [@Nat.odd_add] at h
       simp only [odd_one, true_iff] at h
@@ -185,7 +151,7 @@ theorem tutte_part' [Fintype V] [DecidableEq V] [DecidableRel G.Adj]
       simp only [(compMatching K).choose_spec.1, Set.mem_diff, Set.mem_image, ConnectedComponent.mem_supp_iff, Subtype.exists,
         deleteUniversalVerts_verts, Set.mem_univ, true_and, exists_and_right, exists_eq_right,
         exists_prop, and_true]
-      aesop
+      exact ⟨⟨h.2, (by simp [K])⟩, h.1⟩
 
   have subM1M2Clique : G.IsClique ((Set.univ : Set V) \ (M1.verts ∪ M2.verts)) := by
     exact G.isClique_universalVerts.subset sub
