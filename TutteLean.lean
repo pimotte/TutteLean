@@ -11,7 +11,6 @@ import Mathlib.Data.Fintype.Card
 import TutteLean.Defs
 import TutteLean.Supp
 import TutteLean.SingleEdge
-import TutteLean.ConnectedComponent
 import TutteLean.Clique
 import TutteLean.PartNew
 import TutteLean.Part2
@@ -38,10 +37,6 @@ lemma ConnectedComponent.connected_induce_supp (c : ConnectedComponent G) : (G.i
     simp [connectedComponentMk])
   exact reachable_induce_supp c _ _ c.out_eq hwc p
 
-lemma ConnectedComponent.supp_eq_of_mem_supp {c c' : ConnectedComponent G} {v} (h : v ∈ c.supp) (h' : v ∈ c'.supp) : c = c' := by
-  simp [SimpleGraph.ConnectedComponent.mem_supp_iff] at h h'
-  subst h h'
-  rfl
 
 lemma walk_length_one_adj : (∃ (p : G.Walk u v), p.length = 1) ↔ G.Adj u v := by
   refine ⟨?_, fun h ↦ ⟨h.toWalk, by simp⟩⟩
@@ -107,7 +102,7 @@ theorem tutte_blocker_odd [Fintype V]
     simpa [Fintype.card_congr (Equiv.Set.univ V)] using hodd))
   rw [Set.ncard_empty, Set.ncard_pos]
   use c
-  exact hc
+
 
 lemma tutte_necessary [Fintype V]
   {M : Subgraph G} (hM : M.IsPerfectMatching) (u : Set V) :
@@ -120,7 +115,7 @@ lemma tutte_necessary [Fintype V]
     obtain ⟨w, hw⟩:= (y.1.odd_matches_node_outside hM y.2).choose_spec.2
     obtain ⟨v', hv'⟩ := (M.isPerfectMatching_iff).mp hM (f y)
     rw [Subtype.mk_eq_mk.mp hxy, (Subtype.val_injective (hv'.2 _ hw.1.symm ▸ hv'.2 _ hv.1.symm) : v = w)] at hv
-    exact Subtype.mk_eq_mk.mpr <| ConnectedComponent.supp_eq_of_mem_supp hv.2 hw.2)
+    exact Subtype.mk_eq_mk.mpr <| ConnectedComponent.eq_of_common_vertex hv.2 hw.2)
 
 lemma tutte_sufficient [Fintype V] [DecidableEq V]
   (h : ∀ (M : G.Subgraph), ¬M.IsPerfectMatching) (hvEven : Even (Fintype.card V)) :
@@ -131,7 +126,7 @@ lemma tutte_sufficient [Fintype V] [DecidableEq V]
   suffices ∃ u, Set.ncard u <  {c : ((⊤ : Gmax.Subgraph).deleteVerts u).coe.ConnectedComponent | Odd (c.supp.ncard)}.ncard  by
     · obtain ⟨u, hu⟩ := this
       use u
-      exact lt_of_lt_of_le hu (oddComponentsIncrease G Gmax hSubgraph u)
+      exact lt_of_lt_of_le hu (ncard_odd_components_mono _ (Subgraph.deleteVerts_mono' u hSubgraph))
 
   let S : Set V := {v | ∀ w, v ≠ w → Gmax.Adj w v}
   let Gsplit := ((⊤ : Subgraph Gmax).deleteVerts S)
