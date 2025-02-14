@@ -28,297 +28,6 @@ lemma mem_supp_of_adj_alt {c : G.ConnectedComponent} (h : v ∈ c.supp) (h' : G.
   rw [← h]
   exact ConnectedComponent.connectedComponentMk_eq_of_adj h'.symm
 
--- In #20830
-@[simp]
-lemma sup_spanningCoe (H H' : Subgraph G) : (H ⊔ H').spanningCoe = H.spanningCoe ⊔ H'.spanningCoe := by rfl
-
--- In #20830
-lemma IsCycles_Path_mem_support_is_second (p : G.Walk v w) (hw : w ≠ w') (hw' : w' ∈ p.support) (hp : p.IsPath)
-    (hadj : G.Adj v w') (hcyc : G.IsCycles) : p.getVert 1 = w' := by
-  rw [@Walk.mem_support_iff_exists_getVert] at hw'
-  obtain ⟨n, ⟨rfl, hnl⟩⟩ := hw'
-  have hnz : n ≠ 0 := by
-    intro h
-    simp_all only [h, zero_le, Walk.getVert_zero, ne_eq, SimpleGraph.irrefl]
-  by_cases hn : n = 1
-  · rw [hn]
-  have hnp1 : G.Adj (p.getVert n) (p.getVert (n + 1)) := by
-    exact (Walk.toSubgraph_adj_getVert p (by
-      by_contra! hc
-      exact hw (Walk.getVert_of_length_le p hc).symm)).adj_sub
-  rw [adj_comm] at hadj
-  have hns1 : G.Adj (p.getVert n) (p.getVert (n - 1)) := by
-    simpa [show n - 1 + 1 = n from by omega] using (@Walk.toSubgraph_adj_getVert _  _  _ _ p (n - 1) (by omega)).adj_sub.symm
-  have := hcyc (Set.nonempty_of_mem hnp1)
-  rw [@Set.ncard_eq_two] at this
-  obtain ⟨x, y, hxy⟩ := this
-  have hvgv : v ∈ G.neighborSet (p.getVert n) := hadj
-  have hsgv : p.getVert (n - 1) ∈ G.neighborSet (p.getVert n) := hns1
-  have hpgv : p.getVert (n + 1) ∈ G.neighborSet (p.getVert n) := hnp1
-  rw [hxy.2] at hvgv hsgv hpgv
-
-  have : p.getVert (n - 1) ≠ p.getVert (n + 1) := by
-    by_cases h : n = p.length
-    · subst h
-      simp_all only [ne_eq, and_true, Set.mem_insert_iff, Set.mem_singleton_iff, le_refl, Walk.getVert_length,
-        not_true_eq_false]
-    intro h
-    apply hp.getVert_injOn (by rw [@Set.mem_setOf]; omega) (by rw [@Set.mem_setOf]; omega) at h
-
-    omega
-
-  have hsnv : p.getVert (n - 1) ≠ v := by
-    intro h
-    have : p.getVert (n - 1) = p.getVert 0 := by aesop
-    apply hp.getVert_injOn (by rw [Set.mem_setOf]; omega) (by rw [Set.mem_setOf]; omega) at this
-    omega
-
-  have hpnv : p.getVert (n + 1) ≠ v := by
-    have : p.getVert (n + 1) = p.getVert 0 := by aesop
-    by_cases h : n = p.length
-    · subst h
-      simp_all only [ne_eq, and_true, Set.mem_insert_iff, Set.mem_singleton_iff, le_refl, Walk.getVert_length,
-        not_true_eq_false]
-    apply hp.getVert_injOn (by rw [Set.mem_setOf]; omega) (by rw [Set.mem_setOf]; omega) at this
-    omega
-
-  simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hsgv hpgv
-  aesop
-
--- In #20830
-lemma subgraphOfAdj_spanningCoe (hadj : G.Adj v w) : (G.subgraphOfAdj hadj).spanningCoe = fromEdgeSet {s(v, w)} := by
-  ext v w
-  aesop
-
--- In #20830
-lemma IsCycles_Reachable_Path [Fintype V] (hcyc : G.IsCycles)
-  (p : G.Walk v w) (hp : p.IsPath) :
-    (G \ p.toSubgraph.spanningCoe).Reachable w v := by
-  by_cases hvw : v = w
-  · subst hvw
-    use .nil
-  have hpn : ¬p.Nil := Walk.not_nil_of_ne hvw
-  have : p.toSubgraph.Adj v (p.getVert 1) := by
-    simpa [Walk.getVert_zero p] using
-      SimpleGraph.Walk.toSubgraph_adj_getVert p (Walk.not_nil_iff_lt_length.mp hpn)
-  obtain ⟨w', ⟨hw'1, hw'2⟩⟩ := hcyc.other_adj_of_adj (this.adj_sub)
-  have hnpvw' : ¬ p.toSubgraph.Adj v w' := by
-    intro h
-    rw [@Walk.toSubgraph_adj_iff] at h
-    obtain ⟨i, hi⟩ := h
-    by_cases h0 : i = 0
-    · aesop
-    by_cases h1 : i = 1
-    · subst h1
-      have : p.getVert 1 ≠ v := by
-        intro h
-        rw [h] at this
-        exact this.ne rfl
-      aesop
-    by_cases hpi : p.getVert i = v
-    · have : p.getVert i = p.getVert 0 := by aesop
-      apply hp.getVert_injOn (by rw [Set.mem_setOf]; omega) (by rw [Set.mem_setOf]; omega) at this
-      omega
-    have : p.getVert (i + 1) = p.getVert 0 := by aesop
-    apply hp.getVert_injOn (by rw [Set.mem_setOf]; omega) (by rw [Set.mem_setOf]; omega) at this
-    omega
-  by_cases hww' : w = w'
-  · subst hww'
-    have : (G \ p.toSubgraph.spanningCoe).Adj w v := by
-      simp only [sdiff_adj, Subgraph.spanningCoe_adj]
-      exact ⟨hw'2.symm, fun h ↦ hnpvw' h.symm⟩
-    exact this.reachable
-  let p' := Walk.cons hw'2.symm p
-  have hle : (G \ p'.toSubgraph.spanningCoe) ≤ (G \ p.toSubgraph.spanningCoe) := by
-    apply sdiff_le_sdiff (by rfl) ?hcd
-    aesop
-
-  have hp'p : p'.IsPath := by
-    unfold p'
-    rw [@Walk.cons_isPath_iff]
-    refine ⟨hp, ?_⟩
-    intro hw'
-    have := IsCycles_Path_mem_support_is_second _  hww'  hw' hp hw'2 hcyc
-    exact hw'1 this
-
-  have p'' := (IsCycles_Reachable_Path hcyc p' hp'p).some
-
-
-  let pMap := Walk.mapLe hle p''
-  have : (G \ p.toSubgraph.spanningCoe).Adj w' v := by
-    simp only [sdiff_adj, Subgraph.spanningCoe_adj]
-    refine ⟨hw'2.symm, ?_⟩
-    intro h
-    exact hnpvw' h.symm
-
-  use Walk.append pMap (this.toWalk)
-termination_by Fintype.card V + 1 - p.length
-decreasing_by
-  simp_wf
-  have : p.length < Fintype.card V := by exact Walk.IsPath.length_lt hp
-  omega
-
--- In #20830
-lemma IsCycles_Reachable [Fintype V] (hadj : G.Adj v w) (hcyc : G.IsCycles) :
-    (G \ SimpleGraph.fromEdgeSet {s(v, w)}).Reachable v w := by
-  -- have := hcyc (Set.nonempty_of_mem hadj)
-  have hr := IsCycles_Reachable_Path hcyc hadj.toWalk (by aesop)
-  have : fromEdgeSet {s(v, w)} = hadj.toWalk.toSubgraph.spanningCoe := by
-    simp only [Walk.toSubgraph, singletonSubgraph_le_iff, subgraphOfAdj_verts, Set.mem_insert_iff,
-      Set.mem_singleton_iff, or_true, sup_of_le_left]
-    exact Eq.symm (subgraphOfAdj_spanningCoe hadj)
-  rw [this]
-  exact hr.symm
-
-lemma Walk.toSubgraph_Adj_mem_support_new (p : G.Walk u v) (hp : p.toSubgraph.Adj u' v') : u' ∈ p.support := by
-  rw [← p.mem_verts_toSubgraph]
-  exact p.toSubgraph.edge_vert hp
-
--- In #20830 (obsoleted)
-lemma get?_nonZero (a : α) (l : List α) (h : n ≠ 0) : (a :: l).get? n = l.get? (n - 1) := by
-    have : ∃ (i : ℕ), i.succ = n := by
-      use (n - 1)
-      exact Nat.sub_one_add_one_eq_of_pos (Nat.zero_lt_of_ne_zero h)
-    obtain ⟨i, hi⟩ := this
-    rw [← hi]
-    simp only [Nat.succ_eq_add_one, List.get?_cons_succ, add_tsub_cancel_right]
-
--- In #20830 (obsoleted)
-lemma getVert_support_get (p : G.Walk u v) (h2 : n ≤ p.length) : p.getVert n = p.support.get? n := by
-  match p with
-  | .nil =>
-    simp only [Walk.length_nil, nonpos_iff_eq_zero] at h2
-    simp only [h2, Walk.getVert_zero, Walk.support_nil, List.get?_cons_zero]
-  | .cons h q =>
-    simp only [Walk.support_cons]
-    by_cases hn : n = 0
-    · simp only [hn, Walk.getVert_zero, List.get?_cons_zero]
-    · push_neg at hn
-      rw [Walk.getVert_cons q h hn]
-      rw [get?_nonZero _ _ hn]
-      exact getVert_support_get q (by
-        rw [@Walk.length_cons] at h2
-        exact Nat.sub_le_of_le_add h2
-        )
-
--- In #20830
-lemma card_subgraph_argument [DecidableEq V] {H : Subgraph G} (h : G.neighborSet v ≃ H.neighborSet v) (hfin : (G.neighborSet v).Finite) : ∀ w, H.Adj v w ↔ G.Adj v w := by
-  intro w
-  refine ⟨fun a => a.adj_sub, ?_⟩
-  have : Finite (H.neighborSet v) := by
-    rw [Set.finite_coe_iff, ← (Equiv.set_finite_iff h)]
-    exact hfin
-  have : Fintype (H.neighborSet v) := by
-    exact Set.Finite.fintype this
-  let f : H.neighborSet v → G.neighborSet v := fun a => ⟨a, a.coe_prop.adj_sub⟩
-  have hfinj : f.Injective := by
-    intro w w' hww'
-    aesop
-  have hfsurj : f.Surjective := by
-    apply Function.Injective.surjective_of_fintype _ hfinj
-    exact h.symm
-  have hfbij : f.Bijective := ⟨hfinj, hfsurj⟩
-  have g := Fintype.bijInv hfbij
-  intro h
-  obtain ⟨v', hv'⟩ : ∃ v', f v' = ⟨w, h⟩ := hfsurj ⟨w, h⟩
-  have : (f v').1 = (⟨w, h⟩ : G.neighborSet v).1 := by
-    exact congrArg Subtype.val hv'
-  simp at this
-  rw [← this]
-  have := (g ⟨w, h⟩).coe_prop
-  rw [← hv'] at this
-  aesop
-
--- In #20830
-def Walk.coeWalk {H : Subgraph G} {u v : H.verts} (p : H.coe.Walk u v) : G.Walk u.val v.val :=
-  match p with
-  | .nil => Walk.nil
-  | .cons h q => Walk.cons (H.adj_sub h) (q.coeWalk)
-
--- In #20830 (obsoleted)
-theorem Subgraph.verts_bot_iff (H : G.Subgraph) : H.verts = ∅ ↔ H = ⊥ := by
-  refine ⟨?_, by aesop⟩
-  intro h
-  rw [Subgraph.ext_iff]
-  refine ⟨h, ?_⟩
-  ext v w
-  simp only [not_bot_adj, iff_false]
-  intro hadj
-  have := hadj.fst_mem
-  simp_all only [Set.mem_empty_iff_false]
-
--- In #20830 (obsoleted)
-lemma Subgraph_eq_component_supp {H : Subgraph G} (hb : H ≠ ⊥) (h : ∀ v ∈ H.verts, ∀ w, H.Adj v w ↔ G.Adj v w)
-    (hc : H.Connected) :
-    ∃ c : G.ConnectedComponent, H.verts = c.supp := by
-  rw [SimpleGraph.ConnectedComponent.exists]
-  simp at hb
-  rw [← Subgraph.verts_bot_iff, Set.eq_empty_iff_forall_not_mem] at hb
-  push_neg at hb
-  obtain ⟨v, hv⟩ := hb
-  use v
-  ext w
-  simp only [ConnectedComponent.mem_supp_iff, ConnectedComponent.eq]
-  by_cases hvw : v = w
-  · aesop
-  constructor
-  · intro hw
-    obtain ⟨p⟩ := hc ⟨v, hv⟩ ⟨w, hw⟩
-    simpa using p.coeWalk.reachable.symm
-  · let rec aux {v' : V} (hv' : v' ∈ H.verts) (p : G.Walk v' w) : w ∈ H.verts := by
-      by_cases hnp : p.Nil
-      · have : v' = w := hnp.eq
-        exact this ▸ hv'
-      have : p.getVert 1 ∈ H.verts := H.edge_vert (by
-            rw [Subgraph.adj_comm, h _ hv' _]
-            exact Walk.adj_snd hnp)
-      exact aux this p.tail
-    termination_by p.length
-    decreasing_by {
-      simp_wf
-      rw [← Walk.length_tail_add_one hnp]
-      omega
-    }
-    exact fun hr ↦ aux hv hr.some.reverse
-
--- In #20830
-lemma Path.of_IsCycles [Fintype V] [DecidableEq V] {c : G.ConnectedComponent} (h : G.IsCycles) (hv : v ∈ c.supp)
-  (hn : (G.neighborSet v).Nonempty) :
-    ∃ (p : G.Walk v v), p.IsCycle ∧ p.toSubgraph.verts = c.supp := by
-  obtain ⟨w, hw⟩ := hn
-  simp only [mem_neighborSet] at hw
-  have := IsCycles_Reachable hw h
-  obtain ⟨u, p, hp⟩ := SimpleGraph.adj_and_reachable_delete_edges_iff_exists_cycle.mp ⟨hw, this⟩
-
-  have hvp : v ∈ p.support := SimpleGraph.Walk.fst_mem_support_of_mem_edges _ hp.2
-  have : p.toSubgraph.verts = c.supp := by
-    obtain ⟨c', hc'⟩ := Subgraph_eq_component_supp (by
-      intro hpb
-      rw [← @Subgraph.verts_bot_iff, Set.eq_empty_iff_forall_not_mem] at hpb
-      rw [← Walk.mem_verts_toSubgraph] at hvp
-      exact hpb _ hvp) (by
-        intro v hv w
-        refine card_subgraph_argument ?_ (Set.toFinite _) w
-        exact @Classical.ofNonempty _ (by
-          rw [← Cardinal.eq]
-          apply Cardinal.toNat_injOn (Set.mem_Iio.mpr (by apply Cardinal.lt_aleph0_of_finite))
-                (Set.mem_Iio.mpr (by apply Cardinal.lt_aleph0_of_finite))
-          rw [← Set.cast_ncard (Set.toFinite _),← Set.cast_ncard (Set.toFinite _)]
-          rw [h (by
-            rw [@Walk.mem_verts_toSubgraph] at hv
-            exact (Set.nonempty_of_ncard_ne_zero (by rw [hp.1.ncard_neighborSet_toSubgraph_eq_two hv]; omega)).mono (p.toSubgraph.neighborSet_subset v)
-            )]
-          rw [hp.1.ncard_neighborSet_toSubgraph_eq_two (p.mem_verts_toSubgraph.mp hv)])
-        ) p.toSubgraph_connected
-    rw [hc']
-    have : v ∈ c'.supp := by
-      rw [← hc', Walk.mem_verts_toSubgraph]
-      exact hvp
-    simp_all
-  use p.rotate hvp
-  rw [← this]
-  refine ⟨?_, by simp_all only [ConnectedComponent.mem_supp_iff, Walk.verts_toSubgraph, Walk.toSubgraph_rotate]⟩
-  exact hp.1.rotate _
 
 lemma IsCycle.first_two {p : G.Walk v v} (h : p.IsCycle) (hadj : p.toSubgraph.Adj v w) :
     ∃ (p' : G.Walk v v), p'.IsCycle ∧ p'.getVert 1 = w ∧ p'.toSubgraph.verts = p.toSubgraph.verts := by
@@ -485,11 +194,12 @@ lemma cycle_takeUntil_takeUntil_adj [DecidableEq V] (p : G.Walk u u) (hp : p.IsC
   rw [Subgraph.adj_comm]
   intro h
   have hww : (p.takeUntil w hw).getVert (p.takeUntil w hw).length = w := Walk.getVert_length _
-  have hx := Walk.toSubgraph_Adj_mem_support_new _ h.symm
+  have hx := (Walk.mem_verts_toSubgraph _).mp ((Walk.toSubgraph _).edge_vert h)
   rw [@Walk.mem_support_iff_exists_getVert] at hx
   obtain ⟨n, ⟨hn, hnl⟩⟩ := hx
   rw [takeUntil_getVert _ (by omega)] at hn
-  have heq : (p.takeUntil w hw).getVert n = (p.takeUntil w hw).getVert (p.takeUntil w hw).length := by simp_all only [Walk.getVert_length]
+  have heq : (p.takeUntil w hw).getVert n = (p.takeUntil w hw).getVert (p.takeUntil w hw).length := by
+    sorry
   have := Walk.length_takeUntil_lt (p.takeUntil w hw) hx h.ne
 
   apply (hp.takeUntil hw).getVert_injOn (by rw [@Set.mem_setOf]; omega) (by simp) at heq
@@ -498,7 +208,7 @@ lemma cycle_takeUntil_takeUntil_adj [DecidableEq V] (p : G.Walk u u) (hp : p.IsC
 lemma cycles_arg [Finite V] [DecidableEq V] {p : G.Walk u u} (hp : p.IsCycle) (hcyc : G.IsCycles) (hv : v ∈ p.toSubgraph.verts) :
     ∀ w, p.toSubgraph.Adj v w ↔ G.Adj v w := by
   intro w
-  refine card_subgraph_argument (?_ : Inhabited ((G.neighborSet v) ≃ (p.toSubgraph.neighborSet v))).default (Set.toFinite _) w
+  refine Subgraph.adj_iff_of_neighborSet_equiv (?_ : Inhabited ((G.neighborSet v) ≃ (p.toSubgraph.neighborSet v))).default (Set.toFinite _).fintype
   apply Classical.inhabited_of_nonempty
 
   have h : (G.neighborSet v).Nonempty := Set.Nonempty.mono (p.toSubgraph.neighborSet_subset v) <|
@@ -545,7 +255,7 @@ lemma IsCycle.IsCycles_toSubgraph_spanningCoe {p : G.Walk u u} (hpc : p.IsCycle)
   rw [spanningCoe_neighborSet]
   apply hpc.ncard_neighborSet_toSubgraph_eq_two
   obtain ⟨_, hw⟩ := hv
-  exact p.toSubgraph_Adj_mem_support_new hw
+  exact p.mem_verts_toSubgraph.mp <| p.toSubgraph.edge_vert hw
 
 lemma mapSpanningSubgraph_inj (h : G ≤ G'): Function.Injective (Hom.mapSpanningSubgraphs h) := by
   intro v w hvw
@@ -730,7 +440,7 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
 
   have : ∃ x' ∈ ({x, b} : Set V), ∃ (p : cycles.Walk a x'), p.IsPath ∧
     p.toSubgraph.Adj a c ∧ ¬ p.toSubgraph.Adj x b := by
-      obtain ⟨p, hp⟩ := Path.of_IsCycles hcycles hacc (Set.nonempty_of_mem hcac)
+      obtain ⟨p, hp⟩ := hcycles.exists_cycle_toSubgraph_verts_eq_connectedComponentSupp hacc (Set.nonempty_of_mem hcac)
       obtain ⟨p', hp'⟩ := IsCycle.first_two hp.1 (by
         rwa [cycles_arg hp.1 hcycles (hp.2 ▸ hacc)])
       have hxp' : x ∈ p'.support := by
@@ -738,15 +448,14 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
       by_cases hc : b ∈ (p'.takeUntil x hxp').support
       · use b, (by simp), (p'.takeUntil b (p'.support_takeUntil_subset _ hc))
         refine ⟨(IsCycle_takeUntil hp'.1 (p'.support_takeUntil_subset _ hc)), ⟨?_, fun h ↦ cycle_takeUntil_new p' hp'.1 _
-            ((p'.takeUntil b (Walk.support_takeUntil_subset p' hxp' hc)).toSubgraph_Adj_mem_support_new
-                 h) hnxb.symm hc⟩⟩
+            ((Walk.mem_verts_toSubgraph _).mp ((Walk.toSubgraph _).edge_vert h)) hnxb.symm hc⟩⟩
         have : 0 < (p'.takeUntil b (p'.support_takeUntil_subset _ hc)).length := by
           rw [Nat.pos_iff_ne_zero, Ne.eq_def, ← Walk.nil_iff_length_eq]
           exact fun h ↦ takeUntil_notNil p' (p'.support_takeUntil_subset _ hc) hab.ne h
         simpa [takeUntil_getVert_one hab.ne.symm, hp'.2.1] using
           ((p'.takeUntil b (p'.support_takeUntil_subset _ hc)).toSubgraph_adj_getVert this)
       · use x, (by simp), (p'.takeUntil x hxp')
-        refine ⟨IsCycle_takeUntil hp'.1 hxp', ⟨?_, fun h ↦ hc ((p'.takeUntil x hxp').toSubgraph_Adj_mem_support_new h.symm)⟩⟩
+        refine ⟨IsCycle_takeUntil hp'.1 hxp', ⟨?_, fun h ↦ hc ((Walk.mem_verts_toSubgraph _).mp ((Walk.toSubgraph _).edge_vert h.symm))⟩⟩
         have : (p'.takeUntil x hxp').toSubgraph.Adj ((p'.takeUntil x hxp').getVert 0) ((p'.takeUntil x hxp').getVert 1) := by
           apply SimpleGraph.Walk.toSubgraph_adj_getVert
           rw [Nat.pos_iff_ne_zero, Ne.eq_def, ← Walk.nil_iff_length_eq]
