@@ -189,10 +189,11 @@ lemma tutte_sufficient [Fintype V] [DecidableEq V]
     exact hMatchingFree Mcon hMcon
 
 
-theorem tutte [Fintype V] [Inhabited V] [DecidableEq V] [DecidableRel G.Adj] :
+theorem tutte [Fintype V] :
     (∃ (M : Subgraph G) , M.IsPerfectMatching) ↔
       (∀ (u : Set V),
          {c : ((⊤ : G.Subgraph).deleteVerts u).coe.ConnectedComponent | Odd (c.supp.ncard)}.ncard  ≤ u.ncard) := by
+  classical
   refine ⟨by rintro ⟨M, hM⟩; apply tutte_necessary hM, ?_⟩
   contrapose!
   intro h

@@ -602,9 +602,6 @@ lemma Walk.IsPath.neighborSet_toSubgraph_start {u} {p : G.Walk u v} (hp : p.IsPa
 lemma nil_reverse {p : G.Walk v w} : p.reverse.Nil ↔ p.Nil := by
   sorry
 
-lemma Walk.snd_reverse {p : G.Walk v w} : p.reverse.snd = p.penultimate := by
-  simp [getVert_reverse]
-
 lemma Walk.IsPath.neighborSet_toSubgraph_end {u} {p : G.Walk u v} (hp : p.IsPath) (hnp : ¬p.Nil):
     p.toSubgraph.neighborSet v = {p.penultimate} := by
   simpa [toSubgraph_reverse, Walk.snd_reverse] using hp.reverse.neighborSet_toSubgraph_start (by simpa [nil_reverse])
