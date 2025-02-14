@@ -23,7 +23,7 @@ lemma reachable_induce_supp (c : ConnectedComponent G) (v w : V) (hv : v ∈ c.s
   induction p with
   | nil => rfl
   | @cons u v w h p ih =>
-    have : v ∈ c.supp := (ConnectedComponent.mem_supp_congr_adj c h).mp hv
+    have : v ∈ c.supp := (c.mem_supp_congr_adj h).mp hv
     obtain ⟨q⟩ := ih this hw
     have hadj : (G.induce c.supp).Adj ⟨u, hv⟩ ⟨v, this⟩ := h
     use q.cons hadj
