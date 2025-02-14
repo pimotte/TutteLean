@@ -171,27 +171,8 @@ lemma IsCycles_Reachable [Fintype V] (hadj : G.Adj v w) (hcyc : G.IsCycles) :
   exact hr.symm
 
 lemma Walk.toSubgraph_Adj_mem_support_new (p : G.Walk u v) (hp : p.toSubgraph.Adj u' v') : u' ∈ p.support := by
-  unfold Walk.toSubgraph at hp
-  match p with
-  | nil =>
-    simp only [singletonSubgraph_adj, Pi.bot_apply] at hp
-    exact hp.elim
-  | .cons h q =>
-    simp only [Subgraph.sup_adj, subgraphOfAdj_adj, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq,
-      Prod.swap_prod_mk] at hp
-    rw [@support_cons]
-    rw [@List.mem_cons]
-    cases hp with
-    | inl hl =>
-      cases hl with
-      | inl h1 => left; exact h1.1.symm
-      | inr h2 =>
-        right
-        rw [← h2.2]
-        exact start_mem_support q
-    | inr hr =>
-      right
-      exact q.toSubgraph_Adj_mem_support_new hr
+  rw [← p.mem_verts_toSubgraph]
+  exact p.toSubgraph.edge_vert hp
 
 -- In #20830 (obsoleted)
 lemma get?_nonZero (a : α) (l : List α) (h : n ≠ 0) : (a :: l).get? n = l.get? (n - 1) := by

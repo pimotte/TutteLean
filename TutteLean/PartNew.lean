@@ -1,6 +1,5 @@
 import TutteLean.Defs
 import TutteLean.Clique
-import TutteLean.ConnectedComponent
 
 import Mathlib.Combinatorics.SimpleGraph.UniversalVerts
 import Mathlib.Combinatorics.SimpleGraph.Connectivity.Represents

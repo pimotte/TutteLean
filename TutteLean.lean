@@ -3,6 +3,7 @@ import Mathlib.Combinatorics.SimpleGraph.Matching
 import Mathlib.Combinatorics.SimpleGraph.Connectivity.Subgraph
 import Mathlib.Combinatorics.SimpleGraph.Metric
 import Mathlib.Combinatorics.SimpleGraph.Operations
+import Mathlib.Combinatorics.SimpleGraph.Path
 import Mathlib.Data.Set.Card
 import Mathlib.Data.Set.Finite.Basic
 import Mathlib.Data.Fintype.Basic
@@ -103,7 +104,6 @@ theorem tutte_blocker_odd [Fintype V]
   rw [Set.ncard_empty, Set.ncard_pos]
   use c
 
-
 lemma tutte_necessary [Fintype V]
   {M : Subgraph G} (hM : M.IsPerfectMatching) (u : Set V) :
     {c : ((⊤ : G.Subgraph).deleteVerts u).coe.ConnectedComponent | Odd (c.supp.ncard)}.ncard  ≤ u.ncard := by
@@ -120,9 +120,8 @@ lemma tutte_necessary [Fintype V]
 lemma tutte_sufficient [Fintype V] [DecidableEq V]
   (h : ∀ (M : G.Subgraph), ¬M.IsPerfectMatching) (hvEven : Even (Fintype.card V)) :
      ∃ u, u.ncard < {c : ((⊤ : G.Subgraph).deleteVerts u).coe.ConnectedComponent | Odd c.supp.ncard}.ncard := by
+  classical
   obtain ⟨Gmax, hSubgraph, hMatchingFree, hMaximal⟩ := exists_maximal_isMatchingFree h
-  haveI : DecidableRel G.Adj := Classical.decRel _
-  haveI : DecidableRel Gmax.Adj := Classical.decRel _
   suffices ∃ u, Set.ncard u <  {c : ((⊤ : Gmax.Subgraph).deleteVerts u).coe.ConnectedComponent | Odd (c.supp.ncard)}.ncard  by
     · obtain ⟨u, hu⟩ := this
       use u
