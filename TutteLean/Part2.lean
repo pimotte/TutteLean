@@ -66,12 +66,14 @@ lemma takeUntil_notNil [DecidableEq V] (p : G.Walk u v) (hwp : w ∈ p.support) 
     simp only [Walk.support_cons, List.mem_cons, huw.symm, false_or] at hwp
     simp [cons_takeUntil hwp huw] at hnil
 
+-- Obsoleted in path_edge
 lemma support_length (p : G.Walk v w) : p.support.length = p.length + 1 := by
   match p with
   | .nil => simp only [Walk.support_nil, List.length_singleton, Walk.length_nil, zero_add]
   | .cons _ _ => simp only [Walk.support_cons, List.length_cons, Walk.length_support,
     Nat.succ_eq_add_one, Walk.length_cons]
 
+-- In path_edge (rewritten)
 lemma IsPath.getVert_injOn_iff (p : G.Walk u v): Set.InjOn p.getVert {i | i ≤ p.length} ↔ p.IsPath := by
   refine ⟨?_, fun a => a.getVert_injOn⟩
   intro hinj
@@ -282,6 +284,7 @@ lemma path_edge_IsCycles (p : G.Walk u v) (hp : p.IsPath) (h : u ≠ v) (hs : s(
   rw [this]
   exact IsCycle.IsCycles_toSubgraph_spanningCoe hc
 
+-- In path_edge
 lemma Walk.IsPath.getVert_start_iff {i : ℕ} {p : G.Walk u w} (hp : p.IsPath) (hi : i ≤ p.length) :
     p.getVert i = u ↔ i = 0 := by
   refine ⟨?_, by aesop⟩
@@ -291,6 +294,7 @@ lemma Walk.IsPath.getVert_start_iff {i : ℕ} {p : G.Walk u w} (hp : p.IsPath) (
   · apply hp.getVert_injOn (by rw [Set.mem_setOf]; omega) (by rw [Set.mem_setOf]; omega)
     simp [h]
 
+-- In path_edge
 lemma Walk.IsPath.getVert_end_iff {i : ℕ} {p : G.Walk u w} (hp : p.IsPath) (hi : i ≤ p.length) :
     p.getVert i = w ↔ i = p.length := by
   have := hp.reverse.getVert_start_iff (by omega : p.reverse.length - i ≤ p.reverse.length)
@@ -299,29 +303,16 @@ lemma Walk.IsPath.getVert_end_iff {i : ℕ} {p : G.Walk u w} (hp : p.IsPath) (hi
   rw [this]
   omega
 
-lemma Walk.IsPath.neighborSet_toSubgraph_start {u} {p : G.Walk u v} (hp : p.IsPath) (hnp : ¬p.Nil):
-    p.toSubgraph.neighborSet u = {p.snd} := by
-  have hadj1 := p.toSubgraph_adj_snd hnp
-  ext v
-  simp_all only [Subgraph.mem_neighborSet, Set.mem_insert_iff, Set.mem_singleton_iff,
-    SimpleGraph.Walk.toSubgraph_adj_iff, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk]
-  refine ⟨?_, by aesop⟩
-  rintro ⟨i, (hl | hl)⟩ <;> rw [hp.getVert_start_iff (by omega)] at hl <;> aesop
-
 -- In #21250
 lemma nil_reverse {p : G.Walk v w} : p.reverse.Nil ↔ p.Nil := by
   sorry
-
-lemma Walk.IsPath.neighborSet_toSubgraph_end {u} {p : G.Walk u v} (hp : p.IsPath) (hnp : ¬p.Nil):
-    p.toSubgraph.neighborSet v = {p.penultimate} := by
-  simpa [toSubgraph_reverse, Walk.snd_reverse] using hp.reverse.neighborSet_toSubgraph_start (by simpa [nil_reverse])
 
 lemma Walk.not_nil_of_adj_toSubgraph {u v} (p : G.Walk u v) (hadj : p.toSubgraph.Adj w x) : ¬p.Nil := by
   cases p <;> simp_all
 
 theorem toSubgraph_adj_sndOfNotNil {u v} (p : G.Walk u v) (hpp : p.IsPath)
     (h : v' ∈ p.toSubgraph.neighborSet u) : p.getVert 1 = v' := by
-  simpa [hpp.neighborSet_toSubgraph_start (p.not_nil_of_adj_toSubgraph h), Eq.comm] using h
+  simpa [hpp.neighborSet_toSubgraph_startpoint (p.not_nil_of_adj_toSubgraph h), Eq.comm] using h
 
 lemma Subgraph.IsMatching.not_adj_of_ne {M : Subgraph G} {u v w : V} (hM : M.IsMatching) (huv : v ≠ w) (hadj : M.Adj u v) : ¬ M.Adj u w := by
   intro hadj'
@@ -349,7 +340,10 @@ lemma tutte_part2b [Fintype V] [DecidableEq V] {x b a c : V} {cycles : SimpleGra
     (hnab : a ≠ b) (hle : p.toSubgraph.spanningCoe ≤ G ⊔ edge a c) (aux : (c' : V) → c' ≠ a → p.toSubgraph.Adj c' x → M2.Adj c' x):
     ∃ G', G'.IsAlternating M2.spanningCoe ∧ G'.IsCycles ∧ ¬G'.Adj x b ∧ G'.Adj a c ∧ G' ≤ G ⊔ edge a c := by
   use p.toSubgraph.spanningCoe ⊔ edge x a
-  refine ⟨IsAlternating.sup_edge (hcalt.spanningCoe p.toSubgraph) (by simp_all) (fun u' hu'x hadj ↦ by simpa [← toSubgraph_adj_sndOfNotNil p hp hadj, toSubgraph_adj_sndOfNotNil p hp hpac]) (fun c' hc'a hadj ↦ aux _ hc'a hadj), ?_⟩
+  refine ⟨IsAlternating.sup_edge (hcalt.spanningCoe p.toSubgraph) (by simp_all) (fun u' hu'x hadj ↦ by
+    simp only [← toSubgraph_adj_sndOfNotNil p hp hadj, toSubgraph_adj_sndOfNotNil p hp hpac,
+      Subgraph.spanningCoe_adj]
+    simpa [← toSubgraph_adj_sndOfNotNil p hp hadj, toSubgraph_adj_sndOfNotNil p hp hpac]) (fun c' hc'a hadj ↦ aux _ hc'a hadj), ?_⟩
 
   have hfincycle : (p.toSubgraph.spanningCoe ⊔ edge x a).IsCycles := by
     intro v hv
