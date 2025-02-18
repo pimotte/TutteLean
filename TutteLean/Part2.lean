@@ -28,7 +28,7 @@ lemma mem_supp_of_adj_alt {c : G.ConnectedComponent} (h : v ∈ c.supp) (h' : G.
   rw [← h]
   exact ConnectedComponent.connectedComponentMk_eq_of_adj h'.symm
 
-
+-- In path_edge
 lemma IsCycle.first_two {p : G.Walk v v} (h : p.IsCycle) (hadj : p.toSubgraph.Adj v w) :
     ∃ (p' : G.Walk v v), p'.IsCycle ∧ p'.getVert 1 = w ∧ p'.toSubgraph.verts = p.toSubgraph.verts := by
   have : w ∈ p.toSubgraph.neighborSet v := hadj
@@ -207,6 +207,7 @@ lemma cycle_takeUntil_takeUntil_adj [DecidableEq V] (p : G.Walk u u) (hp : p.IsC
   apply (hp.takeUntil hw).getVert_injOn (by rw [@Set.mem_setOf]; omega) (by simp) at heq
   omega
 
+-- In path_edge
 lemma cycles_arg [Finite V] [DecidableEq V] {p : G.Walk u u} (hp : p.IsCycle) (hcyc : G.IsCycles) (hv : v ∈ p.toSubgraph.verts) :
     ∀ w, p.toSubgraph.Adj v w ↔ G.Adj v w := by
   intro w
@@ -219,12 +220,13 @@ lemma cycles_arg [Finite V] [DecidableEq V] {p : G.Walk u u} (hp : p.IsCycle) (h
   rw [← Cardinal.eq, ← Set.cast_ncard (Set.toFinite _), ← Set.cast_ncard (Set.toFinite _),
         hcyc h, hp.ncard_neighborSet_toSubgraph_eq_two (by aesop)]
 
-
+-- In path_edge
 lemma IsAlternating.spanningCoe (H : Subgraph G) (halt : G.IsAlternating G') : H.spanningCoe.IsAlternating G' := by
   intro v w w' hww' hvw hvv'
   simp only [Subgraph.spanningCoe_adj] at hvw hvv'
   exact halt hww' hvw.adj_sub hvv'.adj_sub
 
+-- In path_edge
 lemma IsAlternating.sup_edge (halt : G.IsAlternating G') (hnadj : ¬G'.Adj u x) (hu' : ∀ u', u' ≠ u → G.Adj x u' → G'.Adj x u')
   (hx' : ∀ x', x' ≠ x → G.Adj x' u → G'.Adj x' u): (G ⊔ edge u x).IsAlternating G' := by
   by_cases hadj : G.Adj u x
@@ -247,10 +249,12 @@ lemma IsAlternating.sup_edge (halt : G.IsAlternating G') (hnadj : ¬G'.Adj u x) 
     · aesop
   · aesop
 
+-- In path_edge (obsolete)
 lemma spanningCoe_neighborSet (H : Subgraph G) : H.spanningCoe.neighborSet = H.neighborSet := by
   ext v w
   simp
 
+-- In path_edge
 lemma IsCycle.IsCycles_toSubgraph_spanningCoe {p : G.Walk u u} (hpc : p.IsCycle) :
     p.toSubgraph.spanningCoe.IsCycles := by
   intro v hv
@@ -259,26 +263,29 @@ lemma IsCycle.IsCycles_toSubgraph_spanningCoe {p : G.Walk u u} (hpc : p.IsCycle)
   obtain ⟨_, hw⟩ := hv
   exact p.mem_verts_toSubgraph.mp <| p.toSubgraph.edge_vert hw
 
+-- In path_edge
 lemma mapSpanningSubgraph_inj (h : G ≤ G'): Function.Injective (Hom.mapSpanningSubgraphs h) := by
   intro v w hvw
   simpa [Hom.mapSpanningSubgraphs_apply] using hvw
 
-lemma path_map_spanning {w x : V} (p : G.Walk u v) : p.toSubgraph.Adj w x ↔ (p.mapLe (OrderTop.le_top G)).toSubgraph.Adj w x := by
+-- In path_edge
+lemma path_map_spanning {w x : V} (p : G.Walk u v) (h : G ≤ G') : (p.mapLe h).toSubgraph.Adj w x ↔ p.toSubgraph.Adj w x  := by
   simp only [Walk.toSubgraph_map, Subgraph.map_adj]
-  nth_rewrite 2 [← Hom.mapSpanningSubgraphs_apply (OrderTop.le_top _) w]
-  nth_rewrite 2 [← Hom.mapSpanningSubgraphs_apply (OrderTop.le_top _) x]
-  rw [Relation.map_apply_apply (mapSpanningSubgraph_inj _) (mapSpanningSubgraph_inj _)]
+  nth_rewrite 1 [← Hom.mapSpanningSubgraphs_apply h w, ← Hom.mapSpanningSubgraphs_apply h x]
+  rw [Relation.map_apply_apply (mapSpanningSubgraph_inj h) (mapSpanningSubgraph_inj h)]
 
+-- In path_edge
 lemma path_edge_IsCycles (p : G.Walk u v) (hp : p.IsPath) (h : u ≠ v) (hs : s(v, u) ∉ p.edges) : (p.toSubgraph.spanningCoe ⊔ edge v u).IsCycles := by
   let p' := p.mapLe (OrderTop.le_top G)
-  let c := Walk.cons (by simp [h.symm] : (⊤ : SimpleGraph V).Adj v u) p'
+  let c := Walk.cons (by simp [h.symm] : (completeGraph V).Adj v u) p'
   simp only [Hom.coe_ofLE, id_eq] at p' c
   have hc : c.IsCycle := by
     simp [Walk.cons_isCycle_iff, c, p', hp, hs]
   have : p.toSubgraph.spanningCoe ⊔ edge v u = c.toSubgraph.spanningCoe := by
     ext w x
     simp
-    simp only [edge_adj, c, p', SimpleGraph.Walk.toSubgraph.eq_2, Subgraph.sup_adj, subgraphOfAdj_adj, ← path_map_spanning]
+    simp only [edge_adj, c, p', SimpleGraph.Walk.toSubgraph.eq_2, Subgraph.sup_adj,
+      subgraphOfAdj_adj, path_map_spanning]
     aesop
 
   rw [this]
@@ -307,27 +314,33 @@ lemma Walk.IsPath.getVert_end_iff {i : ℕ} {p : G.Walk u w} (hp : p.IsPath) (hi
 lemma nil_reverse {p : G.Walk v w} : p.reverse.Nil ↔ p.Nil := by
   sorry
 
+-- In path_edge
 lemma Walk.not_nil_of_adj_toSubgraph {u v} (p : G.Walk u v) (hadj : p.toSubgraph.Adj w x) : ¬p.Nil := by
   cases p <;> simp_all
 
+-- In as snd_of_toSubgraph_adj
 theorem toSubgraph_adj_sndOfNotNil {u v} (p : G.Walk u v) (hpp : p.IsPath)
     (h : v' ∈ p.toSubgraph.neighborSet u) : p.getVert 1 = v' := by
-  simpa [hpp.neighborSet_toSubgraph_startpoint (p.not_nil_of_adj_toSubgraph h), Eq.comm] using h
+  exact hpp.snd_of_toSubgraph_adj h
 
+-- In path_edge
 lemma Subgraph.IsMatching.not_adj_of_ne {M : Subgraph G} {u v w : V} (hM : M.IsMatching) (huv : v ≠ w) (hadj : M.Adj u v) : ¬ M.Adj u w := by
   intro hadj'
   obtain ⟨x, hx⟩ := hM (M.edge_vert hadj)
   exact huv (hx.2 _ hadj ▸ (hx.2 _ hadj').symm)
 
+-- In path_edge
 lemma disjoint_edge {u v : V} (h : u ≠ v): Disjoint G (edge u v) ↔ ¬ G.Adj u v := by
   simp [← disjoint_edgeSet, edge_edgeSet_of_ne h]
 
+-- In path_edge
 lemma sdiff_edge {u v : V} (h : ¬G.Adj u v): G \ edge u v = G := by
   by_cases huv : u = v
   · subst huv
     simp [edge_self_eq_bot]
-  · simp [disjoint_edge huv, h]
+  · simp only [sdiff_eq_left, disjoint_edge huv, h, not_false_eq_true]
 
+-- In path_edge
 lemma adj_edge_iff {u v x w : V} : (edge u v).Adj x w ↔ (s(u, v) = s(x, w) ∧ (x ≠ w)) := by
   simp only [edge_adj, ne_eq, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk,
     and_congr_left_iff]
