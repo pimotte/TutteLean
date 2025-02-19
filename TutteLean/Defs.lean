@@ -6,6 +6,8 @@ namespace SimpleGraph
 
 variable {V : Type*} {G : SimpleGraph V}
 
+def TutteBlocker (G: SimpleGraph V) (u : Set V) : Prop :=
+  u.ncard < {c : ((⊤ : G.Subgraph).deleteVerts u).coe.ConnectedComponent | Odd (c.supp.ncard)}.ncard
 
 instance [Fintype V] [DecidableEq V] [DecidableRel G.Adj] : DecidableEq (ConnectedComponent G) := by
   intro c c'

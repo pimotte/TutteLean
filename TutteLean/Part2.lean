@@ -211,7 +211,7 @@ lemma cycle_takeUntil_takeUntil_adj [DecidableEq V] (p : G.Walk u u) (hp : p.IsC
 lemma cycles_arg [Finite V] [DecidableEq V] {p : G.Walk u u} (hp : p.IsCycle) (hcyc : G.IsCycles) (hv : v ∈ p.toSubgraph.verts) :
     ∀ w, p.toSubgraph.Adj v w ↔ G.Adj v w := by
   intro w
-  refine Subgraph.adj_iff_of_neighborSet_equiv (?_ : Inhabited ((G.neighborSet v) ≃ (p.toSubgraph.neighborSet v))).default (Set.toFinite _).fintype
+  refine Subgraph.adj_iff_of_neighborSet_equiv (?_ : Inhabited ((G.neighborSet v) ≃ (p.toSubgraph.neighborSet v))).default (Set.toFinite _)
   apply Classical.inhabited_of_nonempty
 
   have h : (G.neighborSet v).Nonempty := Set.Nonempty.mono (p.toSubgraph.neighborSet_subset v) <|
@@ -219,35 +219,6 @@ lemma cycles_arg [Finite V] [DecidableEq V] {p : G.Walk u u} (hp : p.IsCycle) (h
           by simp [hp.ncard_neighborSet_toSubgraph_eq_two (by aesop), Set.Nonempty.mono, Set.nonempty_of_ncard_ne_zero]
   rw [← Cardinal.eq, ← Set.cast_ncard (Set.toFinite _), ← Set.cast_ncard (Set.toFinite _),
         hcyc h, hp.ncard_neighborSet_toSubgraph_eq_two (by aesop)]
-
--- In path_edge
-lemma IsAlternating.spanningCoe (H : Subgraph G) (halt : G.IsAlternating G') : H.spanningCoe.IsAlternating G' := by
-  intro v w w' hww' hvw hvv'
-  simp only [Subgraph.spanningCoe_adj] at hvw hvv'
-  exact halt hww' hvw.adj_sub hvv'.adj_sub
-
--- In path_edge
-lemma IsAlternating.sup_edge (halt : G.IsAlternating G') (hnadj : ¬G'.Adj u x) (hu' : ∀ u', u' ≠ u → G.Adj x u' → G'.Adj x u')
-  (hx' : ∀ x', x' ≠ x → G.Adj x' u → G'.Adj x' u): (G ⊔ edge u x).IsAlternating G' := by
-  by_cases hadj : G.Adj u x
-  · rwa [sup_edge_of_adj G hadj]
-  intro v w w' hww' hvw hvv'
-  simp only [sup_adj, edge_adj] at hvw hvv'
-  cases' hvw with hl hr <;> cases' hvv' with h1 h2
-  · exact halt hww' hl h1
-  · rw [G'.adj_congr_of_sym2 (by aesop : s(v, w') = s(u, x))]
-    simp only [hnadj, not_false_eq_true, iff_true]
-    rcases h2.1 with (⟨h2l1, h2l2⟩| ⟨h2r1, h2r2⟩)
-    · subst h2l1 h2l2
-      exact (hx' _ hww' hl.symm).symm
-    · aesop
-  · rw [G'.adj_congr_of_sym2 (by aesop : s(v, w) = s(u, x))]
-    simp only [hnadj, false_iff, not_not]
-    rcases hr.1 with (⟨hrl1, hrl2⟩| ⟨hrr1, hrr2⟩)
-    · subst hrl1 hrl2
-      exact (hx' _ hww'.symm h1.symm).symm
-    · aesop
-  · aesop
 
 -- In path_edge (obsolete)
 lemma spanningCoe_neighborSet (H : Subgraph G) : H.spanningCoe.neighborSet = H.neighborSet := by
@@ -314,9 +285,6 @@ lemma Walk.IsPath.getVert_end_iff {i : ℕ} {p : G.Walk u w} (hp : p.IsPath) (hi
 lemma nil_reverse {p : G.Walk v w} : p.reverse.Nil ↔ p.Nil := by
   sorry
 
--- In path_edge
-lemma Walk.not_nil_of_adj_toSubgraph {u v} (p : G.Walk u v) (hadj : p.toSubgraph.Adj w x) : ¬p.Nil := by
-  cases p <;> simp_all
 
 -- In as snd_of_toSubgraph_adj
 theorem toSubgraph_adj_sndOfNotNil {u v} (p : G.Walk u v) (hpp : p.IsPath)
@@ -328,17 +296,6 @@ lemma Subgraph.IsMatching.not_adj_of_ne {M : Subgraph G} {u v w : V} (hM : M.IsM
   intro hadj'
   obtain ⟨x, hx⟩ := hM (M.edge_vert hadj)
   exact huv (hx.2 _ hadj ▸ (hx.2 _ hadj').symm)
-
--- In path_edge
-lemma disjoint_edge {u v : V} (h : u ≠ v): Disjoint G (edge u v) ↔ ¬ G.Adj u v := by
-  simp [← disjoint_edgeSet, edge_edgeSet_of_ne h]
-
--- In path_edge
-lemma sdiff_edge {u v : V} (h : ¬G.Adj u v): G \ edge u v = G := by
-  by_cases huv : u = v
-  · subst huv
-    simp [edge_self_eq_bot]
-  · simp only [sdiff_eq_left, disjoint_edge huv, h, not_false_eq_true]
 
 -- In path_edge
 lemma adj_edge_iff {u v x w : V} : (edge u v).Adj x w ↔ (s(u, v) = s(x, w) ∧ (x ≠ w)) := by
@@ -403,7 +360,7 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
     use G'
     refine ⟨hG', hG'cyc, ?_⟩
     apply Disjoint.left_le_of_le_sup_right (_root_.symmDiff_le (le_sup_of_le_right M2.spanningCoe_le) (le_sup_of_le_right hle))
-    simp [disjoint_edge hnac, symmDiff_def, hM2ac, hnG'ac]
+    simp [disjoint_edge, symmDiff_def, hM2ac, hnG'ac]
 
   let cycles := symmDiff M1.spanningCoe M2.spanningCoe
   have hcalt : cycles.IsAlternating M2.spanningCoe := IsPerfectMatching.isAlternating_symmDiff_right hM1 hM2
@@ -434,7 +391,7 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
     simp only [ConnectedComponent.adj_spanningCoe_induce_supp, hxc, hcac, false_and, not_false_eq_true, ConnectedComponent.mem_supp_iff, ConnectedComponent.eq,
       and_true, true_and, hcac.reachable]
     refine ⟨hcycles.induce_supp (cycles.connectedComponentMk c), Disjoint.left_le_of_le_sup_right induce_le ?_⟩
-    rw [disjoint_edge hnxb]
+    rw [disjoint_edge]
     aesop
   push_neg at hxc
 
@@ -472,7 +429,7 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
   obtain ⟨x', hx', p, hp, hpac, hnpxb⟩ := this
 
   have hle4 : p.toSubgraph.spanningCoe ≤ G ⊔ edge a c := by
-    rw [← sdiff_edge (by simpa : ¬ p.toSubgraph.spanningCoe.Adj x b), sdiff_le_iff']
+    rw [← sdiff_edge _ (by simpa : ¬ p.toSubgraph.spanningCoe.Adj x b), sdiff_le_iff']
     intro v w hvw
     exact (hsupG ▸ sup_le_sup hM1sub hM2sub) ((symmDiff_le (fun ⦃v w⦄ a => a) fun ⦃v w⦄ a => a) (p.toSubgraph.spanningCoe_le hvw))
 

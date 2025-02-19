@@ -95,21 +95,21 @@ lemma union_gt_iff : G < G ⊔ G' ↔ ¬ (G' ≤ G) := by
     exact left_lt_sup.mpr h
 
 theorem tutte_blocker_odd [Fintype V]
-    (hodd : Odd (Fintype.card V)) : ∃ u, u.ncard < {c : ((⊤ : G.Subgraph).deleteVerts u).coe.ConnectedComponent | Odd (c.supp.ncard)}.ncard  := by
+    (hodd : Odd (Fintype.card V)) : ∃ u, G.TutteBlocker u  := by
   use ∅
   have ⟨c, hc⟩ := Classical.inhabited_of_nonempty
     (Finite.card_pos_iff.mp <| Odd.pos <|
     (odd_card_iff_odd_components ((⊤ : Subgraph G).deleteVerts ∅).coe).mp (by
     simpa [Fintype.card_congr (Equiv.Set.univ V)] using hodd))
-  rw [Set.ncard_empty, Set.ncard_pos]
+  rw [TutteBlocker, Set.ncard_empty, Set.ncard_pos]
   use c
 
 lemma tutte_necessary [Fintype V]
   {M : Subgraph G} (hM : M.IsPerfectMatching) (u : Set V) :
-    {c : ((⊤ : G.Subgraph).deleteVerts u).coe.ConnectedComponent | Odd (c.supp.ncard)}.ncard  ≤ u.ncard := by
+    ¬ G.TutteBlocker u := by
   let f : {c : ConnectedComponent ((⊤ : Subgraph G).deleteVerts u).coe | Odd (Nat.card c.supp)} → u :=
       fun c => ⟨(c.1.odd_matches_node_outside hM c.2).choose,(c.1.odd_matches_node_outside hM c.2).choose_spec.1⟩
-  simpa [Set.Nat.card_coe_set_eq] using Finite.card_le_of_injective f (by
+  simpa [TutteBlocker, Set.Nat.card_coe_set_eq] using Finite.card_le_of_injective f (by
     intro x y hxy
     obtain ⟨v, hv⟩:= (x.1.odd_matches_node_outside hM x.2).choose_spec.2
     obtain ⟨w, hw⟩:= (y.1.odd_matches_node_outside hM y.2).choose_spec.2
@@ -119,14 +119,14 @@ lemma tutte_necessary [Fintype V]
 
 lemma tutte_sufficient [Fintype V] [DecidableEq V]
   (h : ∀ (M : G.Subgraph), ¬M.IsPerfectMatching) (hvEven : Even (Fintype.card V)) :
-     ∃ u, u.ncard < {c : ((⊤ : G.Subgraph).deleteVerts u).coe.ConnectedComponent | Odd c.supp.ncard}.ncard := by
+     ∃ u, G.TutteBlocker u := by
   classical
   obtain ⟨Gmax, hSubgraph, hMatchingFree, hMaximal⟩ := exists_maximal_isMatchingFree h
   suffices ∃ u, Set.ncard u <  {c : ((⊤ : Gmax.Subgraph).deleteVerts u).coe.ConnectedComponent | Odd (c.supp.ncard)}.ncard  by
     · obtain ⟨u, hu⟩ := this
       use u
       exact lt_of_lt_of_le hu (ncard_odd_components_mono _ (Subgraph.deleteVerts_mono' u hSubgraph))
-      
+
   let Gsplit := Gmax.deleteUniversalVerts
 
   by_contra! hc
@@ -190,8 +190,7 @@ lemma tutte_sufficient [Fintype V] [DecidableEq V]
 
 theorem tutte [Fintype V] :
     (∃ (M : Subgraph G) , M.IsPerfectMatching) ↔
-      (∀ (u : Set V),
-         {c : ((⊤ : G.Subgraph).deleteVerts u).coe.ConnectedComponent | Odd (c.supp.ncard)}.ncard  ≤ u.ncard) := by
+      (∀ (u : Set V), ¬ G.TutteBlocker u) := by
   classical
   refine ⟨by rintro ⟨M, hM⟩; apply tutte_necessary hM, ?_⟩
   contrapose!
