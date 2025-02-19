@@ -126,12 +126,11 @@ lemma tutte_sufficient [Fintype V] [DecidableEq V]
     · obtain ⟨u, hu⟩ := this
       use u
       exact lt_of_lt_of_le hu (ncard_odd_components_mono _ (Subgraph.deleteVerts_mono' u hSubgraph))
-
-  let S : Set V := {v | ∀ w, v ≠ w → Gmax.Adj w v}
-  let Gsplit := ((⊤ : Subgraph Gmax).deleteVerts S)
+      
+  let Gsplit := Gmax.deleteUniversalVerts
 
   by_contra! hc
-  have h' := hc S
+  have h' := hc Gmax.universalVerts
   simp only [Set.ncard_eq_toFinset_card', Set.toFinset_card] at h'
   have h'' := h'
 
@@ -147,7 +146,7 @@ lemma tutte_sufficient [Fintype V] [DecidableEq V]
     obtain ⟨p , hp⟩ := SimpleGraph.Reachable.exists_path_of_dist (K.connected_induce_supp x y)
     obtain ⟨x, ⟨a, ⟨b, hxab⟩⟩⟩ := verts_of_walk p hp.2 (dist_gt_one_of_ne_and_nadj (Walk.reachable p) hxy.1 hxy.2)
 
-    have ha : (a : V) ∉ S := a.1.2.2
+    have ha : (a : V) ∉ Gmax.universalVerts := a.1.2.2
     have hc : ∃ (c : V), ¬ Gmax.Adj a c ∧ (a : V) ≠ c := by
       have : ¬ ∀ (w : V), (a : V) ≠ w → Gmax.Adj (w : V) a := by exact ha
       push_neg at this
@@ -164,7 +163,7 @@ lemma tutte_sufficient [Fintype V] [DecidableEq V]
     have hG1nxb : ¬ Gmax.Adj x.val.val b.val.val := by
       intro h
       apply hxab.2.2.1
-      simp [h, Gsplit]
+      simp [h, Gsplit, deleteUniversalVerts]
 
     have hG1 := left_lt_sup.mpr (by rw [edge_le_iff (fun h ↦ hxab.2.2.2 (Subtype.val_injective (Subtype.val_injective h)))]; exact hG1nxb)
     have hG2 := left_lt_sup.mpr (by rw [edge_le_iff (fun h ↦ hc.2 h)]; exact hc.1)
