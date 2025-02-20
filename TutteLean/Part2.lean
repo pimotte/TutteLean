@@ -53,13 +53,6 @@ lemma takeUntil_notNil [DecidableEq V] (p : G.Walk u v) (hwp : w ∈ p.support) 
     simp only [Walk.support_cons, List.mem_cons, huw.symm, false_or] at hwp
     simp [cons_takeUntil hwp huw] at hnil
 
--- Obsoleted in path_edge
-lemma support_length (p : G.Walk v w) : p.support.length = p.length + 1 := by
-  match p with
-  | .nil => simp only [Walk.support_nil, List.length_singleton, Walk.length_nil, zero_add]
-  | .cons _ _ => simp only [Walk.support_cons, List.length_cons, Walk.length_support,
-    Nat.succ_eq_add_one, Walk.length_cons]
-
 -- In takeUntil PR
 lemma Walk.IsCycle.of_append_right {p : G.Walk u v} {q : G.Walk v u} (h : u ≠ v) (hcyc : (p.append q).IsCycle) : q.IsPath := by
   have := hcyc.2
@@ -179,11 +172,6 @@ lemma cycle_takeUntil_takeUntil_adj [DecidableEq V] (p : G.Walk u u) (hp : p.IsC
   apply (hp.takeUntil hw).getVert_injOn (by rw [@Set.mem_setOf]; omega) (by simp) at heq
   omega
 
--- In #21250
-lemma nil_reverse {p : G.Walk v w} : p.reverse.Nil ↔ p.Nil := by
-  sorry
-
-
 -- In as snd_of_toSubgraph_adj
 theorem toSubgraph_adj_sndOfNotNil {u v} (p : G.Walk u v) (hpp : p.IsPath)
     (h : v' ∈ p.toSubgraph.neighborSet u) : p.getVert 1 = v' := by
@@ -286,7 +274,7 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
     exact mem_supp_of_adj_alt rfl hcac.symm
 
   have (G : SimpleGraph V) : LocallyFinite G := fun _ ↦ Fintype.ofFinite _
-  
+
   have hnM2 (x' : V) (h : x' ≠ c) : ¬ M2.Adj x' a := by
     rw [M2.adj_comm]
     exact hM2.1.not_adj_left_of_ne h.symm hM2ac
