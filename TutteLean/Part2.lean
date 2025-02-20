@@ -185,13 +185,10 @@ lemma tutte_part2b [Fintype V] [DecidableEq V] {x b a c : V} {cycles : SimpleGra
     ∃ G', G'.IsAlternating M2.spanningCoe ∧ G'.IsCycles ∧ ¬G'.Adj x b ∧ G'.Adj a c ∧ G' ≤ G ⊔ edge a c := by
   use p.toSubgraph.spanningCoe ⊔ edge x a
   refine ⟨IsAlternating.sup_edge (hcalt.spanningCoe p.toSubgraph) (by simp_all) (fun u' hu'x hadj ↦ by
-    simp only [← toSubgraph_adj_sndOfNotNil p hp hadj, toSubgraph_adj_sndOfNotNil p hp hpac,
-      Subgraph.spanningCoe_adj]
     simpa [← toSubgraph_adj_sndOfNotNil p hp hadj, toSubgraph_adj_sndOfNotNil p hp hpac]) (fun c' hc'a hadj ↦ aux _ hc'a hadj), ?_⟩
 
   have hfincycle : (p.toSubgraph.spanningCoe ⊔ edge x a).IsCycles := by
-    intro v hv
-    refine hp.isCycles_spanningCoe_toSubgraph_sup_edge hgadj.ne.symm (fun hadj ↦ ?_) hv
+    refine fun v hv ↦ hp.isCycles_spanningCoe_toSubgraph_sup_edge hgadj.ne.symm (fun hadj ↦ ?_) hv
     rw [← Walk.mem_edges_toSubgraph, Subgraph.mem_edgeSet] at hadj
     simp [← toSubgraph_adj_sndOfNotNil p hp hadj.symm, toSubgraph_adj_sndOfNotNil p hp hpac] at hnxc
 
@@ -241,16 +238,10 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
   have hcalt : cycles.IsAlternating M2.spanningCoe := IsPerfectMatching.isAlternating_symmDiff_right hM1 hM2
   have hcycles := Subgraph.IsPerfectMatching.symmDiff_isCycles hM1 hM2
 
-  have hcxb : cycles.Adj x b := by
-    simp [cycles, symmDiff_def, hM2nxb, hM1xb]
-  have hcac : cycles.Adj a c := by
-    simp [cycles, symmDiff_def, hM2ac, hM1nac]
-
-
+  have hcxb : cycles.Adj x b := by simp [cycles, symmDiff_def, hM2nxb, hM1xb]
+  have hcac : cycles.Adj a c := by simp [cycles, symmDiff_def, hM2ac, hM1nac]
   have hM1sub : M1.spanningCoe ≤ G ⊔ edge x b := Subgraph.spanningCoe_le M1
   have hM2sub := Subgraph.spanningCoe_le M2
-
-
 
   have cycles_le : cycles ≤ (G ⊔ edge a c) ⊔ (edge x b) := by
     simp only [← hsupG, cycles]
@@ -314,6 +305,7 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
     intro hc hadj
     have := hadj.adj_sub
     simp only [cycles, symmDiff_def] at this
+    
     cases' this with hl hr
     · exfalso
       obtain ⟨w, hw⟩ := hM1.1 (hM1.2 x')
