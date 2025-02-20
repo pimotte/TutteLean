@@ -1,14 +1,10 @@
 import Mathlib.Combinatorics.SimpleGraph.Clique
-
+import Mathlib.Data.Set.Card.Arithmetic
 import TutteLean.Defs
 
 namespace SimpleGraph
 variable {V : Type*} {G : SimpleGraph V}
 
--- In #18878
-theorem exists_union_disjoint_ncard_eq_of_even (he : Even s.ncard) : ∃ (t u : Set α),
-    t ∪ u = s ∧ Disjoint t u ∧ t.ncard = u.ncard := by
-  sorry
 
 lemma isClique_even_iff_matches [DecidableEq V]
     (u : Set V) (hu : Set.Finite u) (hc : G.IsClique u) : Even u.ncard ↔ ∃ (M : Subgraph G), M.verts = u ∧ M.IsMatching := by
@@ -17,7 +13,7 @@ lemma isClique_even_iff_matches [DecidableEq V]
     simpa [Set.ncard_eq_toFinset_card _ hu, Set.toFinite_toFinset,
       ← Set.toFinset_card] using @hMr.even_card _  _ _ hu.fintype⟩
   intro h
-  obtain ⟨t, u, rfl, hd, hcard⟩ := exists_union_disjoint_ncard_eq_of_even h
+  obtain ⟨t, u, rfl, hd, hcard⟩ := Set.exists_union_disjoint_ncard_eq_of_even h
   obtain ⟨f⟩ : Nonempty (t ≃ u) := by
     rw [← Cardinal.eq, ← t.cast_ncard (Set.finite_union.mp hu).1, ← u.cast_ncard (Set.finite_union.mp hu).2]
     exact congrArg Nat.cast hcard

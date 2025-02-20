@@ -48,13 +48,6 @@ lemma walk_length_one_adj : (∃ (p : G.Walk u v), p.length = 1) ↔ G.Adj u v :
     simp only [Walk.length_cons, add_left_eq_self] at hp
     exact ((p'.eq_of_length_eq_zero hp) ▸ h)
 
-lemma tail_length_le (p : G.Walk v w): p.tail.length ≤ p.length := by
-  induction p with
-  | nil => rfl
-  | cons h p ih =>
-    rw [Walk.length_cons, Walk.tail_cons, Walk.length_copy]
-    omega
-
 lemma verts_of_walk (p : G.Walk v w) (hp : p.length = G.dist v w) (hl : 1 < G.dist v w) : ∃ (x a b : V), G.Adj x a ∧ G.Adj a b ∧ ¬ G.Adj x b ∧ x ≠ b := by
   use v, p.getVert 1, p.getVert 2
   have hnp : ¬p.Nil := by simpa [SimpleGraph.Walk.nil_iff_length_eq, hp] using Nat.not_eq_zero_of_lt hl
@@ -86,13 +79,6 @@ lemma dist_gt_one_of_ne_and_nadj (h : G.Reachable u v) (hne : u ≠ v) (hnadj : 
     rw [← hc] at hp
     exact hnadj (walk_length_one_adj.mp ⟨p, hp.2⟩)
   exact Nat.lt_of_le_of_ne (h.pos_dist_of_ne hne) this
-
-lemma union_gt_iff : G < G ⊔ G' ↔ ¬ (G' ≤ G) := by
-  constructor
-  · intro h h'
-    simp only [sup_of_le_left h', lt_self_iff_false] at h
-  · intro h
-    exact left_lt_sup.mpr h
 
 theorem tutte_blocker_odd [Fintype V]
     (hodd : Odd (Fintype.card V)) : ∃ u, G.TutteBlocker u  := by
@@ -198,3 +184,4 @@ theorem tutte [Fintype V] :
   by_cases hvOdd : Odd (Fintype.card V)
   · exact tutte_blocker_odd hvOdd
   · exact tutte_sufficient h (Nat.not_odd_iff_even.mp hvOdd)
+

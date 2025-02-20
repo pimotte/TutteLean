@@ -25,30 +25,8 @@ lemma isClique_lifts {K : G.deleteUniversalVerts.coe.ConnectedComponent}
   have := h hx'.1 hy'.1 (fun a => hxy (congrArg Subtype.val a))
   exact subgraph_coe G.deleteUniversalVerts this
 
-lemma disjoint_supp_universalVerts {K : G.deleteUniversalVerts.coe.ConnectedComponent} :
-    Disjoint (Subtype.val '' K.supp) G.universalVerts := by
-  rw [Set.disjoint_left]
-  intro v hv
-  simp only [Set.mem_image, ConnectedComponent.mem_supp_iff, Subtype.exists,
-    deleteUniversalVerts_verts, Set.mem_diff, Set.mem_univ, true_and, exists_and_right,
-    exists_eq_right] at hv
-  exact hv.choose
-
 lemma quot_out_inj (r : V → V → Prop): Function.Injective (@Quot.out _ r) :=
   fun v w h ↦ by simpa [Quot.out_eq] using (congrArg _ h : Quot.mk r v.out = Quot.mk r w.out)
-
-lemma IsMatching.exists_of_universalVerts [Fintype V] [DecidableEq V] {s : Set V} (h : Disjoint G.universalVerts s) (hc : s.ncard ≤ G.universalVerts.ncard) :
-    ∃ t ⊆ G.universalVerts, ∃ (M : Subgraph G), M.IsMatching ∧ M.verts = s ∪ t := by
-  obtain ⟨t, ⟨ht, hts⟩⟩ := Set.exists_subset_card_eq hc
-  use t
-  refine ⟨ht, ?_⟩
-  obtain ⟨f⟩ : Nonempty (s ≃ t) := by
-    rw [← Cardinal.eq, ← t.cast_ncard (Set.toFinite _), ← s.cast_ncard (Set.toFinite _)]
-    exact congrArg Nat.cast hts.symm
-  have hd := (Set.disjoint_of_subset_left ht h).symm
-  obtain ⟨M1, hM1⟩ := Subgraph.IsMatching.exists_of_disjoint_sets_of_equiv hd f
-    (fun v ↦ ht (f v).coe_prop (hd.symm.ne_of_mem (f v).coe_prop v.coe_prop) : ∀ (v : ↑s), G.Adj ↑v ↑(f v))
-  aesop
 
 lemma even_comp_left [Fintype V] [DecidableEq V] [DecidableRel G.Adj] {t : Set V} (K : G.deleteUniversalVerts.coe.ConnectedComponent)  (h : t ⊆ G.universalVerts) :
   Even ((Subtype.val '' K.supp) \ (Subtype.val '' (Quot.out '' {c : G.deleteUniversalVerts.coe.ConnectedComponent | Odd (c.supp.ncard)}) ∪ t)).ncard := by
@@ -57,7 +35,7 @@ lemma even_comp_left [Fintype V] [DecidableEq V] [DecidableRel G.Adj] {t : Set V
   have : Subtype.val '' K.supp \ t = Subtype.val '' K.supp := by
     simp only [sdiff_eq_left]
     apply Set.disjoint_of_subset_right h
-    exact disjoint_supp_universalVerts
+    exact disjoint_image_val_universalVerts _
   simp only [← Set.diff_inter_diff, ← Set.image_diff Subtype.val_injective, this, Set.inter_diff_distrib_right,
     Set.inter_self, Set.diff_inter_self_eq_diff, ← Set.image_inter Subtype.val_injective, Set.ncard_image_of_injective _ Subtype.val_injective]
   by_cases h : Even K.supp.ncard
@@ -78,7 +56,7 @@ theorem comp_matching [Fintype V] [DecidableEq V] [DecidableRel G.Adj]
 
   have hrep := ConnectedComponent.Represents.image_out {c : G.deleteUniversalVerts.coe.ConnectedComponent | Odd (c.supp.ncard)}
   let oddVerts := Quot.out '' {c : G.deleteUniversalVerts.coe.ConnectedComponent | Odd (c.supp.ncard)}
-  obtain ⟨t, ht, M1, hM1⟩ := IsMatching.exists_of_universalVerts (disjoint_image_val_universalVerts _).symm (by
+  obtain ⟨t, ht, M1, hM1⟩ := Subgraph.IsMatching.exists_of_universalVerts (disjoint_image_val_universalVerts _).symm (by
       simp only [Fintype.card_eq_nat_card, Set.Nat.card_coe_set_eq] at h
       rwa [Set.ncard_image_of_injective _ Subtype.val_injective, Set.ncard_image_of_injective _ (quot_out_inj _)])
 
@@ -86,7 +64,7 @@ theorem comp_matching [Fintype V] [DecidableEq V] [DecidableRel G.Adj]
       ∃ M : Subgraph G, M.verts = Subtype.val '' K.supp \ M1.verts ∧ M.IsMatching := by
     have : G.IsClique (Subtype.val '' K.supp \ M1.verts) := (isClique_lifts (h' K)).subset Set.diff_subset
     rw [← isClique_even_iff_matches _ (Set.toFinite _ ) this]
-    rw [hM1.2]
+    rw [hM1.1]
     exact even_comp_left _ ht
   let M2 : Subgraph G := (⨆ (K : G.deleteUniversalVerts.coe.ConnectedComponent), (compMatching K).choose)
 
@@ -104,8 +82,8 @@ theorem comp_matching [Fintype V] [DecidableEq V] [DecidableRel G.Adj]
     exact Set.disjoint_sdiff_right
 
   have hM12 : (M1 ⊔ M2).IsMatching := by
-    apply hM1.1.sup hM2
-    rw [hM1.1.support_eq_verts, hM2.support_eq_verts]
+    apply hM1.2.sup hM2
+    rw [hM1.2.support_eq_verts, hM2.support_eq_verts]
     exact disjointM12
 
   have sub : ((Set.univ : Set V) \ (M1.verts ∪ M2.verts)) ⊆ G.universalVerts := by
