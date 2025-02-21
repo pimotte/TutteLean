@@ -5,6 +5,7 @@ import Mathlib.Combinatorics.SimpleGraph.Path
 import Mathlib.Data.Set.Operations
 import Mathlib.Data.Set.Card
 
+
 -- import TutteLean.Walk
 
 namespace SimpleGraph
@@ -22,6 +23,10 @@ lemma symmDiff_le (h : G ≤ H) (h' : G' ≤ H') : (G ∆ G') ≤ H ⊔ H' := by
   intro v w hvw
   simp [symmDiff_def] at *
   aesop
+
+-- In takeUntil PR
+lemma mem_support_of_adj_toSubgraph {u v u' v' : V} {p : G.Walk u v} (hp : p.toSubgraph.Adj u' v') :
+    u' ∈ p.support := p.mem_verts_toSubgraph.mp (p.toSubgraph.edge_vert hp)
 
 lemma mem_supp_of_adj_alt {c : G.ConnectedComponent} (h : v ∈ c.supp) (h' : G.Adj v w) : w ∈ c.supp := by
   simp only [ConnectedComponent.mem_supp_iff] at *
@@ -154,8 +159,7 @@ lemma cycle_takeUntil_new [DecidableEq V] (p : G.Walk u u) (hp : p.IsCycle) (hw 
   (takeUntil_takeUntil w x hw hx) ▸
     takeUntil_last (IsCycle_takeUntil hp hw) hx hwx
 
-
--- In takeUntil PR
+-- In takeUntil PR (not really)
 lemma cycle_takeUntil_takeUntil_adj [DecidableEq V] (p : G.Walk u u) (hp : p.IsCycle) (hw : w ∈ p.support) (hx : x ∈ (p.takeUntil w hw).support) :
     ¬((p.takeUntil w hw).takeUntil x hx).toSubgraph.Adj w x := by
   rw [Subgraph.adj_comm]
@@ -177,6 +181,63 @@ theorem toSubgraph_adj_sndOfNotNil {u v} (p : G.Walk u v) (hpp : p.IsPath)
     (h : v' ∈ p.toSubgraph.neighborSet u) : p.getVert 1 = v' := by
   exact hpp.snd_of_toSubgraph_adj h
 
+lemma not_mem_support_takeUntil_takeUntil [DecidableEq V] {p : G.Walk u v} (w x : V) (h : x ≠ w) (hw : w ∈ p.support) (hx : x ∈ (p.takeUntil w hw).support) :
+  w ∉ ((p.takeUntil w hw).takeUntil x hx).support := by
+  intro hw'
+  have h1 : (((p.takeUntil w hw).takeUntil x hx).takeUntil w hw').length < ((p.takeUntil w hw).takeUntil x hx).length := by
+    exact Walk.length_takeUntil_lt _ _ h.symm
+  have h2 : ((p.takeUntil w hw).takeUntil x hx).length < (p.takeUntil w hw).length := by
+    exact Walk.length_takeUntil_lt _ _ h
+  simp only [takeUntil_takeUntil] at h1 h2
+  omega
+
+lemma Walk.takeUntilSet {u v} [DecidableEq V] (p : G.Walk u v) (s : Set V) (hs : s.Finite) (h : (s ∩ p.support.toFinset).Nonempty) :
+    ∃ x ∈ s, ∃ (hx : x ∈ p.support), (∀ t ∈ s, ∀ w ∈ s, ¬ (p.takeUntil x hx).toSubgraph.Adj t w) := by
+  classical
+  obtain ⟨x, hx⟩ := h
+  simp only [List.coe_toFinset, Set.mem_inter_iff, Set.mem_setOf_eq] at hx
+  by_cases hxe : ((s \ {x}) ∩ (p.takeUntil x hx.2).support.toFinset).Nonempty
+  · obtain ⟨x', hx', hx'p, h⟩ := (p.takeUntil x hx.2).takeUntilSet (s \ {x}) (Set.Finite.diff hs) hxe
+    use x', hx'.1, (p.support_takeUntil_subset _ hx'p)
+    rw [takeUntil_takeUntil] at h
+    simp only [Set.mem_diff] at h
+    intro t ht r hr
+    have hx'x : x' ≠ x := hx'.2
+    by_cases htrx : t = x ∨ r = x
+    · have : x ∉ (p.takeUntil x' (p.support_takeUntil_subset _ hx'p)).support := by
+        rw [← takeUntil_takeUntil]
+        exact not_mem_support_takeUntil_takeUntil _ _ hx'x hx.2 hx'p
+      intro htr
+      have := mem_support_of_adj_toSubgraph htr
+      have := mem_support_of_adj_toSubgraph htr.symm
+      aesop
+    push_neg at htrx
+    exact h t ⟨ht, by simp [htrx.1]⟩ r ⟨hr, by simp [htrx.2]⟩
+  use x, hx.1, hx.2
+  intro t ht r hr
+  by_cases htrx : t = x ∧ r = x
+  · rw [htrx.1, htrx.2]
+    exact fun hadj ↦ hadj.ne rfl
+  rw [not_and] at htrx
+  by_cases htx : t = x
+  · subst htx
+    have : r ∈ s \ {t} := by simp [htrx rfl, hr]
+    simp only [List.coe_toFinset,Set.not_nonempty_iff_eq_empty, ← Set.disjoint_iff_inter_eq_empty] at hxe
+    exact fun hadj ↦ Set.disjoint_left.mp hxe this (mem_support_of_adj_toSubgraph hadj.symm)
+  have : t ∈ s \ {x} := by simp [htrx, htx, ht]
+  simp only [List.coe_toFinset,Set.not_nonempty_iff_eq_empty, ← Set.disjoint_iff_inter_eq_empty] at hxe
+  exact fun hadj ↦ Set.disjoint_left.mp hxe this (by exact mem_support_of_adj_toSubgraph hadj)
+termination_by p.length + s.ncard
+decreasing_by
+  simp_wf
+  simp only [List.coe_toFinset, Set.mem_inter_iff, Set.mem_setOf_eq] at hx
+  have := p.length_takeUntil_le hx.2
+  rw [Set.ncard_diff (by simp_all)]
+  have : 0 < s.ncard := by
+    rw [Set.ncard_pos hs]
+    use x, hx.1
+  simp only [Set.ncard_singleton, gt_iff_lt]
+  omega
 
 lemma tutte_part2b [Fintype V] [DecidableEq V] {x b a c : V} {cycles : SimpleGraph V} {M2 : Subgraph (G ⊔ edge a c)} (hM2 : M2.IsPerfectMatching)
     (p : cycles.Walk a x) (hp : p.IsPath) (hcalt : cycles.IsAlternating M2.spanningCoe)
@@ -205,6 +266,7 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
     (hm1 : ∃ (M : Subgraph (G ⊔ edge x b)), M.IsPerfectMatching)
     (hm2 : ∃ (M : Subgraph (G ⊔ edge a c)), M.IsPerfectMatching)
     : ∃ (M : Subgraph G), M.IsPerfectMatching := by
+  classical
   obtain ⟨M1, hM1⟩ := hm1
   obtain ⟨M2, hM2⟩ := hm2
 
@@ -275,24 +337,27 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
       obtain ⟨p, hp⟩ := hcycles.exists_cycle_toSubgraph_verts_eq_connectedComponentSupp hacc (Set.nonempty_of_mem hcac)
       obtain ⟨p', hp'⟩ := hp.1.exists_isCycle_snd_verts_eq (by
         rwa [hp.1.adj_toSubgraph_iff_of_isCycles hcycles (hp.2 ▸ hacc)])
-      have hxp' : x ∈ p'.support := by
-        rwa [← SimpleGraph.Walk.mem_verts_toSubgraph, hp'.2.2, hp.2]
-      by_cases hc : b ∈ (p'.takeUntil x hxp').support
-      · use b, (by simp), (p'.takeUntil b (p'.support_takeUntil_subset _ hc))
-        refine ⟨(IsCycle_takeUntil hp'.1 (p'.support_takeUntil_subset _ hc)), ⟨?_, fun h ↦ cycle_takeUntil_new p' hp'.1 _
-            ((Walk.mem_verts_toSubgraph _).mp ((Walk.toSubgraph _).edge_vert h)) hnxb.symm hc⟩⟩
-        have : 0 < (p'.takeUntil b (p'.support_takeUntil_subset _ hc)).length := by
-          rw [Nat.pos_iff_ne_zero, Ne.eq_def, ← Walk.nil_iff_length_eq]
-          exact fun h ↦ takeUntil_notNil p' (p'.support_takeUntil_subset _ hc) hab.ne h
-        simpa [takeUntil_getVert_one hab.ne.symm, hp'.2.1] using
-          ((p'.takeUntil b (p'.support_takeUntil_subset _ hc)).toSubgraph_adj_getVert this)
-      · use x, (by simp), (p'.takeUntil x hxp')
-        refine ⟨IsCycle_takeUntil hp'.1 hxp', ⟨?_, fun h ↦ hc ((Walk.mem_verts_toSubgraph _).mp ((Walk.toSubgraph _).edge_vert h.symm))⟩⟩
-        have : (p'.takeUntil x hxp').toSubgraph.Adj ((p'.takeUntil x hxp').getVert 0) ((p'.takeUntil x hxp').getVert 1) := by
-          apply SimpleGraph.Walk.toSubgraph_adj_getVert
-          rw [Nat.pos_iff_ne_zero, Ne.eq_def, ← Walk.nil_iff_length_eq]
-          exact fun hl ↦ takeUntil_notNil p' hxp' hxa.ne.symm hl
-        simpa [Walk.getVert_zero, takeUntil_getVert_one hxa.ne, hp'.2.1] using this
+      obtain ⟨x', hx', hx'p, htw⟩ := Walk.takeUntilSet p' {x, b} (by exact?) (by exact?)
+      use x', hx', p'.takeUntil x' hx'p
+      sorry
+      -- have hxp' : x ∈ p'.support := by
+      --   rwa [← SimpleGraph.Walk.mem_verts_toSubgraph, hp'.2.2, hp.2]
+      -- by_cases hc : b ∈ (p'.takeUntil x hxp').support
+      -- · use b, (by simp), (p'.takeUntil b (p'.support_takeUntil_subset _ hc))
+      --   refine ⟨(IsCycle_takeUntil hp'.1 (p'.support_takeUntil_subset _ hc)), ⟨?_, fun h ↦ cycle_takeUntil_new p' hp'.1 _
+      --       ((Walk.mem_verts_toSubgraph _).mp ((Walk.toSubgraph _).edge_vert h)) hnxb.symm hc⟩⟩
+      --   have : 0 < (p'.takeUntil b (p'.support_takeUntil_subset _ hc)).length := by
+      --     rw [Nat.pos_iff_ne_zero, Ne.eq_def, ← Walk.nil_iff_length_eq]
+      --     exact fun h ↦ takeUntil_notNil p' (p'.support_takeUntil_subset _ hc) hab.ne h
+      --   simpa [takeUntil_getVert_one hab.ne.symm, hp'.2.1] using
+      --     ((p'.takeUntil b (p'.support_takeUntil_subset _ hc)).toSubgraph_adj_getVert this)
+      -- · use x, (by simp), (p'.takeUntil x hxp')
+      --   refine ⟨IsCycle_takeUntil hp'.1 hxp', ⟨?_, fun h ↦ hc ((Walk.mem_verts_toSubgraph _).mp ((Walk.toSubgraph _).edge_vert h.symm))⟩⟩
+      --   have : (p'.takeUntil x hxp').toSubgraph.Adj ((p'.takeUntil x hxp').getVert 0) ((p'.takeUntil x hxp').getVert 1) := by
+      --     apply SimpleGraph.Walk.toSubgraph_adj_getVert
+      --     rw [Nat.pos_iff_ne_zero, Ne.eq_def, ← Walk.nil_iff_length_eq]
+      --     exact fun hl ↦ takeUntil_notNil p' hxp' hxa.ne.symm hl
+      --   simpa [Walk.getVert_zero, takeUntil_getVert_one hxa.ne, hp'.2.1] using this
 
   obtain ⟨x', hx', p, hp, hpac, hnpxb⟩ := this
 
@@ -305,7 +370,7 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
     intro hc hadj
     have := hadj.adj_sub
     simp only [cycles, symmDiff_def] at this
-    
+
     cases' this with hl hr
     · exfalso
       obtain ⟨w, hw⟩ := hM1.1 (hM1.2 x')
