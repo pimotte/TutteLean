@@ -29,6 +29,7 @@ theorem toSubgraph_adj_sndOfNotNil {u v} (p : G.Walk u v) (hpp : p.IsPath)
     (h : v' ∈ p.toSubgraph.neighborSet u) : p.getVert 1 = v' := by
   exact hpp.snd_of_toSubgraph_adj h
 
+-- Already in
 lemma not_mem_support_takeUntil_takeUntil [DecidableEq V] {p : G.Walk u v} (w x : V) (h : x ≠ w) (hw : w ∈ p.support) (hx : x ∈ (p.takeUntil w hw).support) :
   w ∉ ((p.takeUntil w hw).takeUntil x hx).support := by
   intro hw'
@@ -39,13 +40,14 @@ lemma not_mem_support_takeUntil_takeUntil [DecidableEq V] {p : G.Walk u v} (w x 
   simp only [Walk.takeUntil_takeUntil] at h1 h2
   omega
 
-lemma Walk.takeUntilSet {u v} [DecidableEq V] (p : G.Walk u v) (s : Set V) (hs : s.Finite) (h : (s ∩ p.support.toFinset).Nonempty) :
+-- In walk_lemmas
+lemma Walk.takeUntilSet {u v} [DecidableEq V] {p : G.Walk u v} {s : Set V} (hs : s.Finite) (h : (s ∩ p.support.toFinset).Nonempty) :
     ∃ x ∈ s, ∃ (hx : x ∈ p.support), (∀ t ∈ s, ∀ w ∈ s, ¬ (p.takeUntil x hx).toSubgraph.Adj t w) := by
   classical
   obtain ⟨x, hx⟩ := h
   simp only [List.coe_toFinset, Set.mem_inter_iff, Set.mem_setOf_eq] at hx
   by_cases hxe : ((s \ {x}) ∩ (p.takeUntil x hx.2).support.toFinset).Nonempty
-  · obtain ⟨x', hx', hx'p, h⟩ := (p.takeUntil x hx.2).takeUntilSet (s \ {x}) (Set.Finite.diff hs) hxe
+  · obtain ⟨x', hx', hx'p, h⟩ := (p.takeUntil x hx.2).takeUntilSet (Set.Finite.diff hs) hxe
     use x', hx'.1, (p.support_takeUntil_subset _ hx'p)
     rw [takeUntil_takeUntil] at h
     simp only [Set.mem_diff] at h
@@ -88,6 +90,7 @@ decreasing_by
   omega
 
 
+-- Is already in (snd_takeUntil)
 lemma Walk.takeUntil_snd [DecidableEq V] {u v} {p : G.Walk u v} (hx : x ∈ p.support) (hux : u ≠ x) : (p.takeUntil x hx).snd = p.snd := by
   induction p with
   | nil =>
@@ -194,7 +197,7 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
       obtain ⟨p, hp⟩ := hcycles.exists_cycle_toSubgraph_verts_eq_connectedComponentSupp hacc (Set.nonempty_of_mem hcac)
       obtain ⟨p', hp'⟩ := hp.1.exists_isCycle_snd_verts_eq (by
         rwa [hp.1.adj_toSubgraph_iff_of_isCycles hcycles (hp.2 ▸ hacc)])
-      obtain ⟨x', hx', hx'p, htw⟩ := Walk.takeUntilSet p' {x, b} (Set.toFinite _) (by
+      obtain ⟨x', hx', hx'p, htw⟩ := Walk.takeUntilSet (Set.toFinite {x, b}) (by
         use x
         simp only [List.coe_toFinset, Set.mem_inter_iff, Set.mem_insert_iff, Set.mem_singleton_iff,
           true_or, Set.mem_setOf_eq, true_and, cycles]
