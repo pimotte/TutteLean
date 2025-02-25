@@ -108,17 +108,12 @@ lemma tutte_part2b [Fintype V] [DecidableEq V] {x b a c : V} {cycles : SimpleGra
   use p.toSubgraph.spanningCoe ⊔ edge x a
   refine ⟨IsAlternating.sup_edge (hcalt.spanningCoe p.toSubgraph) (by simp_all) (fun u' hu'x hadj ↦ by
     simpa [← toSubgraph_adj_sndOfNotNil p hp hadj, toSubgraph_adj_sndOfNotNil p hp hpac]) (fun c' hc'a hadj ↦ aux _ hc'a hadj), ?_⟩
-
-  have hfincycle : (p.toSubgraph.spanningCoe ⊔ edge x a).IsCycles := by
+  refine ⟨by
     refine fun v hv ↦ hp.isCycles_spanningCoe_toSubgraph_sup_edge hgadj.ne.symm (fun hadj ↦ ?_) hv
     rw [← Walk.mem_edges_toSubgraph, Subgraph.mem_edgeSet] at hadj
-    simp [← toSubgraph_adj_sndOfNotNil p hp hadj.symm, toSubgraph_adj_sndOfNotNil p hp hpac] at hnxc
-
-  have hfin3 : ¬(p.toSubgraph.spanningCoe ⊔ edge x a).Adj x b := by
-    simp only [sup_adj, Subgraph.spanningCoe_adj, hnpxb, edge_adj]
-    aesop
-
-  exact ⟨hfincycle, hfin3, by aesop,
+    simp [← toSubgraph_adj_sndOfNotNil p hp hadj.symm, toSubgraph_adj_sndOfNotNil p hp hpac] at hnxc, ?_⟩
+  exact ⟨
+    by simp only [sup_adj, Subgraph.spanningCoe_adj, hnpxb, edge_adj]; aesop, by aesop,
     sup_le_iff.mpr ⟨hle, fun v w hvw ↦ by simpa [sup_adj, edge_adj, adj_congr_of_sym2 _ ((adj_edge _ _).mp hvw).1.symm] using .inl hgadj⟩⟩
 
 
@@ -166,12 +161,10 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
   have hM1sub : M1.spanningCoe ≤ G ⊔ edge x b := Subgraph.spanningCoe_le M1
   have hM2sub := Subgraph.spanningCoe_le M2
 
-  have cycles_le : cycles ≤ (G ⊔ edge a c) ⊔ (edge x b) := by
-    simp only [← hsupG, cycles]
-    exact symmDiff_le hM1sub hM2sub
-
   have induce_le : (induce (cycles.connectedComponentMk c).supp cycles).spanningCoe ≤ (G ⊔ edge a c) ⊔ edge x b := by
-    refine le_trans ?_ cycles_le
+    refine le_trans ?_ (by
+      simp only [← hsupG, cycles]
+      exact symmDiff_le hM1sub hM2sub)
     exact spanningCoe_induce_le cycles (cycles.connectedComponentMk c).supp
 
   by_cases hxc : x ∉ (cycles.connectedComponentMk c).supp
@@ -183,15 +176,11 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
     rw [disjoint_edge]
     aesop
   push_neg at hxc
-
   have hacc : a ∈ (cycles.connectedComponentMk c).supp := (ConnectedComponent.mem_supp_congr_adj (cycles.connectedComponentMk c) hcac.symm).mp rfl
-
   have (G : SimpleGraph V) : LocallyFinite G := fun _ ↦ Fintype.ofFinite _
-
   have hnM2 (x' : V) (h : x' ≠ c) : ¬ M2.Adj x' a := by
     rw [M2.adj_comm]
     exact hM2.1.not_adj_left_of_ne h.symm hM2ac
-
   have : ∃ x' ∈ ({x, b} : Set V), ∃ (p : cycles.Walk a x'), p.IsPath ∧
     p.toSubgraph.Adj a c ∧ ¬ p.toSubgraph.Adj x b := by
       obtain ⟨p, hp⟩ := hcycles.exists_cycle_toSubgraph_verts_eq_connectedComponentSupp hacc (Set.nonempty_of_mem hcac)
@@ -221,7 +210,6 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) 
     intro hc hadj
     have := hadj.adj_sub
     simp only [cycles, symmDiff_def] at this
-
     cases' this with hl hr
     · exfalso
       obtain ⟨w, hw⟩ := hM1.1 (hM1.2 x')
