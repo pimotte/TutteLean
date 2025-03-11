@@ -105,74 +105,57 @@ lemma tutte_necessary [Fintype V]
     rw [Subtype.mk_eq_mk.mp hxy, (Subtype.val_injective (hv'.2 _ hw.1.symm ▸ hv'.2 _ hv.1.symm) : v = w)] at hv
     exact Subtype.mk_eq_mk.mpr <| ConnectedComponent.eq_of_common_vertex hv.2 hw.2)
 
+lemma TutteBlocker_mono [Finite V] {u : Set V} (h : G ≤ G') (ht : G'.TutteBlocker u) : G.TutteBlocker u := by
+  simp [TutteBlocker] at *
+  have := ncard_odd_components_mono _ (Subgraph.deleteVerts_mono' u h
+     : ((⊤ : Subgraph G).deleteVerts u).coe ≤ ((⊤ : Subgraph G').deleteVerts u).coe)
+  omega
+
 lemma tutte_sufficient [Fintype V] [DecidableEq V]
   (h : ∀ (M : G.Subgraph), ¬M.IsPerfectMatching) (hvEven : Even (Fintype.card V)) :
      ∃ u, G.TutteBlocker u := by
   classical
   obtain ⟨Gmax, hSubgraph, hMatchingFree, hMaximal⟩ := exists_maximal_isMatchingFree h
-  suffices ∃ u, Set.ncard u <  {c : ((⊤ : Gmax.Subgraph).deleteVerts u).coe.ConnectedComponent | Odd (c.supp.ncard)}.ncard  by
-    · obtain ⟨u, hu⟩ := this
-      use u
-      exact lt_of_lt_of_le hu (ncard_odd_components_mono _ (Subgraph.deleteVerts_mono' u hSubgraph))
-
-  let Gsplit := Gmax.deleteUniversalVerts
-
+  use Gmax.universalVerts
+  apply TutteBlocker_mono hSubgraph
   by_contra! hc
-  have h' := hc Gmax.universalVerts
-  simp only [Set.ncard_eq_toFinset_card', Set.toFinset_card] at h'
-  have h'' := h'
+  simp only [TutteBlocker, Set.ncard_eq_toFinset_card', Set.toFinset_card] at hc
 
-  by_cases h' : ∀ (K : ConnectedComponent Gsplit.coe), Gsplit.coe.IsClique K.supp
-  · rw [Fintype.card_eq_nat_card] at h''
-    simp_rw [Fintype.card_eq_nat_card, Set.Nat.card_coe_set_eq] at h''
-    obtain ⟨M, hM⟩ := tutte_part' hvEven h'' h'
+  by_cases h' : ∀ (K : ConnectedComponent Gmax.deleteUniversalVerts.coe), Gmax.deleteUniversalVerts.coe.IsClique K.supp
+  · rw [Fintype.card_eq_nat_card] at hc
+    simp_rw [Fintype.card_eq_nat_card, Set.Nat.card_coe_set_eq] at hc
+    push_neg at hc
+    obtain ⟨M, hM⟩ := tutte_part' hvEven hc h'
     exact hMatchingFree M hM
   · push_neg at h'
     obtain ⟨K, hK⟩ := h'
-    rw [isNotClique_iff] at hK
-    obtain ⟨x, ⟨y, hxy⟩⟩ := hK
+    obtain ⟨x, ⟨y, hxy⟩⟩ := (isNotClique_iff _ _).mp hK
     obtain ⟨p , hp⟩ := SimpleGraph.Reachable.exists_path_of_dist (K.connected_induce_supp x y)
     obtain ⟨x, ⟨a, ⟨b, hxab⟩⟩⟩ := verts_of_walk p hp.2 (dist_gt_one_of_ne_and_nadj (Walk.reachable p) hxy.1 hxy.2)
 
-    have ha : (a : V) ∉ Gmax.universalVerts := a.1.2.2
-    have hc : ∃ (c : V), ¬ Gmax.Adj a c ∧ (a : V) ≠ c := by
-      have : ¬ ∀ (w : V), (a : V) ≠ w → Gmax.Adj (w : V) a := by exact ha
-      push_neg at this
-      obtain ⟨c, hc⟩ := this
-      exact ⟨c, ⟨fun h ↦ hc.2 h.symm, hc.1⟩⟩
-    obtain ⟨c, hc⟩ := hc
+    obtain ⟨c, hc⟩ : ∃ (c : V), (a : V) ≠ c ∧ ¬ Gmax.Adj c a := by simpa [universalVerts] using a.1.2.2
 
     have hbnec : b.val.val ≠ c := by
       intro h
-      apply (h ▸ hc.1)
+      apply (h ▸ hc.2)
       simp only [comap_adj, Function.Embedding.coe_subtype, Subgraph.coe_adj, ne_eq] at hxab
-      simpa using hxab.2.1.adj_sub
+      simpa using hxab.2.1.adj_sub.symm
 
     have hG1nxb : ¬ Gmax.Adj x.val.val b.val.val := by
       intro h
       apply hxab.2.2.1
-      simp [h, Gsplit, deleteUniversalVerts]
+      simp [h, deleteUniversalVerts]
 
-    have hG1 := left_lt_sup.mpr (by rw [edge_le_iff (fun h ↦ hxab.2.2.2 (Subtype.val_injective (Subtype.val_injective h)))]; exact hG1nxb)
-    have hG2 := left_lt_sup.mpr (by rw [edge_le_iff (fun h ↦ hc.2 h)]; exact hc.1)
+    have hG1 := hMaximal _ <| left_lt_sup.mpr (by rw [edge_le_iff (fun h ↦ hxab.2.2.2 (Subtype.val_injective (Subtype.val_injective h)))]; exact hG1nxb)
+    have hG2 := hMaximal _ <| left_lt_sup.mpr (by rw [edge_le_iff (fun h ↦ hc.1 h), adj_comm]; exact hc.2)
 
-    obtain ⟨M1, hM1⟩ := hMaximal _ hG1
-    obtain ⟨M2, hM2⟩ := hMaximal _ hG2
+    have hGMaxadjax := Gmax.deleteUniversalVerts.coe_adj_sub _ _ (by simpa using hxab.1.symm)
+    have hcnex : c ≠ x.val.val := fun hxc ↦ hc.2 (hxc ▸ hGMaxadjax.symm)
 
-    have hGMaxadjax : Gmax.Adj ↑↑a ↑↑x := by
-      refine Gsplit.coe_adj_sub _ _ (adj_symm Gsplit.coe ?_)
-      simpa using hxab.1
-
-    have hGMaxadjab : Gmax.Adj ↑↑a ↑↑b := by
-      refine Gsplit.coe_adj_sub _ _ (adj_symm Gsplit.coe ?_)
-      simpa using hxab.2.1.symm
-
-    have hcnex : c ≠ x.val.val := fun hxc ↦ hc.1 (hxc ▸ hGMaxadjax)
-
-    obtain ⟨Mcon, hMcon⟩ := tutte_part2 hGMaxadjax.symm hGMaxadjab hG1nxb hc.1 (by
+    obtain ⟨Mcon, hMcon⟩ := tutte_part2 hGMaxadjax.symm (Gmax.deleteUniversalVerts.coe_adj_sub _ _ (by simpa using hxab.2.1)) hG1nxb (fun hadj ↦ hc.2 hadj.symm) (by
       intro h
       apply hxab.2.2.2
-      exact Subtype.val_injective (Subtype.val_injective h)) hcnex.symm hc.2 hbnec (hMaximal _ hG1) (hMaximal _ hG2)
+      exact Subtype.val_injective (Subtype.val_injective h)) hcnex.symm hc.1 hbnec hG1 hG2
     exact hMatchingFree Mcon hMcon
 
 
