@@ -136,18 +136,15 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} {M1 : Subgraph (G 
 
   have hsupG : G ⊔ edge x b ⊔ (G ⊔ edge a c) = (G ⊔ edge a c) ⊔ edge x b := by aesop
 
-  suffices ∃ (G' : SimpleGraph V), G'.IsAlternating M2.spanningCoe ∧ G'.IsCycles ∧ symmDiff M2.spanningCoe G' ≤ G by
-    obtain ⟨G', hg⟩ := this
-    use (G.toSubgraph (symmDiff M2.spanningCoe G') hg.2.2)
-    apply IsPerfectMatching.symmDiff_of_isAlternating hM2 hg.1 hg.2.1
-
   suffices ∃ (G' : SimpleGraph V), G'.IsAlternating M2.spanningCoe ∧ G'.IsCycles ∧ ¬G'.Adj x b ∧ G'.Adj a c
       ∧ G' ≤ G ⊔ edge a c by
     obtain ⟨G', ⟨hG', hG'cyc, hG'xb, hnG'ac, hle⟩⟩ := this
-    use G'
-    refine ⟨hG', hG'cyc, ?_⟩
-    apply Disjoint.left_le_of_le_sup_right (_root_.symmDiff_le (le_sup_of_le_right M2.spanningCoe_le) (le_sup_of_le_right hle))
-    simp [disjoint_edge, symmDiff_def, hM2ac, hnG'ac]
+    have : M2.spanningCoe ∆ G' ≤ G := by
+      apply Disjoint.left_le_of_le_sup_right (_root_.symmDiff_le (le_sup_of_le_right M2.spanningCoe_le) (le_sup_of_le_right hle))
+      simp [disjoint_edge, symmDiff_def, hM2ac, hnG'ac]
+    use (G.toSubgraph (symmDiff M2.spanningCoe G') this)
+    apply IsPerfectMatching.symmDiff_of_isAlternating hM2 hG' hG'cyc
+
 
   let cycles := symmDiff M1.spanningCoe M2.spanningCoe
   have hcalt : cycles.IsAlternating M2.spanningCoe := IsPerfectMatching.isAlternating_symmDiff_right hM1 hM2
@@ -207,18 +204,18 @@ theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} {M1 : Subgraph (G 
     intro hc hadj
     have := hadj.adj_sub
     simp only [cycles, symmDiff_def] at this
-    cases' this with hl hr
+    obtain ⟨hl, _⟩ | ⟨hr, _⟩ := this
     · exfalso
       obtain ⟨w, hw⟩ := hM1.1 (hM1.2 x')
       apply hnpxb
       cases' hx' with h1 h2
       · subst h1
-        rw [hw.2 _ hM1xb, ← hw.2 _ hl.1.symm]
+        rw [hw.2 _ hM1xb, ← hw.2 _ hl.symm]
         exact hadj.symm
       · subst h2
-        rw [hw.2 _ hM1xb.symm, ← hw.2 _ hl.1.symm]
+        rw [hw.2 _ hM1xb.symm, ← hw.2 _ hl.symm]
         exact hadj
-    · exact hr.1
+    · exact hr
 
   cases' hx' with hl hl <;> subst hl
   · exact tutte_part2b hM2 p hp hcalt (hnM2 x' hnxc) hpac hnpxb hM2ac hxa hnxc hab.ne hle4 (aux (by simp))
