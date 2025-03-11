@@ -131,30 +131,18 @@ lemma tutte_sufficient [Fintype V] [DecidableEq V]
     obtain ⟨K, hK⟩ := h'
     obtain ⟨x, ⟨y, hxy⟩⟩ := (isNotClique_iff _ _).mp hK
     obtain ⟨p , hp⟩ := SimpleGraph.Reachable.exists_path_of_dist (K.connected_induce_supp x y)
-    obtain ⟨x, ⟨a, ⟨b, hxab⟩⟩⟩ := verts_of_walk p hp.2 (dist_gt_one_of_ne_and_nadj (Walk.reachable p) hxy.1 hxy.2)
-
+    obtain ⟨x, ⟨a, ⟨b, ⟨hxa, hxb, hnadjxb, hnxb⟩⟩⟩⟩ := verts_of_walk p hp.2 (dist_gt_one_of_ne_and_nadj (Walk.reachable p) hxy.1 hxy.2)
+    simp only [deleteUniversalVerts, universalVerts, ne_eq, Subgraph.induce_verts,
+      Subgraph.verts_top, comap_adj, Function.Embedding.coe_subtype, Subgraph.coe_adj,
+      Subgraph.induce_adj, Subtype.coe_prop, Subgraph.top_adj, true_and] at hxa hxb hnadjxb
     obtain ⟨c, hc⟩ : ∃ (c : V), (a : V) ≠ c ∧ ¬ Gmax.Adj c a := by simpa [universalVerts] using a.1.2.2
-
-    have hbnec : b.val.val ≠ c := by
-      intro h
-      apply (h ▸ hc.2)
-      simp only [comap_adj, Function.Embedding.coe_subtype, Subgraph.coe_adj, ne_eq] at hxab
-      simpa using hxab.2.1.adj_sub.symm
-
-    have hG1nxb : ¬ Gmax.Adj x.val.val b.val.val := by
-      intro h
-      apply hxab.2.2.1
-      simp [h, deleteUniversalVerts]
-
-    have hG1 := hMaximal _ <| left_lt_sup.mpr (by rw [edge_le_iff (fun h ↦ hxab.2.2.2 (Subtype.val_injective (Subtype.val_injective h)))]; exact hG1nxb)
+    have hbnec : b.val.val ≠ c := fun h ↦ hc.2 (h ▸ hxb.symm)
+    have hG1 := hMaximal _ <| left_lt_sup.mpr (by rw [edge_le_iff (fun h ↦ hnxb (Subtype.val_injective (Subtype.val_injective h)))]; exact hnadjxb)
     have hG2 := hMaximal _ <| left_lt_sup.mpr (by rw [edge_le_iff (fun h ↦ hc.1 h), adj_comm]; exact hc.2)
-
-    have hGMaxadjax := Gmax.deleteUniversalVerts.coe_adj_sub _ _ (by simpa using hxab.1.symm)
-    have hcnex : c ≠ x.val.val := fun hxc ↦ hc.2 (hxc ▸ hGMaxadjax.symm)
-
-    obtain ⟨Mcon, hMcon⟩ := tutte_part2 hGMaxadjax.symm (Gmax.deleteUniversalVerts.coe_adj_sub _ _ (by simpa using hxab.2.1)) hG1nxb (fun hadj ↦ hc.2 hadj.symm) (by
+    have hcnex : c ≠ x.val.val := fun hxc ↦ hc.2 (hxc ▸ hxa)
+    obtain ⟨Mcon, hMcon⟩ := tutte_part2 hxa hxb hnadjxb (fun hadj ↦ hc.2 hadj.symm) (by
       intro h
-      apply hxab.2.2.2
+      apply hnxb
       exact Subtype.val_injective (Subtype.val_injective h)) hcnex.symm hc.1 hbnec hG1 hG2
     exact hMatchingFree Mcon hMcon
 
