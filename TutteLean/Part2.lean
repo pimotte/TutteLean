@@ -117,14 +117,11 @@ lemma tutte_part2b [Fintype V] [DecidableEq V] {x b a c : V} {cycles : SimpleGra
     sup_le_iff.mpr ⟨hle, fun v w hvw ↦ by simpa [sup_adj, edge_adj, adj_congr_of_sym2 _ ((adj_edge _ _).mp hvw).1.symm] using .inl hgadj⟩⟩
 
 
-theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} (hxa : G.Adj x a) (hab : G.Adj a b) (hnGxb : ¬G.Adj x b) (hnGac : ¬ G.Adj a c)
+theorem tutte_part2 [Fintype V] [DecidableEq V] {x a b c : V} {M1 : Subgraph (G ⊔ edge x b)} {M2 : Subgraph (G ⊔ edge a c)} (hxa : G.Adj x a) (hab : G.Adj a b) (hnGxb : ¬G.Adj x b) (hnGac : ¬ G.Adj a c)
     (hnxb : x ≠ b) (hnxc : x ≠ c) (hnac : a ≠ c) (hnbc : b ≠ c)
-    (hm1 : ∃ (M : Subgraph (G ⊔ edge x b)), M.IsPerfectMatching)
-    (hm2 : ∃ (M : Subgraph (G ⊔ edge a c)), M.IsPerfectMatching)
+    (hM1 : M1.IsPerfectMatching) (hM2 : M2.IsPerfectMatching)
     : ∃ (M : Subgraph G), M.IsPerfectMatching := by
   classical
-  obtain ⟨M1, hM1⟩ := hm1
-  obtain ⟨M2, hM2⟩ := hm2
 
   have hM1nac : ¬M1.Adj a c := fun h ↦ by simpa [hnGac, edge_adj, hnac, hxa.ne, hnbc.symm, hab.ne] using h.adj_sub
   have hM2nxb : ¬M2.Adj x b := fun h ↦ by simpa [hnGxb, edge_adj, hnxb, hxa.ne, hnxc] using h.adj_sub
